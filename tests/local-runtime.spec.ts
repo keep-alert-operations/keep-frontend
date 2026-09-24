@@ -1,0 +1,148 @@
+/** Real interactive local stack: no request mocks or injected identity/session. */
+import { test, expect } from "@playwright/test";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { resolve } from "node:path";
+import { randomUUID } from "node:crypto";
+
+test.skip(
+  process.env.APPCHI_LOCAL_RUNTIME_TEST !== "1",
+  "Requires the running local runtime",
+);
+
+test("native alert reaches the real feed and supports browser acknowledgement and notes", async ({
+  page,
+}) => {
+  const repository = resolve(__dirname, "../..");
+  const state = resolve(repository, ".local/runtime");
+  mkdirSync(state, { recursive: true });
+  const credentials = JSON.parse(
+    readFileSync(
+      resolve(repository, ".local/keycloak/credentials.json"),
+      "utf8",
+    ),
+  );
+  await page.goto("/auth/login");
+  await page.locator("#username").fill("local-admin");
+  await page
+    .locator("#password")
+    .fill(credentials.users["local-admin"].password);
+  await page.locator("#kc-login").click();
+  await expect(page).toHaveURL(/^https:\/\/localhost:3443\//);
+  const sessionResponse = await page.request.get("/auth/session");
+  expect(sessionResponse.status()).toBe(200);
+  const session = (await sessionResponse.json()).data;
+  const tenant = session.tenants.find(
+    (item: { kind: string }) => item.kind === "global",
+  ).id;
+  const run = randomUUID();
+  const message = "Local demo: CPU usage needs investigation";
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, "0");
+  const created = `${pad(now.getUTCDate())}-${pad(now.getUTCMonth() + 1)}-${now.getUTCFullYear()} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`;
+  const admission = await page.request.post("/api/ingest/v1/alerts", {
+    headers: { "Idempotency-Key": run },
+    data: {
+      application: "Appchi local demo",
+      object: "cpu",
+      node_name: "demo-node-01",
+      operator: "local-demo",
+      message,
+      severity: "warning",
+      time_created: created,
+      key_field: run,
+    },
+  });
+  expect(admission.status()).toBe(202);
+  const receipt = await admission.json();
+  let alert = "";
+  await expect
+    .poll(
+      async () => {
+        const response = await page.request.get(receipt.receipt_url, {
+          headers: { "X-Receipt-Token": receipt.receipt_token },
+        });
+        const item = (await response.json()).items[0];
+        alert = item.alert_id ?? "";
+        return item.processing_status;
+      },
+      { timeout: 30000 },
+    )
+    .toBe("applied");
+  await expect
+    .poll(
+      async () => {
+        const response = await page.request.get(
+          `/api/tenants/${tenant}/alerts`,
+          { params: { q: "investigation" } },
+        );
+        if (response.status() !== 200) return false;
+        return (await response.json()).data.some(
+          (item: { id: string }) => item.id === alert,
+        );
+      },
+      { timeout: 30000 },
+    )
+    .toBe(true);
+  await page.goto(`/tenants/${tenant}/alerts`);
+  await expect(
+    page.getByRole("heading", { name: "All alerts", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(message, { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Live", { exact: true })).toBeVisible({
+    timeout: 45000,
+  });
+  await page.screenshot({ path: resolve(state, "alerts.png"), fullPage: true });
+  await page.goto(`/tenants/${tenant}/alerts/${alert}`);
+  await expect(
+    page.getByRole("heading", { name: message, exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Acknowledge", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Clear acknowledgement", exact: true }),
+  ).toBeVisible();
+  const note =
+    "Local runtime verified: received, indexed and reviewed through the browser.";
+  await page.getByRole("textbox", { name: "Add note", exact: true }).fill(note);
+  await page.getByRole("button", { name: "Add note", exact: true }).click();
+  await expect(
+    page.locator(".note-text").filter({ hasText: note }),
+  ).toBeVisible();
+  await expect
+    .poll(
+      async () => {
+        const response = await page.request.get(
+          `/api/tenants/${tenant}/alerts`,
+          { params: { cel: "alert.acknowledged == true" } },
+        );
+        if (response.status() !== 200) return false;
+        return (await response.json()).data.some(
+          (item: { id: string }) => item.id === alert,
+        );
+      },
+      { timeout: 30000 },
+    )
+    .toBe(true);
+  writeFileSync(
+    resolve(state, "browser-evidence.json"),
+    JSON.stringify(
+      {
+        tested_at: new Date().toISOString(),
+        tenant,
+        alert,
+        result: "passed",
+        checks: [
+          "real-username-password",
+          "native-v1-admission",
+          "source-processing",
+          "real-elasticsearch-feed",
+          "live-hints-connected",
+          "browser-acknowledgement",
+          "browser-note",
+          "updated-search",
+        ],
+      },
+      null,
+      2,
+    ),
+  );
+});

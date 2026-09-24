@@ -1,0 +1,372 @@
+/* Maintenance screens (S12 Maintenance, S13 MaintenanceEdit, window detail).
+ * Shared toolbar/table/banner helpers live in rules.css. */
+
+.mw-search {
+  width: 240px;
+}
+.mw-sort {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.mw-sort select.inp {
+  height: 30px;
+  min-height: 30px;
+  font-size: 12.5px;
+  width: auto;
+  padding: 0 8px;
+}
+.g-mw {
+  grid-template-columns: minmax(0, 1fr) 110px 90px 190px 190px 150px 110px;
+}
+.ph {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ph-active {
+  background: #1b1a17;
+  color: #fbfaf7;
+}
+.ph-scheduled {
+  background: #e6ebff;
+  color: #2536a3;
+}
+.ph-ended,
+.ph-deleted,
+.ph-unknown {
+  background: #efede8;
+  color: #46423b;
+}
+
+/* Next 10 days timeline */
+.mw-tl {
+  padding: 14px 18px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mw-tl-h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mw-tl-body {
+  position: relative;
+  height: 72px;
+}
+.mw-tl-grid,
+.mw-tl-days {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+}
+.mw-tl-grid {
+  position: absolute;
+  inset: 0 0 20px 0;
+}
+.mw-tl-grid span {
+  border-left: 1px solid #eeebe5;
+}
+.mw-tl-grid span:last-child {
+  border-right: 1px solid #eeebe5;
+}
+.mw-tl-days {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  font-size: 11px;
+  color: #6d695f;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+.mw-tl-now {
+  position: absolute;
+  top: 0;
+  bottom: 20px;
+  width: 2px;
+  background: #b42318;
+  z-index: 2;
+}
+.tlbar {
+  position: absolute;
+  top: 8px;
+  height: 26px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-decoration: none;
+  z-index: 1;
+}
+.tlbar:hover {
+  text-decoration: none;
+  filter: brightness(0.96);
+}
+.tl-active {
+  background: #1b1a17;
+  color: #fbfaf7;
+}
+.tl-active:hover {
+  color: #fbfaf7;
+}
+.tl-scheduled,
+.tl-scheduled:hover {
+  background: #e6ebff;
+  color: #2536a3;
+}
+.tl-ended,
+.tl-ended:hover {
+  background: #efede8;
+  color: #46423b;
+}
+.tl-disabled,
+.tl-disabled:hover {
+  background: #efede8;
+  color: #46423b;
+  border: 1px dashed #8f8a80;
+}
+
+/* Editor and detail (S13) */
+.mw-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 16px;
+}
+.mw-form-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+.mw-form {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow: auto;
+  min-height: 0;
+  flex-grow: 1;
+}
+.mw-kind {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr);
+  gap: 14px;
+  align-items: end;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eeebe5;
+}
+.mw-kind .help {
+  padding-bottom: 9px;
+}
+.mw-kind select.inp,
+.mw-row select.inp {
+  width: 100%;
+  padding-right: 8px;
+}
+.mw-opt {
+  font-weight: 400;
+  color: #6d695f;
+}
+.mw-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 14px;
+}
+.mw-row-tz {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr);
+}
+.mw-row-occ {
+  grid-template-columns: 1fr 1fr;
+}
+.mw-row .inp[type="datetime-local"] {
+  width: 100%;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12.5px;
+}
+.mw-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mw-inline > .banner {
+  flex-grow: 1;
+}
+.mw-sched .banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-grow: 1;
+}
+.mw-sched-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.mw-sched-row > span {
+  flex-grow: 1;
+}
+.mw-sched-row .btn {
+  flex-shrink: 0;
+  margin-top: -4px;
+}
+.mw-eps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+.mw-ep b {
+  font-weight: 600;
+}
+.mw-cands {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+}
+.mw-valid .small {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mw-cel-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* The visible heading above replaces the editor's own label row; the label
+ * stays available to assistive technology. */
+.mw-cel .cel-head,
+.cond .cel-head {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.mw-read {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.mw-read .fld dd {
+  white-space: normal;
+}
+.mw-wrap {
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.mw-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  overflow: auto;
+}
+.mw-test {
+  flex-shrink: 0;
+}
+.mw-test-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mw-test-result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mw-yes {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.mw-p {
+  margin: 0;
+}
+.mw-count {
+  font-weight: 500;
+  color: #6d695f;
+}
+.mw-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mw-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.mw-alert-link {
+  font-size: 13px;
+  font-weight: 500;
+}
+.mw-res {
+  color: #57534b;
+}
+
+@media (max-width: 1023px) {
+  .mw-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mw-form-panel,
+  .mw-form,
+  .mw-side {
+    overflow: visible;
+  }
+  .g-mw {
+    min-width: 960px;
+  }
+  .mw-search {
+    width: 100%;
+    flex-basis: 100%;
+  }
+}
+@media (max-width: 639px) {
+  .mw-row,
+  .mw-row-tz,
+  .mw-row-occ,
+  .mw-kind {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mw-yes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mw-tl-days span {
+    font-size: 9px;
+  }
+}
+
+/* globals.css renders labels as columns; reference labels are inline. */
+.mw-form label.lbl,
+.rl-def label.lbl {
+  display: block;
+}
+.mw-yes dt,
+.mw-read dt {
+  text-transform: none;
+}
+.cel-code,
+.cmp-mono,
+.th-cond .mono {
+  font-variant-ligatures: none;
+}
