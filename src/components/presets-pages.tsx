@@ -628,7 +628,7 @@ function PresetSwitcher({ scope, current }: { scope: Scope; current: string }) {
           height="18"
           viewBox="0 0 24 24"
           fill="none"
-          stroke="#5f5b53"
+          stroke="var(--muted)"
           strokeWidth="2"
           aria-hidden="true"
         >
@@ -1122,7 +1122,7 @@ function FilterSummary({ cel, sort }: { cel: string; sort: unknown }) {
         height="14"
         viewBox="0 0 24 24"
         fill="none"
-        stroke="#5f5b53"
+        stroke="var(--muted)"
         strokeWidth="2"
         aria-hidden="true"
         style={{ flexShrink: 0 }}

@@ -278,7 +278,7 @@ export function TimeCell({ value }: { value: string }) {
       <span className="mono" style={{ fontSize: 13, fontWeight: 500 }}>
         {time ?? "—"}
       </span>
-      <span className="mono" style={{ fontSize: 11, color: "#6d695f" }}>
+      <span className="mono" style={{ fontSize: 11, color: "var(--subtle)" }}>
         {date}
       </span>
     </span>
@@ -314,7 +314,7 @@ export function SearchInput({
         height="14"
         viewBox="0 0 24 24"
         fill="none"
-        stroke="#5f5b53"
+        stroke="var(--muted)"
         strokeWidth="2"
         aria-hidden="true"
         style={{ position: "absolute", left: 11 }}

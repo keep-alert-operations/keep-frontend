@@ -3,7 +3,7 @@
 /* Shared administration layout */
 .adm-subtitle {
   font-size: 13px;
-  color: #5f5b53;
+  color: var(--ref-5f5b53);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -90,17 +90,17 @@
 .adm-empty-row {
   padding: 28px 18px;
   font-size: 13px;
-  color: #6d695f;
+  color: var(--ref-6d695f);
   text-align: center;
 }
 .adm-note {
   font-size: 12.5px;
-  color: #6d695f;
+  color: var(--ref-6d695f);
 }
 .adm-notice-panel {
   padding: 18px 20px;
   font-size: 13.5px;
-  color: #46423b;
+  color: var(--ref-46423b);
 }
 .adm-chips {
   display: inline-flex;
@@ -178,9 +178,9 @@
   font-size: 13px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: #f1efea;
-  border: 1px solid #e4e1da;
-  color: #1b1a17;
+  background: var(--ref-f1efea);
+  border: 1px solid var(--ref-e4e1da);
+  color: var(--ref-1b1a17);
   overflow-wrap: anywhere;
 }
 .adm-op-line {
@@ -196,11 +196,11 @@
 }
 .adm-op-detail {
   font-size: 12px;
-  color: #5f5b53;
+  color: var(--ref-5f5b53);
 }
 .adm-divider {
   border: none;
-  border-top: 1px solid #eeebe5;
+  border-top: 1px solid var(--ref-eeebe5);
   margin: 2px 0;
 }
 .adm-activity {
@@ -233,7 +233,7 @@
 }
 .r-pend,
 .r-pend:hover {
-  background: #fff8e6;
+  background: var(--ref-fff8e6);
 }
 .adm-pm-row {
   min-height: 54px;
@@ -248,8 +248,8 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #e7e4dd;
-  color: #1b1a17;
+  background: var(--ref-e7e4dd);
+  color: var(--ref-1b1a17);
   display: grid;
   place-items: center;
   font-size: 11px;
@@ -306,7 +306,7 @@ select.adm-role {
 }
 .adm-au-details-row,
 .adm-au-details-row:hover {
-  background: #faf9f6;
+  background: var(--ref-faf9f6);
 }
 .adm-au-details dl {
   margin: 0;
@@ -323,7 +323,7 @@ select.adm-role {
   justify-content: center;
 }
 .adm-expand[aria-expanded="true"] {
-  background: #f1efea;
+  background: var(--ref-f1efea);
 }
 .adm-actor {
   width: 180px;
@@ -338,7 +338,7 @@ select.adm-role {
   grid-template-columns: minmax(0, 1fr) 150px;
   align-items: center;
   padding: 12px 16px;
-  border-bottom: 1px solid #eeebe5;
+  border-bottom: 1px solid var(--ref-eeebe5);
   gap: 12px;
 }
 .hl:last-child {
@@ -401,8 +401,8 @@ select.adm-role {
   left: 0;
   right: 0;
   z-index: 20;
-  background: #fffefc;
-  border: 1px solid #e4e1da;
+  background: var(--ref-fffefc);
+  border: 1px solid var(--ref-e4e1da);
   border-radius: 10px;
   box-shadow: 0 12px 32px rgba(27, 26, 23, 0.14);
   padding: 8px;
@@ -411,7 +411,7 @@ select.adm-role {
 }
 .dirpick-status {
   font-size: 11.5px;
-  color: #6d695f;
+  color: var(--ref-6d695f);
   padding: 0 4px;
 }
 .dirpick-list {
@@ -436,7 +436,7 @@ select.adm-role {
   min-width: 0;
 }
 .dirpick-item:hover {
-  background: #faf9f6;
+  background: var(--ref-faf9f6);
 }
 .dirpick-item .adm-avatar {
   width: 26px;
@@ -458,7 +458,7 @@ select.adm-role {
 }
 .dirpick-name > span:last-child {
   font-size: 11.5px;
-  color: #6d695f;
+  color: var(--ref-6d695f);
 }
 .dirpick .notice {
   margin: 0;
@@ -500,11 +500,11 @@ select.adm-role {
   padding-left: 34px;
   font-size: 13px;
   line-height: 1.5;
-  color: #46423b;
+  color: var(--ref-46423b);
 }
 .adm-steps b {
   font-weight: 600;
-  color: #1b1a17;
+  color: var(--ref-1b1a17);
 }
 
 .adm-page dt {

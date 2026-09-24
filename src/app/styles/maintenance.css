@@ -34,18 +34,18 @@
   white-space: nowrap;
 }
 .ph-active {
-  background: #1b1a17;
-  color: #fbfaf7;
+  background: var(--ref-1b1a17);
+  color: var(--ref-fbfaf7);
 }
 .ph-scheduled {
-  background: #e6ebff;
-  color: #2536a3;
+  background: var(--ref-e6ebff);
+  color: var(--ref-2536a3);
 }
 .ph-ended,
 .ph-deleted,
 .ph-unknown {
-  background: #efede8;
-  color: #46423b;
+  background: var(--ref-efede8);
+  color: var(--ref-46423b);
 }
 
 /* Next 10 days timeline */
@@ -74,10 +74,10 @@
   inset: 0 0 20px 0;
 }
 .mw-tl-grid span {
-  border-left: 1px solid #eeebe5;
+  border-left: 1px solid var(--ref-eeebe5);
 }
 .mw-tl-grid span:last-child {
-  border-right: 1px solid #eeebe5;
+  border-right: 1px solid var(--ref-eeebe5);
 }
 .mw-tl-days {
   position: absolute;
@@ -85,7 +85,7 @@
   right: 0;
   bottom: 0;
   font-size: 11px;
-  color: #6d695f;
+  color: var(--ref-6d695f);
   font-family: var(--font-geist-mono), ui-monospace, monospace;
 }
 .mw-tl-now {
@@ -93,7 +93,7 @@
   top: 0;
   bottom: 20px;
   width: 2px;
-  background: #b42318;
+  background: var(--ref-b42318);
   z-index: 2;
 }
 .tlbar {
@@ -117,27 +117,27 @@
   filter: brightness(0.96);
 }
 .tl-active {
-  background: #1b1a17;
-  color: #fbfaf7;
+  background: var(--ref-1b1a17);
+  color: var(--ref-fbfaf7);
 }
 .tl-active:hover {
-  color: #fbfaf7;
+  color: var(--ref-fbfaf7);
 }
 .tl-scheduled,
 .tl-scheduled:hover {
-  background: #e6ebff;
-  color: #2536a3;
+  background: var(--ref-e6ebff);
+  color: var(--ref-2536a3);
 }
 .tl-ended,
 .tl-ended:hover {
-  background: #efede8;
-  color: #46423b;
+  background: var(--ref-efede8);
+  color: var(--ref-46423b);
 }
 .tl-disabled,
 .tl-disabled:hover {
-  background: #efede8;
-  color: #46423b;
-  border: 1px dashed #8f8a80;
+  background: var(--ref-efede8);
+  color: var(--ref-46423b);
+  border: 1px dashed var(--ref-8f8a80);
 }
 
 /* Editor and detail (S13) */
@@ -167,7 +167,7 @@
   gap: 14px;
   align-items: end;
   padding-bottom: 16px;
-  border-bottom: 1px solid #eeebe5;
+  border-bottom: 1px solid var(--ref-eeebe5);
 }
 .mw-kind .help {
   padding-bottom: 9px;
@@ -179,7 +179,7 @@
 }
 .mw-opt {
   font-weight: 400;
-  color: #6d695f;
+  color: var(--ref-6d695f);
 }
 .mw-row {
   display: grid;
@@ -303,7 +303,7 @@
 }
 .mw-count {
   font-weight: 500;
-  color: #6d695f;
+  color: var(--ref-6d695f);
 }
 .mw-alerts {
   display: flex;
@@ -321,7 +321,7 @@
   font-weight: 500;
 }
 .mw-res {
-  color: #57534b;
+  color: var(--ref-57534b);
 }
 
 @media (max-width: 1023px) {

@@ -50,11 +50,27 @@ export function Workspace() {
     [error, setError] = useState<unknown>(),
     [loading, setLoading] = useState(true);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [notice, setNotice] = useState<string>();
   const [epoch, setEpoch] = useState(0),
     [dirty, setDirty] = useState(false);
   const sessionRequest = useRef<AbortController | null>(null);
   const signedOut = useRef(false);
+  useEffect(() => {
+    setTheme(
+      document.documentElement.dataset.theme === "dark" ? "dark" : "light",
+    );
+  }, []);
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    setTheme(next);
+    try {
+      localStorage.setItem("appchi-theme", next);
+    } catch {
+      // The theme still changes for this page when browser storage is blocked.
+    }
+  }
   const reauthorize = useCallback(async (clear = false) => {
     if (signedOut.current) return;
     sessionRequest.current?.abort();
@@ -255,6 +271,9 @@ export function Workspace() {
             Your company identity determines tenant access. Sessions end after
             30 minutes idle or 24 hours.
           </p>
+          <button type="button" className="login-theme" onClick={toggleTheme}>
+            {theme === "dark" ? "Light mode" : "Dark mode"}
+          </button>
         </main>
       </div>
     );
@@ -341,6 +360,9 @@ export function Workspace() {
             <div className="account-menu">
               <strong>{session.principal.display_name}</strong>
               <span className="muted">Company account</span>
+              <button type="button" onClick={toggleTheme}>
+                {theme === "dark" ? "Light mode" : "Dark mode"}
+              </button>
               <button onClick={() => void logout()}>Sign out</button>
             </div>
           )}

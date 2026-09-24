@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import "./theme.css";
 import "./globals.css";
 import "./design.css";
 import "./styles/alerts.css";
@@ -25,11 +26,19 @@ export const metadata: Metadata = {
   title: "Appchi · Alert operations",
   description: "Internal alert and incident management",
 };
+const themeBootstrap = `try {
+  document.documentElement.dataset.theme = localStorage.getItem("appchi-theme") === "dark" ? "dark" : "light";
+} catch {
+  document.documentElement.dataset.theme = "light";
+}`;
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="light" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
+      </head>
       <body className={`${geist.variable} ${geistMono.variable}`}>
         <a className="skip" href="#main-content">
           Skip to content
