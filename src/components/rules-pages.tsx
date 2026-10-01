@@ -231,12 +231,20 @@ function RuleList({ scope }: { scope: Scope }) {
               : [];
             const href = `${base}/${row.id}${deleted || row.deleted_at ? "/history" : ""}`;
             return (
-              <div role="row" className="row g-rule rl-row" key={row.id}>
+              <div
+                role="row"
+                className="row g-rule rl-row alert-link-row"
+                key={row.id}
+              >
                 <span role="cell" className="mono small muted">
                   {deleted ? "—" : offset + index + 1}
                 </span>
                 <span role="cell" className="rl-name">
-                  <NavLink scope={scope} href={href} className="lnk">
+                  <NavLink
+                    scope={scope}
+                    href={href}
+                    className="lnk alert-row-link"
+                  >
                     {display(row.name)}
                   </NavLink>
                   {row.description ? (
@@ -943,7 +951,7 @@ function RuleDefinition({
               </div>
               <CelEditor
                 scope={scope}
-                context="rule"
+                context="correlation"
                 label={`Condition ${index + 1} CEL`}
                 value={condition.cel}
                 minimal
@@ -1017,7 +1025,10 @@ function GroupFields({
     [typed, setTyped] = useState("");
   const profile = useResource<{
     fields?: { name: string; type: string }[];
-  }>(`${tenantPath(scope.tenant.id)}/cel/profile?context=rule`, scope.onDenied);
+  }>(
+    `${tenantPath(scope.tenant.id)}/cel/profile?context=correlation`,
+    scope.onDenied,
+  );
   const fields = useMemo(
     () =>
       Array.isArray(profile.data?.data?.fields)

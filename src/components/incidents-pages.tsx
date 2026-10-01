@@ -543,51 +543,45 @@ function IncidentDetail({ scope, id }: { scope: Scope; id: string }) {
                   {assigneeLabel}
                 </span>
                 {editable && (
-                  <>
-                    {!mine && (
-                      <button
-                        type="button"
-                        className="btn btn-sm"
-                        disabled={locked}
-                        onClick={() =>
-                          void action("assignment", {
-                            assignee_id: scope.session.principal.id,
-                          })
-                        }
-                      >
-                        Assign to me
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-g"
-                      aria-expanded={picker}
-                      disabled={locked}
-                      onClick={() => setPicker((value) => !value)}
-                    >
-                      {assigned ? "Change…" : "Assign to…"}
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    className="btn"
+                    aria-expanded={picker}
+                    aria-controls="incident-assignment-options"
+                    disabled={locked}
+                    onClick={() => setPicker((value) => !value)}
+                  >
+                    Assign…
+                  </button>
                 )}
               </div>
               {picker && editable && (
                 <Popover onClose={() => setPicker(false)}>
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    disabled={locked || mine}
+                    onClick={() => {
+                      setPicker(false);
+                      void action("assignment", {
+                        assignee_id: scope.session.principal.id,
+                      });
+                    }}
+                  >
+                    Assign to me
+                  </button>
                   {assigned && (
-                    <div className="inc-popover-current">
-                      <span className="small">
-                        Assigned to <b>{assigneeLabel}</b>
-                      </span>
-                      <button
-                        type="button"
-                        className="btn btn-sm"
-                        disabled={locked}
-                        onClick={() =>
-                          void action("assignment", { assignee_id: null })
-                        }
-                      >
-                        Unassign
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-g"
+                      disabled={locked}
+                      onClick={() => {
+                        setPicker(false);
+                        void action("assignment", { assignee_id: null });
+                      }}
+                    >
+                      Unassign
+                    </button>
                   )}
                   <DirectoryPicker
                     key={scope.tenant.id}
@@ -595,9 +589,10 @@ function IncidentDetail({ scope, id }: { scope: Scope; id: string }) {
                     endpoint={`${prefix}/assignees`}
                     onDenied={scope.onDenied}
                     disabled={locked}
-                    onChoose={(principal) =>
-                      void action("assignment", { assignee_id: principal.id })
-                    }
+                    onChoose={(principal) => {
+                      setPicker(false);
+                      void action("assignment", { assignee_id: principal.id });
+                    }}
                   />
                 </Popover>
               )}
@@ -968,7 +963,7 @@ function LinkedAlerts({ scope, rows }: { scope: Scope; rows: RecordData[] }) {
           <div
             role="row"
             key={key}
-            className={`row g-ia inc-arow ${row.status === "resolved" ? "r-res" : ""}`}
+            className={`row g-ia inc-arow alert-link-row ${row.status === "resolved" ? "r-res" : ""}`}
           >
             <span role="cell">
               {available ? <Severity value={row.severity} /> : "—"}
@@ -978,7 +973,7 @@ function LinkedAlerts({ scope, rows }: { scope: Scope; rows: RecordData[] }) {
                 {available ? (
                   <NavLink
                     scope={scope}
-                    className="msg"
+                    className="msg alert-row-link"
                     href={`/tenants/${scope.tenant.id}/alerts/${key}`}
                   >
                     {text}
@@ -1000,7 +995,7 @@ function LinkedAlerts({ scope, rows }: { scope: Scope; rows: RecordData[] }) {
             </span>
             <span role="cell">
               {available ? (
-                <AlertStatus value={row.status} />
+                <AlertStatus value={row.status} assigneeId={row.assignee_id} />
               ) : (
                 <span className="small muted">Unknown</span>
               )}
@@ -1050,7 +1045,7 @@ function Popover({
     };
   }, []);
   return (
-    <div className="panel inc-popover" ref={ref}>
+    <div id="incident-assignment-options" className="panel inc-popover" ref={ref}>
       {children}
     </div>
   );

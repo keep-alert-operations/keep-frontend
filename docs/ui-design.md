@@ -23,9 +23,17 @@ Component paths above are relative to `frontend/src/components`; `resources.tsx`
 
 The user's reference selects a 76-pixel warm gray rail, `#f6f5f2` canvas, `#fffefc` surfaces, `#1b1a17` text, `#5f5b53` secondary text and `#e4e1da` borders. Geist body text is 13.5 pixels; page titles are 24 pixels. Inputs/buttons use 8-pixel corners and panels use 12-pixel corners. Geist Mono distinguishes expressions, timestamps and counts. The fonts are served locally through Next's font loader from the pinned Next package; rendering does not depend on a Google Fonts request.
 
-The supplied light palette remains the default. The user's later dark-mode request supersedes the earlier fixed-light direction: a user can select Light or Dark, and Appchi remembers that choice on the device across pages and reloads. Assistant-selected behavior keeps the reference light appearance on first use regardless of OS preference. The dark palette covers Appchi-owned sign-in and operational screens; external Keycloak authentication remains on the normal OIDC route and retains its separate theme. Assistant-selected adaptations stack editors/detail panels on narrow viewports, retain horizontal scrolling inside wide tables, and keep keyboard focus and semantic controls. Live responses determine rows, counts, identities, available controls, references, errors and freshness. Prototype numbers, names and green Live indicators are never hardcoded into production views.
+The supplied light palette remains the default. The user's later dark-mode request supersedes the earlier fixed-light direction: a user can select Light or Dark, and Appchi remembers that choice on the device across pages and reloads. Assistant-selected behavior keeps the reference light appearance on first use regardless of OS preference. The dark palette covers Appchi-owned sign-in and operational screens; the later user-approved Appchi Keycloak theme extends the same visual direction to the password form while retaining normal OIDC authentication (REV-23). Appearance is persisted independently on the application and identity origins. The user later requested an icon-based sun/moon switch for the appearance control (REV-24). Assistant-selected adaptations stack editors/detail panels on narrow viewports, retain horizontal scrolling inside wide tables, and keep keyboard focus and semantic controls. Live responses determine rows, counts, identities, available controls, references, errors and freshness. Prototype numbers, names and green Live indicators are never hardcoded into production views.
 
 The alerts quick views combine with the applied CEL expression and search text. Saving a preset starts from the expression draft; transient quick views, text search and suppression toggles are not silently saved. Existing authoritative revisions, CSRF, authorization, conflict handling and idempotent command recovery remain in use. Detail notes remain separately paginated and editable alongside activity.
+
+At the user's request, the entire available alert row opens its detail page in feeds, preset results/previews, incident links and maintenance summaries. The existing alert anchor covers the row, retaining keyboard and new-tab navigation and the unsaved-changes guard. Checkboxes, action buttons and incident links remain independent controls above that link.
+
+Incident, correlation rule and maintenance window list rows use the same full-row title link as preset rows. Deleted rules and windows open their retained history from anywhere in the row.
+
+Alert details opened from saved preset results show a Presets / preset breadcrumb and a Back to preset action (REV-25). Previous and Next follow the visible result page. The source is remembered for the opened alert in the browser tab, so a direct alert link without that context starts at Alerts.
+
+The active and deleted preset-list rows open their existing primary destination when clicked anywhere in the row. Row-level Edit, History and action-menu controls stay independent; keyboard focus on the primary link outlines the row (REV-26).
 
 Saved presets and editor previews render every configured field as its own column
 in the selected order, including the initial default selection. The user's preset
@@ -41,6 +49,8 @@ including list, notes and history views. Refresh text uses existing status areas
 ordinary refreshes do not insert warning rows. Actual failures still display
 errors and identify retained results. Saved preset empty results are matched to
 their completed query, so a changed filter waits for its own result (REV-18).
+
+The incoming-alert dashboard correction (REV-21) also moves routine tenant indexing lag into the header's existing status pill and dashboard indexing, suppression and refresh progress into its stable status line. Refreshing keeps the last captured counts and their colors; only failed or invalidated results receive the stale treatment. The compact status has no animation, and its narrow layout retains enough space to read the update label.
 
 The operational routes share `frontend/src/app/(workspace)/layout.tsx`, which owns
 the client workspace and its session state. Changing pages preserves that mounted
@@ -63,6 +73,16 @@ REV-17 browser checks additionally cover creating presets with initial or adjust
 columns, opening and reloading the saved result, reopening the editor, and reading
 presets with the original default column order. New forms follow the default order
 in [preset section 3](../spec-preset-operations.md#3-saved-definition-and-initial-defaults);
-previously saved field order is read as configured.
+previously saved field order is read as configured, subject to the later REV-27 acknowledgement-column adaptation below.
 
-Visual review is not a certified pixel-diff comparison of every reference state. Production qualification and external identity-service theme changes are outside this UI change.
+Visual review is not a certified pixel-diff comparison of every reference state. Production qualification remains outstanding. The later approved local Keycloak theme is documented in [local identity setup](./local-keycloak.md#appchi-login-theme); this does not deploy changes to shared identity services.
+
+## Assignment and alert status (REV-27)
+
+The user's 2026-09-27 redesign makes assignment the sole current ownership control. Alert detail has one Assign menu with Assign to me, a directory picker and Unassign. Bulk assignment uses the same choices. Remove standalone acknowledgement actions, badges and table fields. Detail, feeds, presets, incident links and maintenance summaries show Firing when firing and unassigned, Acknowledged when firing and assigned, and Resolved regardless of assignment. Suppression stays separate. Assignment history and old acknowledgement activity remain readable.
+
+Quick views Firing and Acknowledged use `display_status`; Active uses raw firing lifecycle and includes both. New preset defaults use Status (`display_status`) and Assignee. CEL fields are suggested by bare catalog name; existing `alert.field` source remains compatible. Current legacy column adaptation, legacy query semantics and the Lifecycle-only sort choice are specified in [alert operations section 17](../spec-alert-operations.md#17-assignment-and-derived-acknowledgement) and [preset section 4](../spec-preset-operations.md#4-columns-and-sorting). Existing saved history is not rewritten.
+
+## Current alert JSON viewer (REV-28)
+
+The alert detail page offers **View alert** to every reader who can open that page. It opens the currently loaded authoritative alert detail response as formatted JSON in a native modal dialog. The modal is read-only; it has an explicit Close control, supports Escape/backdrop dismissal and keeps the browser's native focus handling. Opening it makes no second API request and does not change alert state.

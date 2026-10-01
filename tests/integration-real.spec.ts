@@ -81,9 +81,9 @@ elif action=='setup':
     print(json.dumps({'tenant':str(tenant),'alert':str(alert),'handle':handle}))
 elif action=='verify':
     with psycopg.connect(os.environ['APPCHI_DATABASE_URL']) as conn:
-        acknowledged,revision=conn.execute('SELECT acknowledged,revision FROM alerts WHERE id=%s',(os.environ['APPCHI_BROWSER_ALERT_ID'],)).fetchone()
+        assignee,revision=conn.execute('SELECT assignee_id,revision FROM alerts WHERE id=%s',(os.environ['APPCHI_BROWSER_ALERT_ID'],)).fetchone()
         count=conn.execute('SELECT count(*) FROM alert_notes WHERE alert_id=%s AND text=%s AND NOT deleted',(os.environ['APPCHI_BROWSER_ALERT_ID'],'Real browser investigation note')).fetchone()[0]
-        print(json.dumps({'acknowledged':acknowledged,'revision':str(revision),'note_count':count}))
+        print(json.dumps({'assigned':assignee is not None,'revision':str(revision),'note_count':count}))
 else: raise RuntimeError('Unknown fixture action')
 `;
 
@@ -285,13 +285,12 @@ test("real HTTPS browser acknowledges an admitted alert and commits its note to 
         response.url().endsWith(`/alerts/${seeded.alert}/commands`) &&
         response.request().method() === "POST",
     );
+    await page.getByRole("button", { name: "Assign…", exact: true }).click();
     await page
-      .getByRole("button", { name: "Acknowledge", exact: true })
+      .getByRole("button", { name: "Assign to me", exact: true })
       .click();
     expect((await acknowledged).status()).toBe(200);
-    await expect(
-      page.getByRole("button", { name: "Clear acknowledgement", exact: true }),
-    ).toBeVisible();
+    await expect(page.locator(".ad-marks .st-acknowledged")).toBeVisible();
     await page
       .getByRole("textbox", { name: "Add note", exact: true })
       .fill("Real browser investigation note");
@@ -317,7 +316,7 @@ test("real HTTPS browser acknowledges an admitted alert and commits its note to 
       }),
     );
     expect(persisted).toEqual({
-      acknowledged: true,
+      assigned: true,
       revision: "3",
       note_count: 1,
     });

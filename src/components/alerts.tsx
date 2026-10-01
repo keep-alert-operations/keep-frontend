@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { components } from "@/lib/generated";
+import { alertOperatorLabel } from "@/lib/alert-operator";
 import {
   count,
   display,
@@ -10,7 +11,12 @@ import {
   timestamp,
 } from "@/lib/api";
 import { useCommand, useDirtyWarning, useResource } from "@/lib/hooks";
-import { timezoneLabel } from "@/lib/preset-choices";
+import {
+  DEFAULT_SORT,
+  nextQuickSort,
+  timezoneLabel,
+  type SortItem,
+} from "@/lib/preset-choices";
 import type { Scope } from "./workspace";
 import { DirectoryPicker } from "./directory-picker";
 import { CelEditor } from "./cel-editor";
@@ -104,6 +110,7 @@ export function AlertFeed(scope: Scope) {
     [pageIndex, setPageIndex] = useState(0),
     [limit, setLimit] = useState(50);
   const [selection, setSelection] = useState<Map<string, string>>(new Map());
+  const [quickSort, setQuickSort] = useState<SortItem | null>(null);
   const [snapshotVersion, setSnapshotVersion] = useState(scope.version);
   useEffect(() => {
     if (!cursor) setSnapshotVersion(scope.version);
@@ -116,6 +123,10 @@ export function AlertFeed(scope: Scope) {
     limit: String(limit),
   });
   if (cursor) params.set("cursor", cursor);
+  if (quickSort) {
+    params.set("sort", quickSort.field);
+    params.set("direction", quickSort.direction);
+  }
   const feed = useResource<RecordData[]>(
     `${base}/alerts?${params}`,
     scope.onDenied,
@@ -172,8 +183,8 @@ export function AlertFeed(scope: Scope) {
   }
   async function rowCommand(
     row: RecordData,
-    kind: "set_status" | "set_acknowledged",
-    value: string | boolean,
+    kind: "set_status" | "set_assignee",
+    value: string | null,
   ) {
     if (
       await command.execute(`${base}/alerts/${row.id}/commands`, {
@@ -324,6 +335,11 @@ export function AlertFeed(scope: Scope) {
             }
             busy={locked}
             newIds={newIds}
+            sort={quickSort ? [quickSort] : DEFAULT_SORT}
+            onSort={(field) => {
+              setQuickSort((current) => nextQuickSort(current, field));
+              reset();
+            }}
           />
         ) : (
           <div className="alerts-empty">
@@ -491,10 +507,7 @@ function describeActivity(
     changes.find((item) => item.field === field);
   const description =
     typeof row.description === "string" ? row.description : "";
-  const sourceActor =
-    (after && typeof after.operator === "string" && after.operator) ||
-    (typeof alert.operator === "string" && alert.operator) ||
-    "Source";
+  const sourceActor = alertOperatorLabel(alert);
   const namedActor =
     (typeof row.actor_display_name === "string" && row.actor_display_name) ||
     (typeof row.actor_label === "string" && row.actor_label) ||
@@ -767,6 +780,17 @@ function AlertDetail(scope: Scope & { id: string }) {
   const detail = useResource<RecordData>(path, scope.onDenied, scope.version);
   const command = useCommand(scope.session.csrf_token, scope.onDenied);
   const [confirmDialog, confirm] = useConfirm();
+  const [viewingJson, setViewingJson] = useState(false);
+  const jsonDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const element = jsonDialog.current;
+    if (!element) return;
+    if (viewingJson && !element.open) element.showModal();
+    else if (!viewingJson && element.open) element.close();
+    return () => {
+      if (element.open) element.close();
+    };
+  }, [viewingJson]);
   const [tab, setTab] = useState<Tab>("history"),
     [note, setNote] = useState(""),
     [noteRevision, setNoteRevision] = useState<string>();
@@ -888,10 +912,19 @@ function AlertDetail(scope: Scope & { id: string }) {
     scope.navigate(`/tenants/${scope.tenant.id}/alerts/${target}`);
   }
   const position = list ? list.ids.indexOf(scope.id) : -1;
-  const crumbs: Crumb[] = [
-    { label: "Alerts", href: `/tenants/${scope.tenant.id}/alerts` },
-    ...(list ? [{ label: list.label, href: list.href }] : []),
-  ];
+  const fromPreset = list?.href.startsWith(
+    `/tenants/${scope.tenant.id}/presets/`,
+  );
+  const crumbs: Crumb[] =
+    list && fromPreset
+      ? [
+          { label: "Presets", href: `/tenants/${scope.tenant.id}/presets` },
+          { label: list.label, href: list.href },
+        ]
+      : [
+          { label: "Alerts", href: `/tenants/${scope.tenant.id}/alerts` },
+          ...(list ? [{ label: list.label, href: list.href }] : []),
+        ];
   const title = alert
     ? display(alert.message ?? alert.application)
     : detail.error
@@ -916,7 +949,7 @@ function AlertDetail(scope: Scope & { id: string }) {
         ["Component", display(alert.component)],
         ["Node name", display(alert.node_name)],
         ["Site", display(alert.site)],
-        ["Operator", display(alert.operator)],
+        ["Operator", alertOperatorLabel(alert)],
         ["Impact", display(alert.impact)],
         [
           "First received",
@@ -947,6 +980,11 @@ function AlertDetail(scope: Scope & { id: string }) {
       actions={
         list && (
           <>
+            {fromPreset && (
+              <NavLink scope={scope} className="btn" href={list.href}>
+                ← Back to preset
+              </NavLink>
+            )}
             <button
               type="button"
               className="btn"
@@ -978,12 +1016,10 @@ function AlertDetail(scope: Scope & { id: string }) {
             <section className="panel ad-summary" aria-label="Alert summary">
               <div className="ad-marks">
                 <Severity value={alert.severity} />
-                <AlertStatus value={alert.status} />
-                <span
-                  className={`chip ${alert.acknowledged ? "b-green" : "b-neutral"}`}
-                >
-                  {alert.acknowledged ? "Acknowledged" : "Not acknowledged"}
-                </span>
+                <AlertStatus
+                  value={alert.status}
+                  assigneeId={alert.assignee_id}
+                />
                 <span className="chip b-neutral">
                   {personLabel(
                     scope,
@@ -1006,22 +1042,20 @@ function AlertDetail(scope: Scope & { id: string }) {
                     .join(" · ")}
                 </span>
               </div>
-              {(edit || runbook) && (
+              {(edit || runbook || alert) && (
                 <div className="ad-actions">
+                  {alert && (
+                    <button
+                      type="button"
+                      className="btn"
+                      aria-haspopup="dialog"
+                      onClick={() => setViewingJson(true)}
+                    >
+                      View alert
+                    </button>
+                  )}
                   {edit && (
                     <>
-                      <button
-                        type="button"
-                        className={`btn ${alert.acknowledged ? "" : "btn-p"}`}
-                        disabled={command.busy}
-                        onClick={() =>
-                          void execute("set_acknowledged", !alert.acknowledged)
-                        }
-                      >
-                        {alert.acknowledged
-                          ? "Clear acknowledgement"
-                          : "Acknowledge"}
-                      </button>
                       <button
                         type="button"
                         className="btn"
@@ -1037,38 +1071,56 @@ function AlertDetail(scope: Scope & { id: string }) {
                           ? "Reopen alert"
                           : "Resolve alert"}
                       </button>
-                      {alert.assignee_id !== scope.session.principal.id && (
-                        <button
-                          type="button"
-                          className="btn"
-                          disabled={command.busy}
-                          onClick={() =>
-                            void execute(
-                              "set_assignee",
-                              scope.session.principal.id,
-                            )
-                          }
-                        >
-                          Assign to me
-                        </button>
-                      )}
                       <div className="ad-assign" ref={assignBox}>
                         <button
                           type="button"
                           className="btn"
                           aria-expanded={assigning}
+                          aria-controls="alert-assignment-options"
                           disabled={command.busy}
                           onClick={() => setAssigning((shown) => !shown)}
                         >
-                          Assign to…
+                          Assign…
                         </button>
                         {assigning && (
                           <div
+                            id="alert-assignment-options"
                             className="panel ad-pop"
                             onKeyDown={(event) => {
                               if (event.key === "Escape") setAssigning(false);
                             }}
                           >
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              disabled={
+                                command.busy ||
+                                command.uncertain ||
+                                alert.assignee_id === scope.session.principal.id
+                              }
+                              onClick={() => {
+                                setAssigning(false);
+                                void execute(
+                                  "set_assignee",
+                                  scope.session.principal.id,
+                                );
+                              }}
+                            >
+                              Assign to me
+                            </button>
+                            {Boolean(alert.assignee_id) && (
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-g"
+                                disabled={command.busy || command.uncertain}
+                                onClick={() => {
+                                  setAssigning(false);
+                                  void execute("set_assignee", null);
+                                }}
+                              >
+                                Unassign
+                              </button>
+                            )}
                             <DirectoryPicker
                               key={scope.tenant.id}
                               label="Assign alert to a user"
@@ -1083,16 +1135,6 @@ function AlertDetail(scope: Scope & { id: string }) {
                           </div>
                         )}
                       </div>
-                      {Boolean(alert.assignee_id) && (
-                        <button
-                          type="button"
-                          className="btn btn-g"
-                          disabled={command.busy}
-                          onClick={() => void execute("set_assignee", null)}
-                        >
-                          Unassign
-                        </button>
-                      )}
                     </>
                   )}
                   <div className="grow" />
@@ -1498,6 +1540,35 @@ function AlertDetail(scope: Scope & { id: string }) {
             </section>
           </aside>
         </div>
+      )}
+      {alert && (
+        <dialog
+          ref={jsonDialog}
+          className="ad-json-dialog"
+          aria-labelledby="alert-json-title"
+          onClose={() => setViewingJson(false)}
+          onClick={(event) => {
+            if (event.target === event.currentTarget)
+              jsonDialog.current?.close();
+          }}
+        >
+          <div className="ad-json-content">
+            <div className="ad-json-header">
+              <h2 id="alert-json-title">Alert JSON</h2>
+              <button
+                type="button"
+                className="btn btn-sm"
+                autoFocus
+                onClick={() => jsonDialog.current?.close()}
+              >
+                Close
+              </button>
+            </div>
+            <pre role="region" aria-label="Current alert JSON" tabIndex={0}>
+              {JSON.stringify(alert, null, 2)}
+            </pre>
+          </div>
+        </dialog>
       )}
     </Page>
   );

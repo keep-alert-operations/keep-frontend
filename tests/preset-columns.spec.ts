@@ -10,6 +10,9 @@ const row = {
   status: "firing",
   application: "Synthetic database",
   component: "Query service",
+  schema_version: "v2",
+  operator: "00000000-0000-4000-8000-000000000005",
+  operator_display_name: "Payments",
   acknowledged: false,
   site: "Synthetic west",
   assignee_id: "00000000-0000-4000-8000-000000000004",
@@ -31,6 +34,7 @@ async function setup(
     sort: [{ field: "site", direction: "asc" }],
   };
   const creates: Array<{ columns: string[] }> = [];
+  const previews: Record<string, unknown>[] = [];
   await page.route("**/auth/session", (route) =>
     route.fulfill({
       json: {
@@ -73,7 +77,8 @@ async function setup(
     }
     if (path.endsWith(`/presets/${preset}`))
       return route.fulfill({ json: { data: saved } });
-    if (path.endsWith("/presets/preview"))
+    if (path.endsWith("/presets/preview")) {
+      previews.push(route.request().postDataJSON());
       return route.fulfill({
         json: {
           data: [{ ...row, suppressed }],
@@ -81,9 +86,10 @@ async function setup(
           next_cursor: null,
         },
       });
+    }
     return route.fulfill({ json: { data: [], next_cursor: null } });
   });
-  return { creates };
+  return { creates, previews };
 }
 
 for (const customize of [false, true]) {
@@ -113,12 +119,11 @@ for (const customize of [false, true]) {
     if (!customize)
       expect(creates[0].columns).toEqual([
         "severity",
-        "status",
+        "display_status",
         "message",
         "application",
         "component",
         "timestamp",
-        "acknowledged",
         "assignee_id",
       ]);
     const headings = [
@@ -144,7 +149,7 @@ for (const customize of [false, true]) {
   });
 }
 
-test("saved presets with the original default columns keep each field in order", async ({
+test("saved presets adapt legacy acknowledgement columns without changing their stored definition", async ({
   page,
 }) => {
   await setup(page, [
@@ -170,7 +175,6 @@ test("saved presets with the original default columns keep each field in order",
     "Application",
     "Component",
     "Last received",
-    "Acknowledged",
     "Assignee",
     "Actions",
   ]);
@@ -203,6 +207,62 @@ test("saved preset renders configured fields in order with its actual sort", asy
     .getByRole("checkbox", { name: "Select Database latency", exact: true })
     .check();
   await expect(page.getByText("1 selected", { exact: true })).toBeVisible();
+});
+
+test("preset column clicks temporarily replace saved sort and restore it on the third click", async ({
+  page,
+}) => {
+  const { previews } = await setup(page);
+  const saves: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "PUT") saves.push(request.url());
+  });
+  await page.goto(`/tenants/${tenant}/presets/${preset}`);
+  const table = page.getByRole("table", { name: "Alerts", exact: true });
+  const heading = table.getByRole("columnheader", { name: "Last received" });
+  const preview = () => previews.filter((body) => body.limit === 50).at(-1);
+  await expect.poll(() => preview()?.preset_id).toBe(preset);
+
+  await heading.getByRole("button").click();
+  await expect
+    .poll(() => preview()?.sort)
+    .toEqual([{ field: "timestamp", direction: "asc" }]);
+  await expect(
+    table.getByRole("columnheader", { name: "Last received ↑" }),
+  ).toHaveAttribute("aria-sort", "ascending");
+
+  await table.getByRole("button", { name: "Last received ↑" }).click();
+  await expect
+    .poll(() => preview()?.sort)
+    .toEqual([{ field: "timestamp", direction: "desc" }]);
+  await expect(
+    table.getByRole("columnheader", { name: "Last received ↓" }),
+  ).toHaveAttribute("aria-sort", "descending");
+
+  await table.getByRole("button", { name: "Last received ↓" }).click();
+  await expect.poll(() => preview()?.preset_id).toBe(preset);
+  await expect(
+    table.getByRole("columnheader", { name: "Site ↑" }),
+  ).toHaveAttribute("aria-sort", "ascending");
+  expect(saves).toEqual([]);
+});
+
+test("operator column shows the managed name rather than its stable ID", async ({
+  page,
+}) => {
+  await setup(page, ["message", "operator"]);
+  await page.route(`**/alerts/${row.id}`, (route) =>
+    route.fulfill({ json: { data: row } }),
+  );
+  await page.goto(`/tenants/${tenant}/presets/${preset}`);
+  const table = page.getByRole("table", { name: "Alerts", exact: true });
+  await expect(
+    table.getByRole("cell", { name: "Payments", exact: true }),
+  ).toBeVisible();
+  await expect(table.getByText(row.operator, { exact: true })).toHaveCount(0);
+  await table.getByRole("link", { name: "Open Database latency" }).click();
+  await expect(page.getByText("Payments", { exact: true })).toBeVisible();
+  await expect(page.getByText(row.operator, { exact: true })).toHaveCount(0);
 });
 
 test("draft column removal and reordering update the preview without saving", async ({

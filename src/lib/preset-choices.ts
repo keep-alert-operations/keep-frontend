@@ -109,12 +109,11 @@ export interface SortItem {
 }
 export const DEFAULT_COLUMNS = [
   "severity",
-  "status",
+  "display_status",
   "message",
   "application",
   "component",
   "timestamp",
-  "acknowledged",
   "assignee_id",
 ];
 export const DEFAULT_SORT: SortItem[] = [
@@ -123,7 +122,7 @@ export const DEFAULT_SORT: SortItem[] = [
 export const SELECTABLE_COLUMNS = [
   "severity",
   "message",
-  "status",
+  "display_status",
   "application",
   "component",
   "node_name",
@@ -131,7 +130,6 @@ export const SELECTABLE_COLUMNS = [
   "operator",
   "timestamp",
   "time_created",
-  "acknowledged",
   "assignee_id",
   "suppressed",
   "impact",
@@ -147,9 +145,16 @@ export const SORT_FIELDS = [
   "site",
   "operator",
   "time_created",
-  "acknowledged",
   "assignee_id",
 ];
+export function nextQuickSort(
+  current: SortItem | null,
+  field: string,
+): SortItem | null {
+  if (current?.field !== field) return { field, direction: "asc" };
+  if (current.direction === "asc") return { field, direction: "desc" };
+  return null;
+}
 /** Fields offered by the editor's "Insert field" chips (reference S06). */
 export const INSERT_FIELDS = [
   "application",
@@ -158,8 +163,8 @@ export const INSERT_FIELDS = [
   "site",
   "severity",
   "status",
+  "display_status",
   "suppressed",
-  "acknowledged",
   "assignee_id",
   "operator",
   "impact",
@@ -168,7 +173,8 @@ export const INSERT_FIELDS = [
 const LABELS: Record<string, string> = {
   severity: "Severity",
   message: "Message",
-  status: "Status",
+  status: "Lifecycle",
+  display_status: "Status",
   application: "Application",
   component: "Component",
   node_name: "Node",
@@ -178,7 +184,7 @@ const LABELS: Record<string, string> = {
   last_received_at: "Last received",
   time_created: "Created",
   first_received_at: "First received",
-  acknowledged: "Acknowledged",
+  acknowledged: "Legacy acknowledgement",
   assignee_id: "Assignee",
   suppressed: "Suppressed",
   impact: "Impact",
@@ -188,6 +194,16 @@ const LABELS: Record<string, string> = {
 };
 export function fieldLabel(field: string) {
   return LABELS[field] ?? field.replaceAll("_", " ");
+}
+
+/** Adapt legacy columns in the current view; stored revisions stay untouched. */
+export function currentAlertColumns(columns: string[]) {
+  const visible = columns
+    .filter((field) => !["acknowledged_by", "acknowledged_at"].includes(field))
+    .map((field) =>
+      ["status", "acknowledged"].includes(field) ? "display_status" : field,
+    );
+  return visible.length ? [...new Set(visible)] : ["display_status"];
 }
 const TIME_FIELDS = new Set([
   "timestamp",

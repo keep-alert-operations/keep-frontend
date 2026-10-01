@@ -397,7 +397,7 @@ test("ended windows allow metadata and timezone only and uncertain retries keep 
   expect(submitted[0]).not.toHaveProperty("end_local");
 });
 
-test("deleting a window confirms its suppression release and sends a conditional delete", async ({
+test("deleting a window explains retained suppression and sends a conditional delete", async ({
   page,
 }) => {
   await setup(page);
@@ -415,7 +415,7 @@ test("deleting a window confirms its suppression release and sends a conditional
     name: "Delete maintenance window “Synthetic maintenance”?",
   });
   await expect(dialog).toContainText(
-    "Its active suppression will be released.",
+    "Existing suppression remains until each alert receives another source update.",
   );
   await dialog
     .getByRole("button", { name: "Delete window", exact: true })

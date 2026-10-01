@@ -150,7 +150,13 @@ export function useCommand(csrf: string, onDenied: () => void) {
     controller.current = new AbortController();
     setBusy(true);
     setError(undefined);
-    const timer = setTimeout(() => controller.current?.abort(), 15000);
+    const operatorCommand = /^\/api\/tenants\/[^/]+\/operators(?:\/|$)/.test(
+      command.path,
+    );
+    const timer = setTimeout(
+      () => controller.current?.abort(),
+      operatorCommand ? 105000 : 15000,
+    );
     try {
       const data = await request<T>(command.path, {
         method: command.method,
@@ -168,8 +174,14 @@ export function useCommand(csrf: string, onDenied: () => void) {
       if (failure instanceof ApiError && [401, 403].includes(failure.status))
         onDenied();
       // 5xx and invalid responses can follow a committed transaction.
+      const operationRecorded =
+        failure instanceof ApiError &&
+        failure.fields !== null &&
+        typeof failure.fields === "object" &&
+        "operation_id" in failure.fields;
       const unknownOutcome =
-        !(failure instanceof ApiError) || failure.status >= 500;
+        !operationRecorded &&
+        (!(failure instanceof ApiError) || failure.status >= 500);
       if (!unknownOutcome) pending.current = null;
       setUncertain(unknownOutcome);
       setError(failure);

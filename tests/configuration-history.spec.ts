@@ -273,7 +273,7 @@ test("saved results use the saved preview while quick views and counts use candi
       previews.some(
         (body) =>
           body.limit === 50 &&
-          body.cel === `(${preset.cel}) && (alert.severity == "critical")`,
+          body.cel === `(${preset.cel}) && (severity == "critical")`,
       ),
     )
     .toBe(true);

@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { alertStatus } from "@/lib/alert-status";
 import type { Scope } from "./workspace";
 import { Icon } from "./icons";
 
@@ -93,10 +94,19 @@ export function Page({
             className="live-pill"
             role="status"
             data-live={live}
-            title={scope.liveStatus}
+            data-updating={scope.searchUpdating}
+            title={
+              scope.searchUpdating
+                ? "Search is catching up with the latest changes. Counts may be slightly behind."
+                : scope.liveStatus
+            }
           >
             <i aria-hidden="true" />
-            {live ? "Live" : (scope.liveStatus ?? "Connecting")}
+            {live
+              ? scope.searchUpdating
+                ? "Updating"
+                : "Live"
+              : (scope.liveStatus ?? "Connecting")}
             {!live && scope.refresh && (
               <button
                 type="button"
@@ -126,13 +136,14 @@ export function NavLink({
   href,
   className,
   children,
+  onClick,
   ...rest
 }: {
   scope: Scope;
   href: string;
   className?: string;
   children: React.ReactNode;
-} & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "onClick">) {
+} & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href">) {
   return (
     <a
       {...rest}
@@ -142,6 +153,7 @@ export function NavLink({
         if (event.ctrlKey || event.metaKey || event.shiftKey) return;
         event.preventDefault();
         scope.navigate(href);
+        onClick?.(event);
       }}
     >
       {children}
@@ -259,9 +271,15 @@ export function Severity({ value }: { value: unknown }) {
   );
 }
 
-/** Reference alert status mark (Firing / Resolved). */
-export function AlertStatus({ value }: { value: unknown }) {
-  const text = typeof value === "string" ? value : "";
+/** Visible alert status: Firing, Acknowledged, or Resolved. */
+export function AlertStatus({
+  value,
+  assigneeId,
+}: {
+  value: unknown;
+  assigneeId?: unknown;
+}) {
+  const text = alertStatus(value, assigneeId);
   return (
     <span className={`st st-${text}`}>
       <i aria-hidden="true" />

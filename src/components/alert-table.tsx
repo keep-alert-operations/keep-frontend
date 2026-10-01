@@ -1,8 +1,15 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { display, RecordData, tenantPath, timestamp } from "@/lib/api";
+import { alertOperatorLabel } from "@/lib/alert-operator";
 import { useCommand } from "@/lib/hooks";
-import { DEFAULT_SORT, fieldLabel, type SortItem } from "@/lib/preset-choices";
+import {
+  currentAlertColumns,
+  DEFAULT_SORT,
+  fieldLabel,
+  SORT_FIELDS,
+  type SortItem,
+} from "@/lib/preset-choices";
 import type { Scope } from "./workspace";
 import { DirectoryPicker } from "./directory-picker";
 import { ErrorNotice } from "./ui";
@@ -14,31 +21,33 @@ export const QUICK_VIEWS = [
   {
     key: "critical",
     label: "Critical",
-    cel: 'alert.severity == "critical"',
+    cel: 'severity == "critical"',
     severity: true,
   },
   {
     key: "high",
     label: "High",
-    cel: 'alert.severity == "high"',
+    cel: 'severity == "high"',
     severity: true,
   },
   {
     key: "warning",
     label: "Warning",
-    cel: 'alert.severity == "warning"',
+    cel: 'severity == "warning"',
     severity: true,
   },
   {
-    key: "unacknowledged",
-    label: "Unacknowledged",
-    cel: '!alert.acknowledged && alert.status == "firing"',
+    key: "firing",
+    label: "Firing",
+    cel: 'display_status == "firing"',
   },
   {
-    key: "unassigned",
-    label: "Unassigned",
-    cel: 'alert.assignee_id == null && alert.status == "firing"',
+    key: "acknowledged",
+    label: "Acknowledged",
+    cel: 'display_status == "acknowledged"',
   },
+  { key: "active", label: "Active", cel: 'status == "firing"' },
+  { key: "resolved", label: "Resolved", cel: 'status == "resolved"' },
 ] as const;
 export type QuickViewKey = (typeof QUICK_VIEWS)[number]["key"];
 
@@ -181,8 +190,8 @@ export function QuickViews({
 
 type RowCommand = (
   row: RecordData,
-  kind: "set_status" | "set_acknowledged",
-  value: string | boolean,
+  kind: "set_status" | "set_assignee",
+  value: string | null,
 ) => void;
 
 function AlertField({
@@ -196,17 +205,11 @@ function AlertField({
 }) {
   const value = row[field];
   if (field === "severity") return <Severity value={value} />;
-  if (field === "status") return <AlertStatus value={value} />;
-  if (field === "assignee_id" || field === "acknowledged_by")
-    return personLabel(
-      scope,
-      value,
-      row[
-        field === "assignee_id"
-          ? "assignee_display_name"
-          : "acknowledged_by_display_name"
-      ],
-    );
+  if (field === "display_status" || field === "status")
+    return <AlertStatus value={row.status} assigneeId={row.assignee_id} />;
+  if (field === "assignee_id")
+    return personLabel(scope, value, row.assignee_display_name);
+  if (field === "operator") return alertOperatorLabel(row);
   if (
     [
       "timestamp",
@@ -215,7 +218,6 @@ function AlertField({
       "first_received_at",
       "opened_at",
       "resolved_at",
-      "acknowledged_at",
     ].includes(field)
   )
     return <TimeCell value={timestamp(value)} />;
@@ -236,13 +238,26 @@ function ColumnHeading({
   field,
   label = fieldLabel(field),
   sort,
+  onSort,
 }: {
   field: string;
   label?: string;
   sort: SortItem[];
+  onSort?: (field: string) => void;
 }) {
-  const index = sort.findIndex((item) => item.field === field);
+  const sortField = field === "last_received_at" ? "timestamp" : field;
+  const index = sort.findIndex((item) => item.field === sortField);
   const direction = index < 0 ? undefined : sort[index].direction;
+  const text = `${label}${direction ? ` ${direction === "asc" ? "↑" : "↓"}${sort.length > 1 ? index + 1 : ""}` : ""}`;
+  const sortable =
+    onSort &&
+    (SORT_FIELDS.includes(sortField) ||
+      [
+        "first_received_at",
+        "occurrence_number",
+        "opened_at",
+        "resolved_at",
+      ].includes(sortField));
   return (
     <span
       role="columnheader"
@@ -254,9 +269,18 @@ function ColumnHeading({
           : undefined
       }
     >
-      {label}
-      {direction &&
-        ` ${direction === "asc" ? "↑" : "↓"}${sort.length > 1 ? index + 1 : ""}`}
+      {sortable ? (
+        <button
+          type="button"
+          className="alert-sort-heading"
+          onClick={() => onSort(sortField)}
+          title="Sort ascending, descending, then restore regular order"
+        >
+          {text}
+        </button>
+      ) : (
+        text
+      )}
     </span>
   );
 }
@@ -276,6 +300,7 @@ export function AlertTable({
   newIds,
   columns,
   sort = DEFAULT_SORT,
+  onSort,
 }: {
   scope: Scope;
   rows: RecordData[];
@@ -287,18 +312,24 @@ export function AlertTable({
   newIds?: Set<string>;
   columns?: string[];
   sort?: SortItem[];
+  onSort?: (field: string) => void;
 }) {
-  const grid = columns ? "g-custom" : narrow ? "g-narrow" : "g-full";
+  if (columns) columns = currentAlertColumns(columns);
   const needsOpen = Boolean(columns && !columns.includes("message"));
-  const showControls = !narrow || needsOpen;
+  const showControls = needsOpen || (!narrow && scope.tenant.role !== "view");
+  const grid = columns
+    ? "g-custom"
+    : narrow
+      ? "g-narrow"
+      : `g-full ${showControls ? "" : "g-full-no-actions"}`;
   const widths = columns?.map((field) => (field === "message" ? 280 : 146));
   const gridStyle = widths
     ? {
-        gridTemplateColumns: `18px ${widths.map((width) => `minmax(${width}px, 1fr)`).join(" ")}${showControls ? " 132px" : ""}`,
+        gridTemplateColumns: `18px ${widths.map((width) => `minmax(${width}px, 1fr)`).join(" ")}${showControls ? " 196px" : ""}`,
         minWidth:
           54 +
           widths.reduce((total, width) => total + width + 14, 0) +
-          (showControls ? 146 : 0),
+          (showControls ? 210 : 0),
       }
     : undefined;
   const selectable = Boolean(selection && onSelectionChange);
@@ -313,7 +344,7 @@ export function AlertTable({
     onSelectionChange(next);
   }
   return (
-    <div role="table" aria-label="Alerts" className="table-body">
+    <div role="table" aria-label="Alerts" className="table-body alert-results">
       <div role="row" className={`row head ${grid}`} style={gridStyle}>
         <span role="columnheader">
           {selectable ? (
@@ -338,24 +369,34 @@ export function AlertTable({
         </span>
         {columns ? (
           columns.map((field) => (
-            <ColumnHeading key={field} field={field} sort={sort} />
+            <ColumnHeading
+              key={field}
+              field={field}
+              sort={sort}
+              onSort={onSort}
+            />
           ))
         ) : (
           <>
-            <ColumnHeading field="severity" sort={sort} />
+            <ColumnHeading field="severity" sort={sort} onSort={onSort} />
             <span role="columnheader">Alert</span>
-            <ColumnHeading field="status" sort={sort} />
-            <ColumnHeading field="timestamp" sort={sort} />
+            <ColumnHeading field="display_status" sort={sort} onSort={onSort} />
+            <ColumnHeading field="timestamp" sort={sort} onSort={onSort} />
             {!narrow && (
               <>
-                <span role="columnheader">Ownership</span>
+                <ColumnHeading
+                  field="assignee_id"
+                  label="Ownership"
+                  sort={sort}
+                  onSort={onSort}
+                />
                 <span role="columnheader">Incident</span>
               </>
             )}
           </>
         )}
         {showControls && (
-          <span role="columnheader">
+          <span role="columnheader" className="alert-actions-cell">
             <span className="sr-only">Actions</span>
           </span>
         )}
@@ -373,7 +414,7 @@ export function AlertTable({
           <div
             role="row"
             key={row.id}
-            className={`row arow ${grid} ${resolved ? "r-res" : ""} ${selected ? "r-sel" : ""}`}
+            className={`row arow alert-link-row ${grid} ${resolved ? "r-res" : ""} ${selected ? "r-sel" : ""}`}
             style={gridStyle}
           >
             <span role="cell">
@@ -398,7 +439,7 @@ export function AlertTable({
                     <span className="alert-title">
                       <NavLink
                         scope={scope}
-                        className="msg"
+                        className="msg alert-row-link"
                         href={`/tenants/${scope.tenant.id}/alerts/${row.id}`}
                         aria-label={`Open ${message}`}
                       >
@@ -425,7 +466,7 @@ export function AlertTable({
                   <span className="alert-title">
                     <NavLink
                       scope={scope}
-                      className="msg"
+                      className="msg alert-row-link"
                       href={`/tenants/${scope.tenant.id}/alerts/${row.id}`}
                       aria-label={`Open ${message}`}
                     >
@@ -445,7 +486,10 @@ export function AlertTable({
                   </span>
                 </span>
                 <span role="cell" className="cell">
-                  <AlertStatus value={row.status} />
+                  <AlertStatus
+                    value={row.status}
+                    assigneeId={row.assignee_id}
+                  />
                 </span>
                 <span role="cell">
                   <TimeCell value={timestamp(row.timestamp)} />
@@ -455,16 +499,6 @@ export function AlertTable({
                     <span role="cell" className="owner-cell">
                       <span className="cell" style={{ fontSize: 13 }}>
                         {assignee}
-                      </span>
-                      <span
-                        className={`cell ${row.acknowledged ? "ack-y" : "ack-n"}`}
-                        style={{ fontSize: 11.5 }}
-                      >
-                        {row.acknowledged
-                          ? "Acknowledged"
-                          : resolved
-                            ? "—"
-                            : "Not acknowledged"}
                       </span>
                     </span>
                     <span role="cell" style={{ minWidth: 0 }}>
@@ -488,12 +522,15 @@ export function AlertTable({
               </>
             )}
             {showControls && (
-              <span role="cell" className={needsOpen ? "alert-cell" : "acts"}>
+              <span
+                role="cell"
+                className={`alert-actions-cell ${needsOpen ? "alert-cell" : "acts"}`}
+              >
                 {needsOpen && (
                   <>
                     <NavLink
                       scope={scope}
-                      className="lnk"
+                      className="lnk alert-row-link"
                       href={`/tenants/${scope.tenant.id}/alerts/${row.id}`}
                       aria-label={`Open ${message}`}
                     >
@@ -513,12 +550,16 @@ export function AlertTable({
                       onClick={() =>
                         onRowCommand!(
                           row,
-                          "set_acknowledged",
-                          !row.acknowledged,
+                          "set_assignee",
+                          row.assignee_id === scope.session.principal.id
+                            ? null
+                            : scope.session.principal.id,
                         )
                       }
                     >
-                      {row.acknowledged ? "Unack" : "Ack"}
+                      {row.assignee_id === scope.session.principal.id
+                        ? "Unassign"
+                        : "Assign to me"}
                     </button>
                     <button
                       type="button"
@@ -554,7 +595,7 @@ export function AlertTable({
 }
 
 /**
- * Floating bulk bar (reference S05): acknowledge, resolve, assign to me or
+ * Floating bulk bar (reference S05): resolve, assign to me or
  * assign to a chosen user, applied atomically to at most 100 selected alerts.
  */
 export function BulkBar({
@@ -572,8 +613,8 @@ export function BulkBar({
   const [picking, setPicking] = useState(false);
   if (!selection.size || scope.tenant.role === "view") return null;
   async function apply(
-    kind: "set_status" | "set_acknowledged" | "set_assignee",
-    value: string | boolean | null,
+    kind: "set_status" | "set_assignee",
+    value: string | null,
   ) {
     const result = await command.execute(
       `${tenantPath(scope.tenant.id)}/alerts/bulk-commands`,
@@ -605,10 +646,30 @@ export function BulkBar({
       )}
       {picking && (
         <div className="bulkbar-picker panel">
+          <div className="ad-actions">
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={command.busy || command.uncertain}
+              onClick={() =>
+                void apply("set_assignee", scope.session.principal.id)
+              }
+            >
+              Assign to me
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={command.busy || command.uncertain}
+              onClick={() => void apply("set_assignee", null)}
+            >
+              Unassign
+            </button>
+          </div>
           <DirectoryPicker
             endpoint={`${tenantPath(scope.tenant.id)}/assignees`}
             label="Assign selected alerts to"
-            disabled={command.busy}
+            disabled={command.busy || command.uncertain}
             onDenied={scope.onDenied}
             onChoose={(principal) => void apply("set_assignee", principal.id)}
           />
@@ -618,27 +679,11 @@ export function BulkBar({
         <strong>{selection.size} selected</strong>
         <button
           type="button"
-          className="btn btn-sm btn-light"
-          disabled={command.busy}
-          onClick={() => void apply("set_acknowledged", true)}
-        >
-          Acknowledge
-        </button>
-        <button
-          type="button"
           className="btn btn-sm"
           disabled={command.busy}
           onClick={() => void apply("set_status", "resolved")}
         >
           Resolve
-        </button>
-        <button
-          type="button"
-          className="btn btn-sm"
-          disabled={command.busy}
-          onClick={() => void apply("set_assignee", scope.session.principal.id)}
-        >
-          Assign to me
         </button>
         <button
           type="button"

@@ -64,15 +64,13 @@ test("quick views compose with applied CEL and search without saving a preset", 
   await page.goto(`/tenants/${tenant}/alerts`);
   await page
     .getByLabel("CEL expression", { exact: true })
-    .fill('alert.application == "payments"');
+    .fill('application == "payments"');
   await page.getByLabel("Search text", { exact: true }).fill("latency");
   await page.getByRole("button", { name: "Run query", exact: true }).click();
   await page.getByRole("button", { name: "Critical", exact: true }).click();
   await expect
     .poll(() => queries.at(-1)?.get("cel"))
-    .toBe(
-      '(alert.application == "payments") && (alert.severity == "critical")',
-    );
+    .toBe('(application == "payments") && (severity == "critical")');
   expect(queries.at(-1)?.get("q")).toBe("latency");
   await page.getByLabel("Include suppressed").check();
   await expect
@@ -89,11 +87,48 @@ test("quick views compose with applied CEL and search without saving a preset", 
   // The preset editor may label its filter "Filter (CEL)" (reference S06).
   await expect(
     page.getByLabel(/^(CEL expression|Filter \(CEL\))$/),
-  ).toHaveValue('alert.application == "payments"');
+  ).toHaveValue('application == "payments"');
   await expect(page.getByLabel("Name", { exact: true })).toHaveValue("");
 });
 
-test("row acknowledgement sends the observed revision and select-all captures the displayed rows", async ({
+test("alert column clicks cycle server sort and restart pagination", async ({
+  page,
+}) => {
+  await setup(page);
+  const queries: URLSearchParams[] = [];
+  await page.route("**/api/tenants/*/alerts?*", (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    if (params.get("limit") === "50") queries.push(params);
+    return route.fulfill({
+      json: {
+        data: [row],
+        meta: { total: "2" },
+        next_cursor: params.has("cursor") ? null : "next-page",
+      },
+    });
+  });
+  await page.goto(`/tenants/${tenant}/alerts`);
+  const table = page.getByRole("table", { name: "Alerts", exact: true });
+  await expect(table.getByRole("button", { name: "Severity" })).toBeVisible();
+  await page.getByRole("button", { name: "Next page" }).click();
+  await expect.poll(() => queries.at(-1)?.get("cursor")).toBe("next-page");
+
+  await table.getByRole("button", { name: "Severity" }).click();
+  await expect.poll(() => queries.at(-1)?.get("sort")).toBe("severity");
+  expect(queries.at(-1)?.get("direction")).toBe("asc");
+  expect(queries.at(-1)?.has("cursor")).toBe(false);
+  await expect(page.getByText(/page 1$/)).toBeVisible();
+
+  await table.getByRole("button", { name: "Severity ↑" }).click();
+  await expect.poll(() => queries.at(-1)?.get("direction")).toBe("desc");
+  await table.getByRole("button", { name: "Severity ↓" }).click();
+  await expect.poll(() => queries.at(-1)?.has("sort")).toBe(false);
+  await expect(
+    table.getByRole("columnheader", { name: "Last received ↓" }),
+  ).toHaveAttribute("aria-sort", "descending");
+});
+
+test("row assignment sends the observed revision and select-all captures the displayed rows", async ({
   page,
 }) => {
   await setup(page);
@@ -103,15 +138,15 @@ test("row acknowledgement sends the observed revision and select-all captures th
     expect(route.request().headers()["x-csrf-token"]).toBe("test-csrf");
     return route.fulfill({
       json: {
-        data: { ...row, acknowledged: true, revision: "9007199254741000" },
+        data: { ...row, assignee_id: alertId, revision: "9007199254741000" },
       },
     });
   });
   await page.goto(`/tenants/${tenant}/alerts`);
   await page.getByRole("link", { name: "Open Database latency" }).hover();
-  await page.getByRole("button", { name: "Ack", exact: true }).click();
-  await expect.poll(() => command?.kind).toBe("set_acknowledged");
-  expect(command?.value).toBe(true);
+  await page.getByRole("button", { name: "Assign to me", exact: true }).click();
+  await expect.poll(() => command?.kind).toBe("set_assignee");
+  expect(command?.value).toBe(alertId);
   expect(command?.expected_revision).toBe(row.revision);
   await page.getByLabel("Select all on this page").check();
   await expect(page.getByText("1 selected", { exact: true })).toBeVisible();
@@ -138,7 +173,7 @@ test("reference palette and rail remain stable under dark OS preference and narr
     page.getByRole("button", { name: "Save as preset…" }),
   ).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "Ack", exact: true }),
+    page.getByRole("button", { name: "Assign to me", exact: true }),
   ).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
@@ -230,7 +265,7 @@ test("alert detail uses list context, readable history and confirmed note deleti
       command = route.request().postDataJSON();
       return route.fulfill({
         json: {
-          data: { ...row, acknowledged: true, revision: "9007199254741000" },
+          data: { ...row, assignee_id: alertId, revision: "9007199254741000" },
         },
       });
     }
@@ -264,10 +299,11 @@ test("alert detail uses list context, readable history and confirmed note deleti
   await expect(
     page.getByRole("link", { name: "Open runbook ↗" }),
   ).toHaveAttribute("href", "https://runbooks.example/latency");
-  await page.getByRole("button", { name: "Acknowledge", exact: true }).click();
-  await expect.poll(() => command?.kind).toBe("set_acknowledged");
+  await page.getByRole("button", { name: "Assign…", exact: true }).click();
+  await page.getByRole("button", { name: "Assign to me", exact: true }).click();
+  await expect.poll(() => command?.kind).toBe("set_assignee");
   expect(command?.expected_revision).toBe(row.revision);
-  expect(command?.value).toBe(true);
+  expect(command?.value).toBe(alertId);
   await page.getByRole("button", { name: "Delete note", exact: true }).click();
   const dialog = page.getByRole("alertdialog", { name: "Delete this note?" });
   await expect(dialog).toBeVisible();

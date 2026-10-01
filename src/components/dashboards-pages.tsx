@@ -464,7 +464,7 @@ function DashboardView({
                   role="menuitem"
                   className="menu-item"
                   href={`${href}/history`}
-                  onClickCapture={close}
+                  onClick={close}
                 >
                   History
                 </NavLink>

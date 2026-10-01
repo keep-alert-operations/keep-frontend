@@ -65,6 +65,14 @@ async function setup(page: Page) {
           new Response(
             new ReadableStream({
               start(controller) {
+                Object.assign(window, {
+                  emitDashboardChange: (generation: number) =>
+                    controller.enqueue(
+                      new TextEncoder().encode(
+                        `event: invalidate\ndata: {"view_generation":"${generation}"}\n\n`,
+                      ),
+                    ),
+                });
                 controller.enqueue(
                   new TextEncoder().encode(
                     'event: state\ndata: {"view_generation":"1"}\n\n',
@@ -90,6 +98,12 @@ async function setup(page: Page) {
     failure: false,
     conflicts: 0,
     partial: false,
+    generation: 1,
+    health: { committed_seq: "1", searchable_seq: "1", source_blocked: false },
+    countUpdating: false,
+    suppressionUpdating: false,
+    secondCount: "0",
+    waitForCounts: undefined as Promise<void> | undefined,
   };
   await page.route("**/auth/session", (route) =>
     route.fulfill({
@@ -110,7 +124,7 @@ async function setup(page: Page) {
       },
     }),
   );
-  await page.route("**/api/tenants/**", (route) => {
+  await page.route("**/api/tenants/**", async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/events"))
       return route.fulfill({
@@ -118,11 +132,16 @@ async function setup(page: Page) {
         body: 'event: state\ndata: {"view_generation":"1"}\n\n',
       });
     if (path.endsWith("/view-state"))
-      return route.fulfill({ json: { data: { view_generation: "1" } } });
+      return route.fulfill({
+        json: { data: { view_generation: String(state.generation) } },
+      });
+    if (path.endsWith("/health"))
+      return route.fulfill({ json: { data: state.health } });
     if (path === api)
       return route.fulfill({ json: { data: state.definition } });
     if (path === api + "/counts") {
       state.calls++;
+      await state.waitForCounts;
       expect(route.request().headers()["x-csrf-token"]).toBe("counts-csrf");
       if (state.conflicts > 0) {
         state.conflicts--;
@@ -150,6 +169,9 @@ async function setup(page: Page) {
         route.request().postDataJSON().expected_revision,
         state.relative,
       );
+      value.updating = state.countUpdating;
+      value.updating_suppression = state.suppressionUpdating;
+      value.panels[1].count = state.secondCount;
       return route.fulfill({
         json: {
           data: state.partial
@@ -214,6 +236,85 @@ test("static dashboards issue no periodic counts and preserve exact partial and 
     page.getByRole("article", { name: "First panel count" }),
   ).toContainText("Previous observation · stale");
 });
+
+for (const mode of ["desktop", "narrow", "fullscreen"] as const) {
+  test(`live dashboard refresh keeps panels steady in ${mode} mode`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({
+      width: mode === "narrow" ? 390 : 1440,
+      height: 900,
+    });
+    const state = await setup(page);
+    await page.clock.pauseAt(new Date());
+    await open(page);
+    if (mode === "fullscreen")
+      await page
+        .getByRole("button", { name: "Fullscreen", exact: true })
+        .click();
+    const firstPanel = page.getByRole("article", { name: "First panel count" });
+    const secondPanel = page.getByRole("article", {
+      name: "Second panel count",
+    });
+    const before = await firstPanel.boundingBox();
+    async function invalidate() {
+      state.generation++;
+      await page.evaluate((generation) => {
+        (
+          window as unknown as {
+            emitDashboardChange: (generation: number) => void;
+          }
+        ).emitDashboardChange(generation);
+      }, state.generation);
+      await page.clock.runFor(300);
+    }
+    let release!: () => void;
+    state.waitForCounts = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    state.health.committed_seq = "2";
+    state.countUpdating = true;
+    const calls = state.calls;
+    await invalidate();
+    await expect.poll(() => state.calls).toBeGreaterThan(calls);
+    await expect(page.locator(".db-status-text")).toContainText("Updating");
+    expect(await firstPanel.boundingBox()).toEqual(before);
+    await expect(firstPanel).not.toHaveClass(/pn-stale/);
+    await expect(firstPanel).toContainText("9,007,199,254,740,993");
+    state.secondCount = "1";
+    release();
+    await expect(secondPanel.locator("b")).toHaveText("1");
+    expect(await firstPanel.boundingBox()).toEqual(before);
+    await expect(page.locator(".banner.bn-warn")).toHaveCount(0);
+    state.suppressionUpdating = true;
+    await invalidate();
+    await expect(page.locator(".db-status-text")).toContainText(
+      "Updating suppression",
+    );
+    const statusFits = await page
+      .locator(".db-status-word")
+      .evaluate((word) => {
+        const clip = word.closest(".db-status-text")!.getBoundingClientRect();
+        return word.getBoundingClientRect().right <= clip.right;
+      });
+    expect(statusFits).toBe(true);
+    expect(await firstPanel.boundingBox()).toEqual(before);
+    state.health.searchable_seq = "2";
+    state.countUpdating = false;
+    state.suppressionUpdating = false;
+    await invalidate();
+    await expect(page.locator(".db-status-text")).toContainText("Live");
+    expect(await firstPanel.boundingBox()).toEqual(before);
+    await expect(page.locator(".pn-stale, .banner.bn-warn")).toHaveCount(0);
+    if (mode === "desktop") {
+      state.health.source_blocked = true;
+      await invalidate();
+      await expect(
+        page.getByText("Alerts are arriving late.", { exact: true }),
+      ).toBeVisible();
+    }
+  });
+}
 
 test("relative dashboards refresh each foreground second and pause or hide without querying", async ({
   page,
@@ -298,11 +399,11 @@ test("a changed count context gets one fresh-definition retry then remains Updat
   state.conflicts = 2;
   const again = state.calls;
   await page.getByRole("button", { name: "Refresh counts" }).click();
-  await expect(
-    page.getByText(
-      "Updating: count context changed again. Refresh counts or wait for the next committed change.",
-    ),
-  ).toBeVisible();
+  await expect(page.locator(".db-status-word")).toHaveText("Updating");
+  await expect(page.locator(".db-status-word")).toHaveAttribute(
+    "title",
+    "The dashboard changed while refreshing. Refresh counts or wait for the next update.",
+  );
   await page.clock.runFor(4000);
   expect(state.calls).toBe(again + 2);
 });

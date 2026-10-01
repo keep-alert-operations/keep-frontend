@@ -125,6 +125,43 @@ test("page, administration, home and browser-history navigation preserve the sig
   expect(await rail!.evaluate((element) => element.isConnected)).toBe(true);
 });
 
+test("switching presets from the menu keeps the signed-in workspace mounted", async ({
+  page,
+}) => {
+  const state = await setup(page);
+  const first = "00000000-0000-4000-8000-000000000011";
+  const second = "00000000-0000-4000-8000-000000000012";
+  const presets = [
+    { id: first, name: "First preset", revision: "1", cel: "true" },
+    { id: second, name: "Second preset", revision: "1", cel: "true" },
+  ];
+  await page.route(`**/api/tenants/${global}/presets**`, (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const preset = presets.find((row) => path.endsWith(`/${row.id}`));
+    return route.fulfill({
+      json: {
+        data: preset ?? (path.endsWith("/presets/preview") ? [] : presets),
+        meta: { total: "0" },
+      },
+    });
+  });
+  await page.goto(`/tenants/${global}/presets/${first}`);
+  await expect(
+    page.getByRole("heading", { name: "First preset", exact: true }),
+  ).toBeVisible();
+  const sessions = state.sessions;
+  const rail = await page.locator(".rail").elementHandle();
+
+  await page.getByRole("button", { name: "Switch preset" }).click();
+  await page.getByRole("menuitem", { name: "Second preset" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Second preset", exact: true }),
+  ).toBeVisible();
+  expect(state.sessions).toBe(sessions);
+  expect(await rail!.evaluate((element) => element.isConnected)).toBe(true);
+  await expect(page.locator(".login-screen")).toHaveCount(0);
+});
+
 test("tenant changes retain the session but clear the previous tenant content while loading", async ({
   page,
 }) => {

@@ -489,12 +489,12 @@ export function IncidentList({ scope }: { scope: Scope }) {
               <div
                 role="row"
                 key={row.id}
-                className={`row g-inc inc-row ${row.status === "resolved" ? "r-res" : ""}`}
+                className={`row g-inc inc-row alert-link-row ${row.status === "resolved" ? "r-res" : ""}`}
               >
                 <span role="cell" className="inc-title-cell">
                   <NavLink
                     scope={scope}
-                    className="lnk"
+                    className="lnk alert-row-link"
                     href={`/tenants/${scope.tenant.id}/incidents/${row.id}`}
                   >
                     {title}

@@ -18,7 +18,7 @@ const profile = (context: string) => ({
   functions: [
     {
       name: "contains",
-      signature: 'alert.string_field.contains("literal")',
+      signature: 'string_field.contains("literal")',
       description: "Case-sensitive literal string predicate; false on null.",
       insert_text: 'contains("")',
     },
@@ -109,21 +109,19 @@ test("feed discovers only supported fields and completes receiver methods at the
   await expect(
     page.getByText("appchi-cel-v1", { exact: false }).first(),
   ).toBeVisible();
-  await editor.fill("alert.sev");
+  await editor.fill("sev");
   await editor.press("Control+Space");
-  await expect(
-    page.getByRole("option", { name: /alert.severity/ }),
-  ).toBeVisible();
+  await expect(page.getByRole("option", { name: /^severity/ })).toBeVisible();
   await editor.press("Enter");
-  await expect(editor).toHaveValue("alert.severity");
-  await editor.fill("alert.message.con");
+  await expect(editor).toHaveValue("severity");
+  await editor.fill("message.con");
   await editor.press("Control+Space");
   await editor.press("Enter");
-  await expect(editor).toHaveValue('alert.message.contains("")');
+  await expect(editor).toHaveValue('message.contains("")');
 
   await page.getByLabel("Filter supported CEL").fill("severity");
   await expect(
-    page.getByRole("button", { name: "Insert alert.severity", exact: true }),
+    page.getByRole("button", { name: "Insert severity", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByText("enum · critical, major", { exact: false }),
@@ -287,7 +285,12 @@ for (const section of ["presets", "maintenance", "correlation-rules"]) {
     page,
   }) => {
     await setup(page);
-    const context = section === "presets" ? "feed" : "rule";
+    const context =
+      section === "presets"
+        ? "feed"
+        : section === "correlation-rules"
+          ? "correlation"
+          : "rule";
     await page.route("**/cel/validate", (route) => {
       expect(route.request().postDataJSON()).toEqual({
         cel: 'alert.severity == "critical"',

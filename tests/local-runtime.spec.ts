@@ -96,10 +96,9 @@ test("native alert reaches the real feed and supports browser acknowledgement an
   await expect(
     page.getByRole("heading", { name: message, exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Acknowledge", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "Clear acknowledgement", exact: true }),
-  ).toBeVisible();
+  await page.getByRole("button", { name: "Assign…", exact: true }).click();
+  await page.getByRole("button", { name: "Assign to me", exact: true }).click();
+  await expect(page.locator(".ad-marks .st-acknowledged")).toBeVisible();
   const note =
     "Local runtime verified: received, indexed and reviewed through the browser.";
   await page.getByRole("textbox", { name: "Add note", exact: true }).fill(note);
@@ -112,7 +111,7 @@ test("native alert reaches the real feed and supports browser acknowledgement an
       async () => {
         const response = await page.request.get(
           `/api/tenants/${tenant}/alerts`,
-          { params: { cel: "alert.acknowledged == true" } },
+          { params: { cel: 'display_status == "acknowledged"' } },
         );
         if (response.status() !== 200) return false;
         return (await response.json()).data.some(

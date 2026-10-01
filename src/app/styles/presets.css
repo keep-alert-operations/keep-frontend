@@ -496,51 +496,51 @@ a.ps-filter:focus-visible {
 .pe-def .cel-fields .fchip {
   display: none;
 }
-.pe-def .cel-fields .fchip[aria-label="Insert field alert.application"] {
+.pe-def .cel-fields .fchip[aria-label="Insert field application"] {
   display: inline-block;
   order: 1;
 }
-.pe-def .cel-fields .fchip[aria-label="Insert field alert.component"] {
+.pe-def .cel-fields .fchip[aria-label="Insert field component"] {
   display: inline-block;
   order: 2;
 }
-.pe-def .cel-fields .fchip[aria-label="Insert field alert.node_name"] {
+.pe-def .cel-fields .fchip[aria-label="Insert field node_name"] {
   display: inline-block;
   order: 3;
 }
-.pe-def .cel-fields .fchip[aria-label="Insert field alert.site"] {
+.pe-def .cel-fields .fchip[aria-label="Insert field site"] {
   display: inline-block;
   order: 4;
 }
-.pe-def .cel-fields .fchip[aria-label="Insert field alert.severity"] {
+.pe-def .cel-fields .fchip[aria-label="Insert field severity"] {
   display: inline-block;
   order: 5;
 }
-.pe-def .cel-fields .fchip[aria-label="Insert field alert.status"] {
+.pe-def .cel-fields .fchip[aria-label="Insert field status"] {
   display: inline-block;
   order: 6;
 }
-.pe-def .cel-fields .fchip[aria-label="Insert field alert.suppressed"] {
+.pe-def .cel-fields .fchip[aria-label="Insert field suppressed"] {
   display: inline-block;
   order: 7;
 }
-.pe-def .cel-fields .fchip[aria-label="Insert field alert.acknowledged"] {
+.pe-def .cel-fields .fchip[aria-label="Insert field display_status"] {
   display: inline-block;
   order: 8;
 }
-.pe-def .cel-fields .fchip[aria-label="Insert field alert.assignee_id"] {
+.pe-def .cel-fields .fchip[aria-label="Insert field assignee_id"] {
   display: inline-block;
   order: 9;
 }
-.pe-def .cel-fields .fchip[aria-label="Insert field alert.operator"] {
+.pe-def .cel-fields .fchip[aria-label="Insert field operator"] {
   display: inline-block;
   order: 10;
 }
-.pe-def .cel-fields .fchip[aria-label="Insert field alert.impact"] {
+.pe-def .cel-fields .fchip[aria-label="Insert field impact"] {
   display: inline-block;
   order: 11;
 }
-.pe-def .cel-fields .fchip[aria-label="Insert field alert.message"] {
+.pe-def .cel-fields .fchip[aria-label="Insert field message"] {
   display: inline-block;
   order: 12;
 }

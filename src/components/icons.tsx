@@ -12,6 +12,8 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
     refresh: "M20 7v5h-5M4 17v-5h5M6 6a8 8 0 0 1 14 6M18 18a8 8 0 0 1-14-6",
     arrow: "M5 12h14M13 6l6 6-6 6",
     plus: "M12 5v14M5 12h14",
+    sun: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0-5v2m0 14v2m9-9h-2M5 12H3m15.36-6.36-1.42 1.42M7.06 16.94l-1.42 1.42m12.72 0-1.42-1.42M7.06 7.06 5.64 5.64",
+    moon: "M20.8 13.5A9 9 0 0 1 10.5 3.2 9 9 0 1 0 20.8 13.5Z",
   };
   return (
     <svg

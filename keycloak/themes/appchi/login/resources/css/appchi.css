@@ -1,0 +1,291 @@
+@font-face {
+  font-family: Geist;
+  src: url("../fonts/geist-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+}
+button,
+summary {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: wait;
+}
+
+#appchi-login {
+  --ap-canvas: light-dark(#f6f5f2, #111820);
+  --ap-surface: light-dark(#fffefc, #1c2631);
+  --ap-text: light-dark(#1b1a17, #e9edf4);
+  --ap-muted: light-dark(#5f5b53, #adb9c7);
+  --ap-line: light-dark(#e4e1da, #343e4b);
+  --ap-field: light-dark(#fffefc, #18222c);
+  --ap-field-line: light-dark(#d9d5cc, #48515d);
+  --ap-button: light-dark(#1b1a17, #e9edf4);
+  --ap-button-text: light-dark(#fbfaf7, #111820);
+  --ap-hover: light-dark(#efede8, #293440);
+  --ap-link: light-dark(#3346c9, #9ba9ff);
+  --ap-error: light-dark(#8f1a10, #ff968a);
+  --ap-error-bg: light-dark(#fdf1ef, #432a2a);
+  --ap-error-border: light-dark(#f1cfca, #754843);
+  width: 100%;
+  color: var(--ap-text);
+  font:
+    14px/1.5 "Geist",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  text-align: left;
+}
+#appchi-login * {
+  box-sizing: border-box;
+}
+#appchi-login .ap-stage {
+  min-height: 100svh;
+  padding: 48px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  background: var(--ap-canvas);
+}
+#appchi-login .ap-panel {
+  width: 100%;
+  max-width: 428px;
+  padding: 34px 34px 28px;
+  background: var(--ap-surface);
+  border: 1px solid var(--ap-line);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px light-dark(#1b1a170f, #00000026);
+}
+#appchi-login .ap-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+#appchi-login .ap-mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 10px;
+  background: var(--ap-button);
+  color: var(--ap-button-text);
+  font-size: 19px;
+  font-weight: 600;
+}
+#appchi-login .ap-name {
+  font-size: 21px;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+#appchi-login .ap-tagline {
+  margin-top: 2px;
+  color: var(--ap-muted);
+  font-size: 12px;
+}
+#appchi-login .ap-heading {
+  margin: 30px 0 6px;
+  font-size: 24px;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+#appchi-login .ap-intro {
+  margin: 0 0 24px;
+  color: var(--ap-muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+#appchi-login .ap-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
+}
+#appchi-login .ap-label {
+  display: block;
+  margin: 0 0 7px;
+  font-size: 13px;
+  font-weight: 500;
+}
+#appchi-login .ap-input-wrap {
+  position: relative;
+}
+#appchi-login .ap-input {
+  width: 100%;
+  height: 46px;
+  padding: 10px 13px;
+  border: 1px solid var(--ap-field-line);
+  border-radius: 8px;
+  background: var(--ap-field);
+  color: var(--ap-text);
+  font: inherit;
+  font-size: 14px;
+}
+#appchi-login .ap-input::placeholder {
+  color: var(--ap-muted);
+  opacity: 0.85;
+}
+#appchi-login .ap-input[type="password"],
+#appchi-login .ap-input.ap-password {
+  padding-right: 48px;
+}
+#appchi-login .ap-input[aria-invalid="true"] {
+  border-color: var(--ap-error);
+}
+#appchi-login .ap-eye {
+  position: absolute;
+  right: 2px;
+  top: 1px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ap-muted);
+}
+#appchi-login .ap-eye:hover {
+  color: var(--ap-text);
+  background: var(--ap-hover);
+}
+#appchi-login .ap-submit {
+  margin-top: 4px;
+  min-height: 46px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid var(--ap-button);
+  border-radius: 8px;
+  background: var(--ap-button);
+  color: var(--ap-button-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+}
+#appchi-login .ap-submit:hover {
+  opacity: 0.88;
+}
+#appchi-login .ap-submit:disabled {
+  opacity: 0.7;
+}
+#appchi-login .ap-submit svg {
+  flex: none;
+}
+#appchi-login .ap-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 12px;
+  border: 1px solid var(--ap-error-border);
+  border-radius: 8px;
+  background: var(--ap-error-bg);
+  color: var(--ap-error);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+#appchi-login .ap-message svg {
+  flex: 0 0 16px;
+  margin-top: 2px;
+}
+#appchi-login [hidden] {
+  display: none !important;
+}
+#appchi-login .ap-help {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--ap-line);
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--ap-muted);
+}
+#appchi-login .ap-help-link {
+  padding: 3px 4px;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  font: inherit;
+  font-weight: 500;
+  color: var(--ap-link);
+}
+#appchi-login .ap-help-link:hover {
+  text-decoration: underline;
+}
+#appchi-login .ap-help-note {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+}
+#appchi-login .ap-appearance {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ap-muted);
+  font: inherit;
+  font-size: 12px;
+}
+#appchi-login .ap-appearance:hover {
+  background: var(--ap-hover);
+  color: var(--ap-text);
+}
+@media (max-width: 460px) {
+  #appchi-login .ap-stage {
+    min-height: 100svh;
+    padding: 28px 14px 20px;
+    gap: 16px;
+  }
+  #appchi-login .ap-panel {
+    padding: 28px 22px 24px;
+  }
+  #appchi-login .ap-heading {
+    margin-top: 26px;
+  }
+}
+@media (pointer: coarse) {
+  #appchi-login .ap-input {
+    font-size: 16px;
+  }
+  #appchi-login .ap-appearance,
+  #appchi-login .ap-help-link {
+    min-height: 44px;
+  }
+}
+
+#appchi-login :is(button, summary, a, input):focus-visible {
+  outline: 2px solid var(--ap-link);
+  outline-offset: 3px;
+}
+#appchi-login .ap-help-link {
+  list-style: none;
+  display: inline-block;
+}
+#appchi-login .ap-help-link::-webkit-details-marker {
+  display: none;
+}
+#appchi-login .ap-message-info,
+#appchi-login .ap-message-success {
+  background: var(--ap-hover);
+  border-color: var(--ap-line);
+  color: var(--ap-text);
+}

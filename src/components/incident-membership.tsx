@@ -281,7 +281,14 @@ export function IncidentMembership({
                   </span>
                 </span>
                 <span role="cell">
-                  {row.status ? <AlertStatus value={row.status} /> : "—"}
+                  {row.status ? (
+                    <AlertStatus
+                      value={row.status}
+                      assigneeId={row.assignee_id}
+                    />
+                  ) : (
+                    "—"
+                  )}
                 </span>
               </div>
             );

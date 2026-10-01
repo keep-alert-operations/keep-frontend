@@ -11,6 +11,7 @@ if (backend && !/^https?:\/\/[^\s?#]+$/.test(backend)) {
 const config: NextConfig = {
   distDir: process.env.APPCHI_NEXT_DIST_DIR ?? ".next",
   devIndicators: false,
+  experimental: { proxyTimeout: 100000 },
   output: "standalone",
   poweredByHeader: false,
   async rewrites() {

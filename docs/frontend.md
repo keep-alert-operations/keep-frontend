@@ -80,14 +80,14 @@ allocated loopback ports. A short-lived self-signed test certificate permits a r
 Secure, HttpOnly `__Host-appchi_session` cookie; certificate verification is relaxed
 only in the test browser/request context.
 
-The browser loads authoritative alert detail, acknowledges it, and writes a note
+The browser loads authoritative alert detail, assigns it to the signed-in user, and writes a note
 through the UI and same-origin API. Direct PostgreSQL assertions confirm the
-acknowledgement, one persisted note, and revision `3`. Finally the fixture stops
+assignment, one persisted note, and revision `3`. Finally the fixture stops
 only its own process trees, drops only its validated generated database name, and
 removes only its verified temporary certificate directory. No test behavior or
 credential acceptance path is added to application code.
 
-Latest executed result: **1 passed in 28.8 seconds** (test body 26.7 seconds) against real
+Pre-REV-27 executed result (the earlier acknowledgement workflow): **1 passed in 28.8 seconds** (test body 26.7 seconds) against real
 local PostgreSQL and HTTPS Next.js/FastAPI with installed Chrome 153.0.8010.48.
 A follow-up catalog query confirmed zero remaining `appchi_browser_test_*`
 databases and no remaining fixture Next.js/Uvicorn processes. TypeScript
@@ -100,7 +100,7 @@ Elasticsearch, Kafka, Redis, company integrations, capacity, or production readi
 - Session sign-in link, sign-out, current identity/tenant/role, scoped navigation,
   foreground activity heartbeat, session reauthorization and access-loss clearing.
 - Alert CEL/text/suppression query, exact decimal count presentation, snapshot page
-  controls, detail, lifecycle, acknowledgement, assign-to-me/unassign, notes
+  controls, detail, lifecycle, derived ownership status, one self/other/unassign menu, notes
   create/edit/delete, history/occurrences/source reads and explicit bulk status.
 - Incident lists default to Active, last activity descending, and 50 rows.
   Active/Resolved/All views combine with status, severity, assignee (me, unassigned,
@@ -151,7 +151,7 @@ Elasticsearch, Kafka, Redis, company integrations, capacity, or production readi
   explicit-grant batches and the roster response revision; conflicts retain the
   draft. Alert/incident assignment uses verified eligible-user directory search,
   showing pending matches without making them selectable. Bulk alert controls
-  include acknowledgement and assignment while retaining selected revisions.
+  include lifecycle and assignment actions while retaining selected revisions.
   Tenant/platform audit is a paged read view with applied filters and malformed
   response handling. Global-super-admin controls include tenant creation, platform
   health/audit and source-head repair with a reason and observed generation.

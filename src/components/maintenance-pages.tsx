@@ -11,7 +11,7 @@ import {
 } from "@/lib/api";
 import { useCommand, useResource } from "@/lib/hooks";
 import type { Scope } from "./workspace";
-import { NavLink, Page, Severity, useConfirm } from "./page";
+import { AlertStatus, NavLink, Page, Severity, useConfirm } from "./page";
 import {
   type Endpoint,
   EndpointLine,
@@ -100,7 +100,7 @@ function effect(row: RecordData, now: number, suppressed?: string) {
   const start = Date.parse(String(row.start_at)),
     end = Date.parse(String(row.end_at));
   const phase = String(row.phase ?? "");
-  if (row.deleted_at || phase === "deleted") return "Suppression released";
+  if (row.deleted_at || phase === "deleted") return "No new suppression";
   if (phase === "ended" || (!phase && end <= now))
     return Number.isFinite(end) && end <= now
       ? `Ended ${relative(now - end)} ago`
@@ -293,12 +293,16 @@ function MaintenanceList({ scope }: { scope: Scope }) {
           {rows?.map((row) => {
             const deleted = phase === "deleted" || Boolean(row.deleted_at);
             return (
-              <div role="row" className="row g-mw rl-row" key={row.id}>
+              <div
+                role="row"
+                className="row g-mw rl-row alert-link-row"
+                key={row.id}
+              >
                 <span role="cell" className="rl-name">
                   <NavLink
                     scope={scope}
                     href={`${base}/${row.id}${deleted ? "/history" : ""}`}
-                    className="lnk"
+                    className="lnk alert-row-link"
                   >
                     {display(row.name)}
                   </NavLink>
@@ -566,8 +570,9 @@ function MaintenanceDetail({ scope, id }: { scope: Scope; id: string }) {
       title: `Delete maintenance window “${display(w.name)}”?`,
       body: (
         <p>
-          Its active suppression will be released. Retained history stays
-          available for review. This cannot be undone.
+          Existing suppression remains until each alert receives another source
+          update. Retained history stays available for review. This cannot be
+          undone.
         </p>
       ),
       confirmLabel: "Delete window",
@@ -812,7 +817,7 @@ function SuppressedAlerts({
         {rows.map((row) => {
           const alertId = String(row.alert_id ?? row.id);
           return (
-            <div className="mw-alert" key={alertId}>
+            <div className="mw-alert alert-link-row" key={alertId}>
               {row.severity ? <Severity value={row.severity} /> : null}
               {row.unavailable ? (
                 <span className="small muted">Alert no longer retained</span>
@@ -820,10 +825,13 @@ function SuppressedAlerts({
                 <NavLink
                   scope={scope}
                   href={`/tenants/${scope.tenant.id}/alerts/${alertId}`}
-                  className={`lnk mw-alert-link ${row.status === "resolved" ? "mw-res" : ""}`}
+                  className={`lnk mw-alert-link alert-row-link ${row.status === "resolved" ? "mw-res" : ""}`}
                 >
                   {display(row.message)}
-                  {row.status === "resolved" ? " · resolved" : ""}
+                  <AlertStatus
+                    value={row.status}
+                    assigneeId={row.assignee_id}
+                  />
                 </NavLink>
               )}
             </div>

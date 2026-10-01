@@ -14,7 +14,7 @@ import { useResource } from "@/lib/hooks";
 import { ErrorNotice } from "./ui";
 import type { Scope } from "./workspace";
 
-type Context = "feed" | "rule";
+type Context = "feed" | "rule" | "correlation";
 interface Profile {
   profile: string;
   context: Context;
@@ -238,8 +238,8 @@ export function CelEditor({
   const choices: Choice[] = catalog
     ? [
         ...catalog.fields.map((field) => ({
-          label: `alert.${field.name}`,
-          text: `alert.${field.name}`,
+          label: field.name,
+          text: field.name,
           detail: `${field.type}${field.nullable ? " · nullable" : ""}${field.values.length ? ` · ${field.values.join(", ")}` : ""}`,
           kind: "Field",
         })),
@@ -263,24 +263,46 @@ export function CelEditor({
     catalog?.fields.find(
       (field) =>
         field.type === "string" &&
-        token.text.startsWith(`alert.${field.name}.`),
+        (token.text.startsWith(`${field.name}.`) ||
+          token.text.startsWith(`alert.${field.name}.`)),
     );
-  const completionPrefix = receiver ? `alert.${receiver.name}.` : "";
-  const matches = token
+  const completionPrefix = receiver
+    ? token?.text.startsWith(`alert.${receiver.name}.`)
+      ? `alert.${receiver.name}.`
+      : `${receiver.name}.`
+    : token?.text.startsWith("alert.")
+      ? "alert."
+      : "";
+  const hasArgument = /\bhas\(\s*(?:alert\.)?[A-Za-z_]*$/.test(
+    value.slice(0, caret),
+  );
+  const matches = hasArgument
     ? choices
         .filter(
           (choice) =>
-            (!receiver ||
-              (choice.kind === "Function" &&
-                choice.detail.startsWith("alert.string_field."))) &&
+            choice.kind === "Field" &&
             choice.label
               .toLowerCase()
               .startsWith(
-                token.text.slice(completionPrefix.length).toLowerCase(),
+                token?.text.replace(/^alert\./, "").toLowerCase() ?? "",
               ),
         )
         .slice(0, 12)
-    : [];
+    : token
+      ? choices
+          .filter(
+            (choice) =>
+              (!receiver ||
+                (choice.kind === "Function" &&
+                  choice.detail.startsWith("string_field."))) &&
+              choice.label
+                .toLowerCase()
+                .startsWith(
+                  token.text.slice(completionPrefix.length).toLowerCase(),
+                ),
+          )
+          .slice(0, 12)
+      : [];
   const visible = open && !disabled && matches.length > 0;
   const active =
     validation?.key === key && validation.source === value
@@ -299,12 +321,16 @@ export function CelEditor({
         ? token.start + completionPrefix.length
         : element.selectionStart;
     const end = element.selectionEnd;
-    const source = value.slice(0, start) + choice.text + value.slice(end);
-    const next = start + choice.text.length;
+    const closeHas =
+      choice.kind === "Field" &&
+      /\bhas\(\s*(?:alert\.)?[A-Za-z_]*$/.test(value.slice(0, start));
+    const text = closeHas ? `${choice.text})` : choice.text;
+    const source = value.slice(0, start) + text + value.slice(end);
+    const next = start + text.length;
     insertion.current = { source, position: next };
     onChange(source);
     setCaret(next);
-    setOpen(false);
+    setOpen(choice.kind === "Function" && choice.label === "has");
   }
   async function validate() {
     if (disabled || tooLarge) return;
@@ -635,7 +661,7 @@ export function CelEditor({
     <span id={`${id}-help`} className="sr-only">
       Ctrl+Space shows supported completions. Arrow keys and Enter choose;
       Escape dismisses.{" "}
-      {context === "rule"
+      {context !== "feed"
         ? "Rule expressions use the fixed rule catalog; moving time is unavailable."
         : "Queries return current retained alerts under the tenant and suppression filters."}
     </span>
@@ -753,12 +779,12 @@ export function CelEditor({
               onClick={() =>
                 insert({
                   label: field.name,
-                  text: `alert.${field.name}`,
+                  text: field.name,
                   detail: field.type,
                   kind: "Field",
                 })
               }
-              aria-label={`Insert field alert.${field.name}`}
+              aria-label={`Insert field ${field.name}`}
             >
               {field.name}
             </button>

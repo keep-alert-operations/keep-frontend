@@ -471,8 +471,15 @@ export type DashboardModel = ReturnType<typeof useDashboard>;
 function statusWord(scope: Scope, model: DashboardModel) {
   const { state, paused } = model;
   if (paused) return "Paused";
-  if (state.loading || state.updating) return "Updating";
   if (state.error) return "Unavailable";
+  if (state.batch?.updating_suppression) return "Updating suppression";
+  if (
+    state.loading ||
+    state.updating ||
+    state.batch?.updating ||
+    scope.searchUpdating
+  )
+    return "Updating";
   return scope.liveStatus === "Live hints connected"
     ? "Live"
     : (scope.liveStatus ?? "Connecting");
@@ -594,18 +601,32 @@ export function DashboardBoard({
     state.batch?.dashboard_revision === definition.revision
       ? state.batch
       : undefined;
-  const stale = state.loading || !!state.error || state.updating;
+  const stale = !!state.error || state.updating;
   const names = new Map<string, string>();
   for (const item of batch?.panels ?? [])
     if (item.preset_name) names.set(item.preset_id, item.preset_name);
   const panels = panelsOf(definition);
   const word = statusWord(scope, model);
+  const updateDetail = paused
+    ? "Updates are paused. Showing the captured observation."
+    : state.updating
+      ? "The dashboard changed while refreshing. Refresh counts or wait for the next update."
+      : batch?.updating_suppression
+        ? "Suppression updates are still being applied."
+        : batch?.updating || scope.searchUpdating
+          ? "Search is catching up with the latest changes. Showing the captured counts."
+          : state.loading
+            ? "Refreshing counts. Showing the last captured observation until ready."
+            : undefined;
   const content = (
     <>
       <div className="db-status">
         <span className="db-status-text">
           <b>
-            {scope.tenant.name} · {word}
+            {scope.tenant.name} ·{" "}
+            <span className="db-status-word" title={updateDetail}>
+              {word}
+            </span>
           </b>
           {batch ? (
             <>
@@ -620,12 +641,11 @@ export function DashboardBoard({
           ) : null}
         </span>
         {panels.length > 0 && (
-          <>
+          <span className="db-status-hint">
             <span aria-hidden="true">·</span>
             <span>Click a panel to open its preset</span>
-          </>
+          </span>
         )}
-        <span style={{ flexGrow: 1 }} />
         {batch && (
           <button
             type="button"
@@ -642,30 +662,14 @@ export function DashboardBoard({
       </p>
       {provenance && batch && <Provenance batch={batch} names={names} />}
       <ErrorNotice error={state.error} />
-      {state.updating && (
-        <p className="banner bn-warn">
-          Updating: count context changed again. Refresh counts or wait for the
-          next committed change.
-        </p>
-      )}
       {batch?.relative === undefined && batch && (
         <p className="banner bn-warn">
           Relative-time refresh metadata is unavailable. Refresh counts
           explicitly.
         </p>
       )}
-      {batch?.updating && (
-        <p className="banner bn-warn">
-          Updating: the index has not reached the latest authoritative position.
-        </p>
-      )}
-      {batch?.updating_suppression && (
-        <p className="banner bn-warn">
-          Suppression updates are still being applied.
-        </p>
-      )}
       {panels.length ? (
-        <div className="pg">
+        <div className="pg" aria-busy={state.loading}>
           {panels.map((panel) => {
             const observation = batch?.panels.find(
               (item) => item.panel_id === panel.id,

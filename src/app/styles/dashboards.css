@@ -106,13 +106,28 @@
   font-size: 12.5px;
   color: var(--ref-46423b);
   min-height: 30px;
-  flex-wrap: wrap;
 }
 .db-status b {
   font-weight: 600;
 }
 .db-status-text {
+  flex: 1;
   min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.db-status-word {
+  display: inline-block;
+  min-width: 20ch;
+}
+.db-status-hint {
+  display: flex;
+  gap: 10px;
+  white-space: nowrap;
+}
+.db-status > button {
+  flex-shrink: 0;
 }
 .db-provenance {
   padding: 12px 16px;
@@ -393,6 +408,9 @@
 }
 
 @media (max-width: 1023px) {
+  .db-status-hint {
+    display: none;
+  }
   .db-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -405,6 +423,15 @@
   }
 }
 @media (max-width: 639px) {
+  .db-status {
+    flex-wrap: wrap;
+  }
+  .db-status-text {
+    flex-basis: 100%;
+  }
+  .db-status > button {
+    margin-left: auto;
+  }
   .db-cards {
     grid-template-columns: minmax(0, 1fr);
   }

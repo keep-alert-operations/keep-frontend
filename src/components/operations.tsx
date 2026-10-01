@@ -1,6 +1,13 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
-import { display, RecordData, tenantPath, timestamp } from "@/lib/api";
+import {
+  ApiError,
+  request,
+  display,
+  RecordData,
+  tenantPath,
+  timestamp,
+} from "@/lib/api";
 import { useCommand, useDirtyWarning, useResource } from "@/lib/hooks";
 import type { Scope } from "./workspace";
 import { CommandFeedback, ErrorNotice } from "./ui";
@@ -179,6 +186,15 @@ export function OperatorCreate(scope: Scope) {
     [created, setCreated] = useState<RecordData>();
   const command = useCommand(scope.session.csrf_token, scope.onDenied);
   const nameId = useId();
+  const failureFields =
+    command.error instanceof ApiError ? command.error.fields : null;
+  const failedOperator =
+    failureFields &&
+    typeof failureFields === "object" &&
+    "operator_id" in failureFields &&
+    typeof failureFields.operator_id === "string"
+      ? failureFields.operator_id
+      : null;
   useDirtyWarning(!!name && !created);
   useEffect(() => {
     scope.setDirty(!!name && !created);
@@ -210,9 +226,11 @@ export function OperatorCreate(scope: Scope) {
             type="submit"
             form="operator-create"
             className="btn btn-p"
-            disabled={command.busy || !!created || !name.trim()}
+            disabled={
+              command.busy || !!created || !!failedOperator || !name.trim()
+            }
           >
-            {command.uncertain ? "Retry original command" : "Request setup"}
+            {command.uncertain ? "Retry original command" : "Create operator"}
           </button>
         </>
       }
@@ -275,11 +293,20 @@ export function OperatorCreate(scope: Scope) {
               </span>
             </div>
             <CommandFeedback command={command} />
+            {command.busy && <p role="status">Verifying operator setup…</p>}
+            {failedOperator && (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => scope.navigate(`${list}/${failedOperator}`)}
+              >
+                Open operator to inspect and retry
+              </button>
+            )}
             {created && (
               <div className="banner bn-ok" role="status">
                 <span>
-                  <b>Setup accepted.</b> Provisioning continues in the
-                  background.
+                  <b>Operator ready.</b> Provisioning was verified.
                 </span>
                 <span className="adm-spacer" />
                 <button
@@ -287,7 +314,7 @@ export function OperatorCreate(scope: Scope) {
                   className="btn btn-sm"
                   onClick={() => scope.navigate(`${list}/${created.id}`)}
                 >
-                  Open setup progress
+                  Open operator
                 </button>
               </div>
             )}
@@ -319,8 +346,8 @@ export function OperatorCreate(scope: Scope) {
           <section className="panel adm-help-panel">
             <span className="lbl">If setup stalls</span>
             <p className="help">
-              Operations still pending after 15 minutes need attention. You can
-              retry or request cancellation from the operator page.
+              Failed setup requires an explicit retry from the operator page.
+              Appchi does not retry provisioning in the background.
             </p>
           </section>
         </aside>
@@ -479,6 +506,12 @@ export function OperatorTools({
       install(response.data.operator);
       setCopied(false);
       return true;
+    }
+    try {
+      const refreshed = await request<RecordData>(path);
+      install(refreshed.data);
+    } catch {
+      /* Keep the command failure visible if refresh also fails. */
     }
     return false;
   }
@@ -914,9 +947,7 @@ export function OperatorTools({
                       job.attempts !== undefined && job.attempts !== null
                         ? `Attempts: ${job.attempts}`
                         : "",
-                      job.next_attempt_at
-                        ? `Next attempt ${timestamp(job.next_attempt_at)}`
-                        : "",
+
                     ]
                       .filter(Boolean)
                       .join(" · ")}
@@ -935,8 +966,8 @@ export function OperatorTools({
                 </span>
               )}
               <p className="help">
-                Operations still pending after 15 minutes need attention. You
-                can retry or request cancellation from here.
+                Failed operations require an explicit retry. You can retry or
+                request cancellation from here.
               </p>
               {admin && (
                 <>

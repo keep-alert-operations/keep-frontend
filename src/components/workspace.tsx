@@ -32,6 +32,8 @@ export interface Scope {
   session: Session;
   version: number;
   liveStatus?: string;
+  /** Last reported search projection lag for this tenant. */
+  searchUpdating?: boolean;
   /** Re-reads the current view (live status control). */
   refresh?: () => void;
   /** Administration tabs rendered under the page header. */
@@ -56,6 +58,8 @@ export function Workspace() {
     [dirty, setDirty] = useState(false);
   const sessionRequest = useRef<AbortController | null>(null);
   const signedOut = useRef(false);
+  const hasAuthenticated = useRef(false);
+  const loginStarted = useRef(false);
   useEffect(() => {
     setTheme(
       document.documentElement.dataset.theme === "dark" ? "dark" : "light",
@@ -84,6 +88,7 @@ export function Workspace() {
     try {
       const result = await requestSession(controller.signal);
       if (controller.signal.aborted) return;
+      hasAuthenticated.current = true;
       setSession(result.data);
       setError(undefined);
     } catch (failure) {
@@ -111,6 +116,22 @@ export function Workspace() {
       sessionRequest.current?.abort();
     };
   }, [reauthorize]);
+  const openingSignIn =
+    !session &&
+    !hasAuthenticated.current &&
+    !signedOut.current &&
+    pathname !== "/signed-out" &&
+    error instanceof ApiError &&
+    error.status === 401 &&
+    error.code === "unauthenticated";
+  useEffect(() => {
+    if (!openingSignIn || loginStarted.current) return;
+    loginStarted.current = true;
+    const returnTo = window.location.pathname + window.location.search;
+    window.location.replace(
+      `/auth/login?return_to=${encodeURIComponent(returnTo)}`,
+    );
+  }, [openingSignIn]);
   const onDenied = useCallback(() => {
     void reauthorize(true);
   }, [reauthorize]);
@@ -217,16 +238,25 @@ export function Workspace() {
               <p>Alert operations, in one place.</p>
             </div>
           </div>
-          <p className="login-lead">
-            Sign in with your company account using your username and password.
-          </p>
-          {loading ? (
+          {loading || openingSignIn ? (
             <p role="status" className="login-lead">
-              Checking your session…
+              {openingSignIn ? "Opening sign in…" : "Checking your session…"}
             </p>
           ) : (
             <>
-              <a className="btn btn-p login-button" href="/auth/login">
+              <p className="login-lead">
+                {pathname === "/signed-out"
+                  ? "You have signed out of Appchi."
+                  : "Sign in with your company username and password."}
+              </p>
+              <a
+                className="btn btn-p login-button"
+                href={
+                  pathname === "/signed-out"
+                    ? "/auth/login"
+                    : `/auth/login?return_to=${encodeURIComponent(pathname)}`
+                }
+              >
                 Sign in with company account
               </a>
               {notice ? (
@@ -271,9 +301,7 @@ export function Workspace() {
             Your company identity determines tenant access. Sessions end after
             30 minutes idle or 24 hours.
           </p>
-          <button type="button" className="login-theme" onClick={toggleTheme}>
-            {theme === "dark" ? "Light mode" : "Dark mode"}
-          </button>
+          <ThemeSwitch theme={theme} onToggle={toggleTheme} />
         </main>
       </div>
     );
@@ -328,20 +356,22 @@ export function Workspace() {
             ))}
         </nav>
         <div className="rail-bottom">
-          <a
-            href={tenant ? `/tenants/${tenant.id}/operators` : "#"}
-            aria-label="Operators"
-            title="Administration"
-            aria-current={adminSection ? "page" : undefined}
-            onClick={(event) => {
-              if (event.ctrlKey || event.metaKey || event.shiftKey) return;
-              event.preventDefault();
-              if (tenant) navigate(`/tenants/${tenant.id}/operators`);
-            }}
-          >
-            <Icon name="operators" />
-            <span>Admin</span>
-          </a>
+          {tenant?.kind !== "global" && (
+            <a
+              href={tenant ? `/tenants/${tenant.id}/operators` : "#"}
+              aria-label="Operators"
+              title="Administration"
+              aria-current={adminSection ? "page" : undefined}
+              onClick={(event) => {
+                if (event.ctrlKey || event.metaKey || event.shiftKey) return;
+                event.preventDefault();
+                if (tenant) navigate(`/tenants/${tenant.id}/operators`);
+              }}
+            >
+              <Icon name="operators" />
+              <span>Admin</span>
+            </a>
+          )}
           <button
             className="avatar"
             aria-label={`Account: ${session.principal.display_name}`}
@@ -360,9 +390,7 @@ export function Workspace() {
             <div className="account-menu">
               <strong>{session.principal.display_name}</strong>
               <span className="muted">Company account</span>
-              <button type="button" onClick={toggleTheme}>
-                {theme === "dark" ? "Light mode" : "Dark mode"}
-              </button>
+              <ThemeSwitch theme={theme} onToggle={toggleTheme} />
               <button onClick={() => void logout()}>Sign out</button>
             </div>
           )}
@@ -391,6 +419,41 @@ export function Workspace() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function ThemeSwitch({
+  theme,
+  onToggle,
+}: {
+  theme: "light" | "dark";
+  onToggle: () => void;
+}) {
+  const dark = theme === "dark";
+  return (
+    <div className="theme-switcher">
+      <span className="theme-switcher-label">Appearance</span>
+      <button
+        type="button"
+        className="theme-switch"
+        role="switch"
+        aria-label="Dark mode"
+        aria-checked={dark}
+        onClick={onToggle}
+      >
+        <span className="theme-switch-track" aria-hidden="true">
+          <span className="theme-switch-light">
+            <Icon name="sun" size={14} />
+          </span>
+          <span className="theme-switch-dark">
+            <Icon name="moon" size={14} />
+          </span>
+          <span className={`theme-switch-thumb${dark ? " is-dark" : ""}`}>
+            <Icon name={dark ? "moon" : "sun"} size={13} />
+          </span>
+        </span>
+      </button>
     </div>
   );
 }
@@ -566,6 +629,7 @@ function TenantWorkspace(
     ...props,
     version,
     liveStatus,
+    searchUpdating: !health.error && isSearchUpdating(health.data?.data),
     refresh,
     subnav,
     banners: <HealthBanners health={health} />,
@@ -584,10 +648,15 @@ function TenantWorkspace(
     </div>
   );
 }
-/**
- * Tenant processing conditions as nonmodal banners (reference "System
- * states"). Nothing is shown while processing and search are current.
- */
+function isSearchUpdating(data?: Record<string, unknown>) {
+  const sequence = (value: unknown) =>
+    typeof value === "string" && /^\d+$/.test(value) ? BigInt(value) : null;
+  const committed = sequence(data?.committed_seq);
+  const searchable = sequence(data?.searchable_seq);
+  return committed !== null && searchable !== null && searchable < committed;
+}
+
+/** Tenant failures remain prominent; routine search lag uses the status line. */
 function HealthBanners({
   health,
 }: {
@@ -600,25 +669,11 @@ function HealthBanners({
       </div>
     );
   const data = health.data?.data;
-  if (!data) return null;
-  const sequence = (value: unknown) =>
-    typeof value === "string" && /^\d+$/.test(value) ? BigInt(value) : null;
-  const committed = sequence(data.committed_seq),
-    searchable = sequence(data.searchable_seq);
+  if (data?.source_blocked !== true) return null;
   return (
-    <>
-      {data.source_blocked === true && (
-        <div className="banner bn-err" role="status">
-          <b>Alerts are arriving late.</b> Source processing is blocked for this
-          tenant. Administrators can see the repair steps.
-        </div>
-      )}
-      {committed !== null && searchable !== null && searchable < committed && (
-        <div className="banner bn-warn" role="status">
-          <b>Updating.</b> Search has not caught up with the latest changes.
-          Counts may be slightly behind.
-        </div>
-      )}
-    </>
+    <div className="banner bn-err" role="status">
+      <b>Alerts are arriving late.</b> Source processing is blocked for this
+      tenant. Administrators can see the repair steps.
+    </div>
   );
 }

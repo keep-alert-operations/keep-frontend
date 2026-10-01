@@ -581,7 +581,7 @@ for (const section of ["alerts", "incidents"]) {
       },
     );
     await page.goto(`/tenants/${global}/${section}/${alert}`);
-    await page.getByText("Assign to…", { exact: true }).click();
+    await page.getByRole("button", { name: "Assign…", exact: true }).click();
     const picker = page.getByRole("region", {
       name:
         section === "alerts"
@@ -605,7 +605,7 @@ for (const section of ["alerts", "incidents"]) {
   });
 }
 
-test("bulk acknowledgement uses a boolean and captured selected revision", async ({
+test("bulk assignment uses the acting principal and captured selected revision", async ({
   page,
 }) => {
   await setup(page);
@@ -619,10 +619,14 @@ test("bulk acknowledgement uses a boolean and captured selected revision", async
   await page.getByRole("checkbox", { name: `Select ${row.message}` }).check();
   await page
     .getByRole("toolbar", { name: "Bulk actions" })
-    .getByRole("button", { name: "Acknowledge", exact: true })
+    .getByRole("button", { name: "Assign…", exact: true })
     .click();
-  await expect.poll(() => submitted?.kind).toBe("set_acknowledged");
-  expect(submitted?.value).toBe(true);
+  await page
+    .locator(".bulkbar-picker")
+    .getByRole("button", { name: "Assign to me", exact: true })
+    .click();
+  await expect.poll(() => submitted?.kind).toBe("set_assignee");
+  expect(submitted?.value).toBe(session.principal.id);
   expect(submitted?.items).toEqual([
     { alert_id: alert, expected_revision: row.revision },
   ]);
@@ -694,8 +698,9 @@ for (const status of [401, 403]) {
     await page
       .getByRole("textbox", { name: "Add a note", exact: true })
       .fill("Protected unsaved note");
+    await page.getByRole("button", { name: "Assign…", exact: true }).click();
     await page
-      .getByRole("button", { name: "Acknowledge", exact: true })
+      .getByRole("button", { name: "Assign to me", exact: true })
       .click();
     await expect(page.getByRole("heading", { name: row.message })).toHaveCount(
       0,

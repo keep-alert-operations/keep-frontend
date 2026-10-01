@@ -11,6 +11,7 @@ import {
 import { useCommand, useDirtyWarning } from "@/lib/hooks";
 import {
   celTokens,
+  currentAlertColumns,
   DEFAULT_COLUMNS,
   DEFAULT_SORT,
   directionLabel,
@@ -191,7 +192,7 @@ function presetDefinition(value?: Record<string, unknown>) {
     cel: typeof value?.cel === "string" ? value.cel : "true",
     columns:
       Array.isArray(value?.columns) && value.columns.length
-        ? (value.columns as unknown[]).map(String)
+        ? currentAlertColumns((value.columns as unknown[]).map(String))
         : DEFAULT_COLUMNS,
     sort: sortItems(value?.sort).length ? sortItems(value?.sort) : DEFAULT_SORT,
   };
@@ -732,6 +733,11 @@ export function PresetEditor({
                       )
                     }
                   >
+                    {!SORT_FIELDS.includes(item.field) && (
+                      <option value={item.field}>
+                        {fieldLabel(item.field)}
+                      </option>
+                    )}
                     {SORT_FIELDS.filter(
                       (field) =>
                         field === item.field ||

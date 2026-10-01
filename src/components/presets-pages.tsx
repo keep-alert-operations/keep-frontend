@@ -12,11 +12,13 @@ import { useCommand, useResource } from "@/lib/hooks";
 import {
   DEFAULT_COLUMNS,
   DEFAULT_SORT,
+  nextQuickSort,
   previewTotal,
   sortItems,
   sortSummary,
   timezoneLabel,
   usePresetPreview,
+  type SortItem,
 } from "@/lib/preset-choices";
 import type { Scope } from "./workspace";
 import { CommandFeedback, ErrorNotice } from "./ui";
@@ -29,6 +31,7 @@ import {
   useQuickViewCounts,
   type QuickViewKey,
 } from "./alert-table";
+import { rememberAlertList } from "./alerts";
 import { CelCode, Dialog, Menu, PresetEditor } from "./definition-editor";
 import { ConfigurationHistory } from "./configuration-history";
 
@@ -368,9 +371,17 @@ function PresetList({ scope }: { scope: Scope }) {
             const isDeleted = state === "deleted" || Boolean(row.deleted_at);
             const href = `${tenantBase}/${row.id}${isDeleted ? "/history" : ""}`;
             return (
-              <div role="row" className="row pl-row pl-item" key={row.id}>
+              <div
+                role="row"
+                className="row pl-row pl-item alert-link-row"
+                key={row.id}
+              >
                 <span role="cell" className="pl-name">
-                  <NavLink scope={scope} className="lnk" href={href}>
+                  <NavLink
+                    scope={scope}
+                    className="lnk alert-row-link"
+                    href={href}
+                  >
                     {display(row.name)}
                   </NavLink>
                   <span className="sub">
@@ -678,7 +689,7 @@ function PresetSwitchList({
             className={`menu-item ${row.id === current ? "menu-on" : ""}`}
             aria-current={row.id === current ? "page" : undefined}
             href={`/tenants/${scope.tenant.id}/presets/${row.id}`}
-            onClickCapture={close}
+            onClick={close}
           >
             {display(row.name)}
           </NavLink>
@@ -713,6 +724,7 @@ function PresetResults({
     [refresh, setRefresh] = useState(0),
     [selection, setSelection] = useState<Map<string, string>>(new Map()),
     [references, setReferences] = useState(false);
+  const [quickSort, setQuickSort] = useState<SortItem | null>(null);
   const [fromDashboard] = useState(() => searchParam("from") === "dashboard");
   useReturnFocus(true);
   const q = useDebounced(search.trim());
@@ -723,6 +735,7 @@ function PresetResults({
   const sort = sortItems(preset.sort).length
     ? sortItems(preset.sort)
     : DEFAULT_SORT;
+  const effectiveSort = quickSort ? [quickSort] : sort;
   const columns =
     Array.isArray(preset.columns) && preset.columns.length
       ? (preset.columns as unknown[]).map(String)
@@ -736,10 +749,11 @@ function PresetResults({
     setPageNumber(1);
     setSelection(new Map());
   }, [quick, suppressed, q, preset.id, preset.revision]);
+  useEffect(() => setQuickSort(null), [preset.id, preset.revision]);
   // Saved "All" uses the saved preview (observed revision); quick views are
   // transient candidates built from the saved definition.
   const body =
-    quick === "all"
+    quick === "all" && !quickSort
       ? {
           preset_id: preset.id,
           expected_revision: preset.revision,
@@ -750,7 +764,7 @@ function PresetResults({
         }
       : {
           cel: composeCel(cel, quick),
-          sort,
+          sort: effectiveSort,
           columns,
           q,
           include_suppressed: suppressed,
@@ -807,8 +821,8 @@ function PresetResults({
   }, [page.result, page.loading, page.key, cursor]);
   async function rowCommand(
     row: RecordData,
-    kind: "set_status" | "set_acknowledged",
-    value: string | boolean,
+    kind: "set_status" | "set_assignee",
+    value: string | null,
   ) {
     if (
       await command.execute(
@@ -1008,12 +1022,31 @@ function PresetResults({
           <div
             className={`ps-table ${page.loading ? "is-stale" : ""}`}
             aria-busy={page.loading}
+            onClickCapture={(event) => {
+              const link = (event.target as Element).closest?.("a[href]");
+              const match = link
+                ?.getAttribute("href")
+                ?.match(/\/alerts\/([^/?#]+)$/);
+              if (match)
+                rememberAlertList(tenantId, {
+                  label: display(preset.name),
+                  href: detailHref,
+                  ids: rows.map((row) => row.id),
+                  current: decodeURIComponent(match[1]),
+                });
+            }}
           >
             <AlertTable
               scope={scope}
               rows={rows}
               columns={columns}
-              sort={sort}
+              sort={effectiveSort}
+              onSort={(field) => {
+                setQuickSort((current) => nextQuickSort(current, field));
+                setCursor(null);
+                setPageNumber(1);
+                setSelection(new Map());
+              }}
               selection={selection}
               onSelectionChange={setSelection}
               onRowCommand={(row, kind, value) =>
