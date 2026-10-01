@@ -197,14 +197,14 @@ test("viewer discovers deleted notes and traverses retained revisions", async ({
     page.getByRole("button", { name: "Hide deleted", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await expect(
-    page.getByText("Deleted note · current text hidden"),
+    page.getByText("Deleted note Â· current text hidden"),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Edit note", exact: true }),
   ).toHaveCount(0);
   await page.getByRole("button", { name: "View note history" }).last().click();
   const history = page.getByRole("region", { name: "Alert note history" });
-  await expect(history).toContainText("Revision 2 · Deleted");
+  await expect(history).toContainText("Revision 2 Â· Deleted");
   await history.getByRole("button", { name: "Older revisions" }).click();
   await expect(history).toContainText("Original retained <b>text</b>");
   await expect(history.locator("b")).toHaveCount(0);
@@ -215,7 +215,7 @@ test("viewer discovers deleted notes and traverses retained revisions", async ({
     ),
   ).toEqual(["first", "opaque-history"]);
   await history.getByRole("button", { name: "Newest revisions" }).click();
-  await expect(history).toContainText("Revision 2 · Deleted");
+  await expect(history).toContainText("Revision 2 Â· Deleted");
 });
 
 test("access loss clears retained note evidence", async ({ page }) => {

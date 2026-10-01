@@ -13,6 +13,6 @@ light and is the only value saved in localStorage.
 The Geist Latin font is copied from the frontend's pinned Next.js package and
 distributed under `login/resources/fonts/OFL.txt`.
 
-See [local setup](../../../../../docs/local-keycloak.md#appchi-login-theme) for
+See [local setup](https://github.com/appchi-alert-operations/appchi-delivery/blob/main/docs/local-keycloak.md#appchi-login-theme) for
 installation and upgrade notes. Review the form and inherited resources whenever
 the pinned Keycloak version changes.

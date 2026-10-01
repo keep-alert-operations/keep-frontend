@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 
-const repository = resolve(__dirname, "../..");
+const repository = resolve(__dirname, "../../appchi-delivery");
 function credentials() {
   return JSON.parse(
     readFileSync(
@@ -16,7 +16,7 @@ function credentials() {
 }
 function otp(username: string) {
   return execFileSync(
-    resolve(repository, "backend/.venv/Scripts/python.exe"),
+    resolve(repository, ".venv/Scripts/python.exe"),
     [resolve(repository, "scripts/local_identity.py"), "otp", username],
     { encoding: "utf8" },
   ).trim();
@@ -164,7 +164,7 @@ test("live group removal changes access and signed provider logout revokes the s
   );
   function syncDirectory() {
     execFileSync(
-      resolve(repository, "backend/.venv/Scripts/python.exe"),
+      resolve(repository, ".venv/Scripts/python.exe"),
       [
         "-m",
         "appchi.identity.local_keycloak_worker",

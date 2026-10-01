@@ -1045,7 +1045,11 @@ function Popover({
     };
   }, []);
   return (
-    <div id="incident-assignment-options" className="panel inc-popover" ref={ref}>
+    <div
+      id="incident-assignment-options"
+      className="panel inc-popover"
+      ref={ref}
+    >
       {children}
     </div>
   );

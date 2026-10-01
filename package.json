@@ -11,12 +11,12 @@
     "start": "next start --hostname 0.0.0.0",
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
-    "generate": "openapi-typescript ../contracts/openapi.json -o src/lib/generated.ts && prettier --write src/lib/generated.ts",
+    "generate": "openapi-typescript node_modules/@appchi/contracts/schemas/openapi.json -o src/lib/generated.ts && prettier --write src/lib/generated.ts",
     "format": "prettier --write src tests *.ts *.json",
     "format:check": "prettier --check src tests *.ts *.json"
   },
   "dependencies": {
-    "next": "16.3.5",
+    "next": "16.3.6",
     "openapi-fetch": "0.17.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
@@ -28,6 +28,7 @@
     "@types/react-dom": "19.2.3",
     "openapi-typescript": "7.13.0",
     "prettier": "3.9.8",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "@appchi/contracts": "git+https://github.com/appchi-alert-operations/appchi-contracts.git#42107e3814a07518878291929740f5fa120fbff1"
   }
 }

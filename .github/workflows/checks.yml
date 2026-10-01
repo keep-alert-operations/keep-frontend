@@ -1,0 +1,26 @@
+name: Checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.17.1"
+          cache: npm
+      - name: Install and verify
+        env:
+          APPCHI_TOKEN: ${{ secrets.APPCHI_REPOSITORIES_TOKEN }}
+        run: |
+          test -n "$APPCHI_TOKEN" || { echo 'Configure APPCHI_REPOSITORIES_TOKEN for private contracts.'; exit 1; }
+          git config --global credential.helper '!f() { echo username=x-access-token; echo "password=$APPCHI_TOKEN"; }; f'
+          git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+          npm ci
+          npm run generate
+          git diff --exit-code -- src/lib/generated.ts
+          npm run format:check
+          npm run typecheck
+          npm run build

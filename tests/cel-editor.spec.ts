@@ -124,7 +124,7 @@ test("feed discovers only supported fields and completes receiver methods at the
     page.getByRole("button", { name: "Insert severity", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("enum · critical, major", { exact: false }),
+    page.getByText("enum Â· critical, major", { exact: false }),
   ).toBeVisible();
   await page.getByLabel("Filter supported CEL").fill("matches");
   await expect(page.getByRole("button", { name: /^Insert / })).toHaveCount(0);
@@ -145,7 +145,7 @@ test("validation uses the exact draft and CSRF, shows type errors and selects Un
   page,
 }) => {
   await setup(page);
-  const source = 'alert.message == "😀" && alert.severity == 42';
+  const source = 'alert.message == "ðŸ˜€" && alert.severity == 42';
   const offset = Array.from(source.slice(0, source.indexOf("42"))).length;
   await page.route("**/cel/validate", (route) => {
     expect(route.request().postDataJSON()).toEqual({

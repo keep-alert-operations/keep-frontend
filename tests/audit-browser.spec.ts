@@ -317,7 +317,7 @@ test("permission changes are saved together with the observed roster revision", 
   await page.getByRole("button", { name: "Add", exact: true }).click();
   await expect(page.getByText("New grant", { exact: true })).toBeVisible();
   await page.getByLabel("Role for Current actor").selectOption("view");
-  await expect(page.getByText("Admin → View")).toBeVisible();
+  await expect(page.getByText("Admin â†’ View")).toBeVisible();
   await page.getByRole("button", { name: "Save 2 changes" }).click();
   await expect(
     page.getByText("Grant roster changed", { exact: false }),

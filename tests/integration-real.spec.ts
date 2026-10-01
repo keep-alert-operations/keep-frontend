@@ -9,12 +9,11 @@ import { randomBytes } from "node:crypto";
 
 const adminUrl = process.env.APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL;
 const frontend = resolve(__dirname, "..");
-const repository = resolve(frontend, "..");
+const repository = resolve(frontend, "../appchi-delivery");
 const python =
   process.env.APPCHI_REAL_BROWSER_PYTHON ??
   join(
     repository,
-    "backend",
     ".venv",
     process.platform === "win32" ? "Scripts/python.exe" : "bin/python",
   );
@@ -33,7 +32,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 from appchi.db import Database
-from appchi.migrate import migrate
+from appchi.migrate import migrate, migration_directory
 from appchi.shared.crypto import EnvelopeCipher
 from appchi.ingestion.service import Admission
 from appchi.ingestion.native import canonical
@@ -52,7 +51,7 @@ elif action=='setup':
         conn.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(name)))
     repo=Path(os.environ['APPCHI_BROWSER_REPOSITORY'])
     dsn=os.environ['APPCHI_DATABASE_URL']
-    migrate(dsn, repo/'migrations')
+    migrate(dsn, migration_directory())
     cipher=EnvelopeCipher({'browser-test': b'k'*32}, 'browser-test')
     db=Database(dsn)
     principal=uuid4(); handle=secrets.token_urlsafe(32); csrf=secrets.token_urlsafe(32)
@@ -186,7 +185,7 @@ test("real HTTPS browser acknowledges an admitted alert and commits its note to 
   const origin = `https://127.0.0.1:${frontendPort}`;
   const environment: NodeJS.ProcessEnv = {
     ...process.env,
-    PYTHONPATH: join(repository, "backend"),
+    PYTHONPATH: "",
     APPCHI_BROWSER_DATABASE_NAME: databaseName,
     APPCHI_BROWSER_REPOSITORY: repository,
     APPCHI_BROWSER_TEMP: temporary,

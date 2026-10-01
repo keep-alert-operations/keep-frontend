@@ -947,7 +947,6 @@ export function OperatorTools({
                       job.attempts !== undefined && job.attempts !== null
                         ? `Attempts: ${job.attempts}`
                         : "",
-
                     ]
                       .filter(Boolean)
                       .join(" · ")}

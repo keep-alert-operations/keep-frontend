@@ -38,57 +38,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/ingest/v1/alerts": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Ingest V1 */
-    post: operations["ingest_v1_api_ingest_v1_alerts_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/ingest/v2/alerts": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Ingest V2 */
-    post: operations["ingest_v2_api_ingest_v2_alerts_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/ingest/v2/grafana": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Ingest Grafana */
-    post: operations["ingest_grafana_api_ingest_v2_grafana_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/auth/login": {
     parameters: {
       query?: never;
@@ -1772,6 +1721,57 @@ export interface paths {
     patch: operations["change_view_api_tenants__tenant_id__view_subscriptions__view_id__patch"];
     trace?: never;
   };
+  "/api/ingest/v1/alerts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Ingest V1 */
+    post: operations["ingest_v1_api_ingest_v1_alerts_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/ingest/v2/alerts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Ingest V2 */
+    post: operations["ingest_v2_api_ingest_v2_alerts_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/ingest/v2/grafana": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Ingest Grafana */
+    post: operations["ingest_grafana_api_ingest_v2_grafana_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2688,485 +2688,6 @@ export interface operations {
         };
         content: {
           "application/json": unknown;
-        };
-      };
-    };
-  };
-  ingest_v1_api_ingest_v1_alerts_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json":
-          | {
-              application: string;
-              key_field?: string;
-              message: string;
-              node_name: string;
-              object: string;
-              operator: string;
-              /** @enum {string} */
-              severity: "error" | "major" | "warning" | "clear";
-              time_created: string;
-            }
-          | {
-              alerts: {
-                event_id?: string;
-                payload: {
-                  application: string;
-                  key_field?: string;
-                  message: string;
-                  node_name: string;
-                  object: string;
-                  operator: string;
-                  /** @enum {string} */
-                  severity: "error" | "major" | "warning" | "clear";
-                  time_created: string;
-                };
-              }[];
-            };
-      };
-    };
-    responses: {
-      /** @description All items acknowledged by Kafka; eventual PostgreSQL application is not guaranteed. */
-      202: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            /** Format: uuid */
-            request_id: string;
-            results: {
-              index: number;
-              /** @enum {integer} */
-              status: 202 | 422 | 503;
-              /** @enum {string} */
-              disposition: "accepted" | "rejected" | "publish_failed";
-              /** Format: date-time */
-              received_at?: string;
-              error?: {
-                code: string;
-                message: string;
-                retryable?: boolean;
-                fields?: unknown;
-              };
-            }[];
-          };
-        };
-      };
-      /** @description Mixed acceptance, validation rejection or unconfirmed publication. Retry failed members only. */
-      207: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            /** Format: uuid */
-            request_id: string;
-            results: {
-              index: number;
-              /** @enum {integer} */
-              status: 202 | 422 | 503;
-              /** @enum {string} */
-              disposition: "accepted" | "rejected" | "publish_failed";
-              /** Format: date-time */
-              received_at?: string;
-              error?: {
-                code: string;
-                message: string;
-                retryable?: boolean;
-                fields?: unknown;
-              };
-            }[];
-          };
-        };
-      };
-      /** @description All members failed validation, or legacy metadata was invalid. */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json":
-            | {
-                /** Format: uuid */
-                request_id: string;
-                results: {
-                  index: number;
-                  /** @enum {integer} */
-                  status: 202 | 422 | 503;
-                  /** @enum {string} */
-                  disposition: "accepted" | "rejected" | "publish_failed";
-                  /** Format: date-time */
-                  received_at?: string;
-                  error?: {
-                    code: string;
-                    message: string;
-                    retryable?: boolean;
-                    fields?: unknown;
-                  };
-                }[];
-              }
-            | {
-                error: {
-                  code: string;
-                  message: string;
-                  request_id: string;
-                  fields?: unknown;
-                };
-              };
-        };
-      };
-      /** @description Admission dependency/deadline failure, or no member was acknowledged and at least one publication failed. Acknowledgement uncertainty may leave Kafka duplicates. */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json":
-            | {
-                /** Format: uuid */
-                request_id: string;
-                results: {
-                  index: number;
-                  /** @enum {integer} */
-                  status: 202 | 422 | 503;
-                  /** @enum {string} */
-                  disposition: "accepted" | "rejected" | "publish_failed";
-                  /** Format: date-time */
-                  received_at?: string;
-                  error?: {
-                    code: string;
-                    message: string;
-                    retryable?: boolean;
-                    fields?: unknown;
-                  };
-                }[];
-              }
-            | {
-                error: {
-                  code: string;
-                  message: string;
-                  request_id: string;
-                  fields?: unknown;
-                };
-              };
-        };
-      };
-    };
-  };
-  ingest_v2_api_ingest_v2_alerts_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json":
-          | {
-              application: string;
-              component: string;
-              impact: string;
-              message: string;
-              node_name?: string;
-              runbook_url: string;
-              /** @enum {string} */
-              severity: "critical" | "high" | "warning";
-              site: string;
-              /** @enum {string} */
-              status: "firing" | "suspended" | "resolved";
-              time_created?: string;
-            }
-          | {
-              alerts: {
-                event_id?: string;
-                payload: {
-                  application: string;
-                  component: string;
-                  impact: string;
-                  message: string;
-                  node_name?: string;
-                  runbook_url: string;
-                  /** @enum {string} */
-                  severity: "critical" | "high" | "warning";
-                  site: string;
-                  /** @enum {string} */
-                  status: "firing" | "suspended" | "resolved";
-                  time_created?: string;
-                };
-              }[];
-            };
-      };
-    };
-    responses: {
-      /** @description All items acknowledged by Kafka; eventual PostgreSQL application is not guaranteed. */
-      202: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            /** Format: uuid */
-            request_id: string;
-            results: {
-              index: number;
-              /** @enum {integer} */
-              status: 202 | 422 | 503;
-              /** @enum {string} */
-              disposition: "accepted" | "rejected" | "publish_failed";
-              /** Format: date-time */
-              received_at?: string;
-              error?: {
-                code: string;
-                message: string;
-                retryable?: boolean;
-                fields?: unknown;
-              };
-            }[];
-          };
-        };
-      };
-      /** @description Mixed acceptance, validation rejection or unconfirmed publication. Retry failed members only. */
-      207: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            /** Format: uuid */
-            request_id: string;
-            results: {
-              index: number;
-              /** @enum {integer} */
-              status: 202 | 422 | 503;
-              /** @enum {string} */
-              disposition: "accepted" | "rejected" | "publish_failed";
-              /** Format: date-time */
-              received_at?: string;
-              error?: {
-                code: string;
-                message: string;
-                retryable?: boolean;
-                fields?: unknown;
-              };
-            }[];
-          };
-        };
-      };
-      /** @description All members failed validation, or legacy metadata was invalid. */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json":
-            | {
-                /** Format: uuid */
-                request_id: string;
-                results: {
-                  index: number;
-                  /** @enum {integer} */
-                  status: 202 | 422 | 503;
-                  /** @enum {string} */
-                  disposition: "accepted" | "rejected" | "publish_failed";
-                  /** Format: date-time */
-                  received_at?: string;
-                  error?: {
-                    code: string;
-                    message: string;
-                    retryable?: boolean;
-                    fields?: unknown;
-                  };
-                }[];
-              }
-            | {
-                error: {
-                  code: string;
-                  message: string;
-                  request_id: string;
-                  fields?: unknown;
-                };
-              };
-        };
-      };
-      /** @description Admission dependency/deadline failure, or no member was acknowledged and at least one publication failed. Acknowledgement uncertainty may leave Kafka duplicates. */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json":
-            | {
-                /** Format: uuid */
-                request_id: string;
-                results: {
-                  index: number;
-                  /** @enum {integer} */
-                  status: 202 | 422 | 503;
-                  /** @enum {string} */
-                  disposition: "accepted" | "rejected" | "publish_failed";
-                  /** Format: date-time */
-                  received_at?: string;
-                  error?: {
-                    code: string;
-                    message: string;
-                    retryable?: boolean;
-                    fields?: unknown;
-                  };
-                }[];
-              }
-            | {
-                error: {
-                  code: string;
-                  message: string;
-                  request_id: string;
-                  fields?: unknown;
-                };
-              };
-        };
-      };
-    };
-  };
-  ingest_grafana_api_ingest_v2_grafana_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description All items acknowledged by Kafka; eventual PostgreSQL application is not guaranteed. */
-      202: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            /** Format: uuid */
-            request_id: string;
-            results: {
-              index: number;
-              /** @enum {integer} */
-              status: 202 | 422 | 503;
-              /** @enum {string} */
-              disposition: "accepted" | "rejected" | "publish_failed";
-              /** Format: date-time */
-              received_at?: string;
-              error?: {
-                code: string;
-                message: string;
-                retryable?: boolean;
-                fields?: unknown;
-              };
-            }[];
-          };
-        };
-      };
-      /** @description Mixed acceptance, validation rejection or unconfirmed publication. Retry failed members only. */
-      207: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            /** Format: uuid */
-            request_id: string;
-            results: {
-              index: number;
-              /** @enum {integer} */
-              status: 202 | 422 | 503;
-              /** @enum {string} */
-              disposition: "accepted" | "rejected" | "publish_failed";
-              /** Format: date-time */
-              received_at?: string;
-              error?: {
-                code: string;
-                message: string;
-                retryable?: boolean;
-                fields?: unknown;
-              };
-            }[];
-          };
-        };
-      };
-      /** @description All members failed validation, or legacy metadata was invalid. */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json":
-            | {
-                /** Format: uuid */
-                request_id: string;
-                results: {
-                  index: number;
-                  /** @enum {integer} */
-                  status: 202 | 422 | 503;
-                  /** @enum {string} */
-                  disposition: "accepted" | "rejected" | "publish_failed";
-                  /** Format: date-time */
-                  received_at?: string;
-                  error?: {
-                    code: string;
-                    message: string;
-                    retryable?: boolean;
-                    fields?: unknown;
-                  };
-                }[];
-              }
-            | {
-                error: {
-                  code: string;
-                  message: string;
-                  request_id: string;
-                  fields?: unknown;
-                };
-              };
-        };
-      };
-      /** @description Admission dependency/deadline failure, or no member was acknowledged and at least one publication failed. Acknowledgement uncertainty may leave Kafka duplicates. */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json":
-            | {
-                /** Format: uuid */
-                request_id: string;
-                results: {
-                  index: number;
-                  /** @enum {integer} */
-                  status: 202 | 422 | 503;
-                  /** @enum {string} */
-                  disposition: "accepted" | "rejected" | "publish_failed";
-                  /** Format: date-time */
-                  received_at?: string;
-                  error?: {
-                    code: string;
-                    message: string;
-                    retryable?: boolean;
-                    fields?: unknown;
-                  };
-                }[];
-              }
-            | {
-                error: {
-                  code: string;
-                  message: string;
-                  request_id: string;
-                  fields?: unknown;
-                };
-              };
         };
       };
     };
@@ -7344,6 +6865,485 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  ingest_v1_api_ingest_v1_alerts_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json":
+          | {
+              application: string;
+              key_field?: string;
+              message: string;
+              node_name: string;
+              object: string;
+              operator: string;
+              /** @enum {string} */
+              severity: "error" | "major" | "warning" | "clear";
+              time_created: string;
+            }
+          | {
+              alerts: {
+                event_id?: string;
+                payload: {
+                  application: string;
+                  key_field?: string;
+                  message: string;
+                  node_name: string;
+                  object: string;
+                  operator: string;
+                  /** @enum {string} */
+                  severity: "error" | "major" | "warning" | "clear";
+                  time_created: string;
+                };
+              }[];
+            };
+      };
+    };
+    responses: {
+      /** @description All items acknowledged by Kafka; eventual PostgreSQL application is not guaranteed. */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            request_id: string;
+            results: {
+              index: number;
+              /** @enum {integer} */
+              status: 202 | 422 | 503;
+              /** @enum {string} */
+              disposition: "accepted" | "rejected" | "publish_failed";
+              /** Format: date-time */
+              received_at?: string;
+              error?: {
+                code: string;
+                message: string;
+                retryable?: boolean;
+                fields?: unknown;
+              };
+            }[];
+          };
+        };
+      };
+      /** @description Mixed acceptance, validation rejection or unconfirmed publication. Retry failed members only. */
+      207: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            request_id: string;
+            results: {
+              index: number;
+              /** @enum {integer} */
+              status: 202 | 422 | 503;
+              /** @enum {string} */
+              disposition: "accepted" | "rejected" | "publish_failed";
+              /** Format: date-time */
+              received_at?: string;
+              error?: {
+                code: string;
+                message: string;
+                retryable?: boolean;
+                fields?: unknown;
+              };
+            }[];
+          };
+        };
+      };
+      /** @description All members failed validation, or legacy metadata was invalid. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json":
+            | {
+                /** Format: uuid */
+                request_id: string;
+                results: {
+                  index: number;
+                  /** @enum {integer} */
+                  status: 202 | 422 | 503;
+                  /** @enum {string} */
+                  disposition: "accepted" | "rejected" | "publish_failed";
+                  /** Format: date-time */
+                  received_at?: string;
+                  error?: {
+                    code: string;
+                    message: string;
+                    retryable?: boolean;
+                    fields?: unknown;
+                  };
+                }[];
+              }
+            | {
+                error: {
+                  code: string;
+                  message: string;
+                  request_id: string;
+                  fields?: unknown;
+                };
+              };
+        };
+      };
+      /** @description Admission dependency/deadline failure, or no member was acknowledged and at least one publication failed. Acknowledgement uncertainty may leave Kafka duplicates. */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json":
+            | {
+                /** Format: uuid */
+                request_id: string;
+                results: {
+                  index: number;
+                  /** @enum {integer} */
+                  status: 202 | 422 | 503;
+                  /** @enum {string} */
+                  disposition: "accepted" | "rejected" | "publish_failed";
+                  /** Format: date-time */
+                  received_at?: string;
+                  error?: {
+                    code: string;
+                    message: string;
+                    retryable?: boolean;
+                    fields?: unknown;
+                  };
+                }[];
+              }
+            | {
+                error: {
+                  code: string;
+                  message: string;
+                  request_id: string;
+                  fields?: unknown;
+                };
+              };
+        };
+      };
+    };
+  };
+  ingest_v2_api_ingest_v2_alerts_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json":
+          | {
+              application: string;
+              component: string;
+              impact: string;
+              message: string;
+              node_name?: string;
+              runbook_url: string;
+              /** @enum {string} */
+              severity: "critical" | "high" | "warning";
+              site: string;
+              /** @enum {string} */
+              status: "firing" | "suspended" | "resolved";
+              time_created?: string;
+            }
+          | {
+              alerts: {
+                event_id?: string;
+                payload: {
+                  application: string;
+                  component: string;
+                  impact: string;
+                  message: string;
+                  node_name?: string;
+                  runbook_url: string;
+                  /** @enum {string} */
+                  severity: "critical" | "high" | "warning";
+                  site: string;
+                  /** @enum {string} */
+                  status: "firing" | "suspended" | "resolved";
+                  time_created?: string;
+                };
+              }[];
+            };
+      };
+    };
+    responses: {
+      /** @description All items acknowledged by Kafka; eventual PostgreSQL application is not guaranteed. */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            request_id: string;
+            results: {
+              index: number;
+              /** @enum {integer} */
+              status: 202 | 422 | 503;
+              /** @enum {string} */
+              disposition: "accepted" | "rejected" | "publish_failed";
+              /** Format: date-time */
+              received_at?: string;
+              error?: {
+                code: string;
+                message: string;
+                retryable?: boolean;
+                fields?: unknown;
+              };
+            }[];
+          };
+        };
+      };
+      /** @description Mixed acceptance, validation rejection or unconfirmed publication. Retry failed members only. */
+      207: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            request_id: string;
+            results: {
+              index: number;
+              /** @enum {integer} */
+              status: 202 | 422 | 503;
+              /** @enum {string} */
+              disposition: "accepted" | "rejected" | "publish_failed";
+              /** Format: date-time */
+              received_at?: string;
+              error?: {
+                code: string;
+                message: string;
+                retryable?: boolean;
+                fields?: unknown;
+              };
+            }[];
+          };
+        };
+      };
+      /** @description All members failed validation, or legacy metadata was invalid. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json":
+            | {
+                /** Format: uuid */
+                request_id: string;
+                results: {
+                  index: number;
+                  /** @enum {integer} */
+                  status: 202 | 422 | 503;
+                  /** @enum {string} */
+                  disposition: "accepted" | "rejected" | "publish_failed";
+                  /** Format: date-time */
+                  received_at?: string;
+                  error?: {
+                    code: string;
+                    message: string;
+                    retryable?: boolean;
+                    fields?: unknown;
+                  };
+                }[];
+              }
+            | {
+                error: {
+                  code: string;
+                  message: string;
+                  request_id: string;
+                  fields?: unknown;
+                };
+              };
+        };
+      };
+      /** @description Admission dependency/deadline failure, or no member was acknowledged and at least one publication failed. Acknowledgement uncertainty may leave Kafka duplicates. */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json":
+            | {
+                /** Format: uuid */
+                request_id: string;
+                results: {
+                  index: number;
+                  /** @enum {integer} */
+                  status: 202 | 422 | 503;
+                  /** @enum {string} */
+                  disposition: "accepted" | "rejected" | "publish_failed";
+                  /** Format: date-time */
+                  received_at?: string;
+                  error?: {
+                    code: string;
+                    message: string;
+                    retryable?: boolean;
+                    fields?: unknown;
+                  };
+                }[];
+              }
+            | {
+                error: {
+                  code: string;
+                  message: string;
+                  request_id: string;
+                  fields?: unknown;
+                };
+              };
+        };
+      };
+    };
+  };
+  ingest_grafana_api_ingest_v2_grafana_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description All items acknowledged by Kafka; eventual PostgreSQL application is not guaranteed. */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            request_id: string;
+            results: {
+              index: number;
+              /** @enum {integer} */
+              status: 202 | 422 | 503;
+              /** @enum {string} */
+              disposition: "accepted" | "rejected" | "publish_failed";
+              /** Format: date-time */
+              received_at?: string;
+              error?: {
+                code: string;
+                message: string;
+                retryable?: boolean;
+                fields?: unknown;
+              };
+            }[];
+          };
+        };
+      };
+      /** @description Mixed acceptance, validation rejection or unconfirmed publication. Retry failed members only. */
+      207: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            request_id: string;
+            results: {
+              index: number;
+              /** @enum {integer} */
+              status: 202 | 422 | 503;
+              /** @enum {string} */
+              disposition: "accepted" | "rejected" | "publish_failed";
+              /** Format: date-time */
+              received_at?: string;
+              error?: {
+                code: string;
+                message: string;
+                retryable?: boolean;
+                fields?: unknown;
+              };
+            }[];
+          };
+        };
+      };
+      /** @description All members failed validation, or legacy metadata was invalid. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json":
+            | {
+                /** Format: uuid */
+                request_id: string;
+                results: {
+                  index: number;
+                  /** @enum {integer} */
+                  status: 202 | 422 | 503;
+                  /** @enum {string} */
+                  disposition: "accepted" | "rejected" | "publish_failed";
+                  /** Format: date-time */
+                  received_at?: string;
+                  error?: {
+                    code: string;
+                    message: string;
+                    retryable?: boolean;
+                    fields?: unknown;
+                  };
+                }[];
+              }
+            | {
+                error: {
+                  code: string;
+                  message: string;
+                  request_id: string;
+                  fields?: unknown;
+                };
+              };
+        };
+      };
+      /** @description Admission dependency/deadline failure, or no member was acknowledged and at least one publication failed. Acknowledgement uncertainty may leave Kafka duplicates. */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json":
+            | {
+                /** Format: uuid */
+                request_id: string;
+                results: {
+                  index: number;
+                  /** @enum {integer} */
+                  status: 202 | 422 | 503;
+                  /** @enum {string} */
+                  disposition: "accepted" | "rejected" | "publish_failed";
+                  /** Format: date-time */
+                  received_at?: string;
+                  error?: {
+                    code: string;
+                    message: string;
+                    retryable?: boolean;
+                    fields?: unknown;
+                  };
+                }[];
+              }
+            | {
+                error: {
+                  code: string;
+                  message: string;
+                  request_id: string;
+                  fields?: unknown;
+                };
+              };
         };
       };
     };

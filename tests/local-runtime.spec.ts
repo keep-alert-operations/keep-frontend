@@ -12,7 +12,7 @@ test.skip(
 test("native alert reaches the real feed and supports browser acknowledgement and notes", async ({
   page,
 }) => {
-  const repository = resolve(__dirname, "../..");
+  const repository = resolve(__dirname, "../../appchi-delivery");
   const state = resolve(repository, ".local/runtime");
   mkdirSync(state, { recursive: true });
   const credentials = JSON.parse(
