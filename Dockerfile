@@ -1,6 +1,6 @@
+# syntax=docker/dockerfile:1
 # This is a reproducible development image selection, not a qualified company
 # runtime binding. Release CI must record actual image digests and scan results.
-# syntax=docker/dockerfile:1
 FROM node:22.17.1-bookworm-slim AS dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
