@@ -76,9 +76,9 @@ test("account theme switch persists across pages and reloads", async ({
     .evaluate((panel) => getComputedStyle(panel).backgroundColor);
 
   await openAccount(page);
-  await page.getByRole("button", { name: "Dark mode", exact: true }).click();
+  await page.getByRole("switch", { name: "Dark mode", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.getByRole("button", { name: "Light mode" })).toBeVisible();
+  await expect(page.getByRole("switch", { name: "Dark mode" })).toBeChecked();
   expect(await page.evaluate(() => localStorage.getItem("appchi-theme"))).toBe(
     "dark",
   );
@@ -104,7 +104,10 @@ test("account theme switch persists across pages and reloads", async ({
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
   await openAccount(page);
-  await page.getByRole("button", { name: "Light mode", exact: true }).click();
+  await page.getByRole("switch", { name: "Dark mode", exact: true }).click();
+  await expect(
+    page.getByRole("switch", { name: "Dark mode" }),
+  ).not.toBeChecked();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   expect(await page.evaluate(() => localStorage.getItem("appchi-theme"))).toBe(
     "light",

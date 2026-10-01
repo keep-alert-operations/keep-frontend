@@ -4,7 +4,7 @@ const global = "00000000-0000-4000-8000-000000000001";
 const other = "00000000-0000-4000-8000-000000000002";
 const alert = "00000000-0000-4000-8000-000000000003";
 
-async function setup(page: Page) {
+async function setup(page: Page, otherRole: "view" | "admin" = "view") {
   await page.clock.install();
   await page.clock.pauseAt(new Date());
   const state = { sessions: 0, expired: false, streams: 0 };
@@ -35,7 +35,7 @@ async function setup(page: Page) {
                     id: other,
                     name: "Other tenant",
                     kind: "specific",
-                    role: "view",
+                    role: otherRole,
                     revision: "1",
                   },
                 ],
@@ -85,7 +85,7 @@ async function setup(page: Page) {
 test("page, administration, home and browser-history navigation preserve the signed-in shell", async ({
   page,
 }) => {
-  const state = await setup(page);
+  const state = await setup(page, "admin");
   const sessions = state.sessions;
   const rail = await page.locator(".rail").elementHandle();
   for (const name of [
@@ -94,7 +94,6 @@ test("page, administration, home and browser-history navigation preserve the sig
     "Incidents",
     "Correlation rules",
     "Maintenance",
-    "Operators",
   ]) {
     await page.getByRole("link", { name, exact: true }).first().click();
     await expect(
@@ -104,6 +103,18 @@ test("page, administration, home and browser-history navigation preserve the sig
     expect(state.sessions).toBe(sessions);
     expect(await rail!.evaluate((element) => element.isConnected)).toBe(true);
   }
+  // Operator administration belongs to a specific tenant, not fixed Global.
+  await page
+    .getByRole("combobox", { name: "Tenant", exact: true })
+    .selectOption(other);
+  await page
+    .getByRole("link", { name: "Operators", exact: true })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Operators", exact: true, level: 1 }),
+  ).toBeVisible();
+  expect(await rail!.evaluate((element) => element.isConnected)).toBe(true);
   await page.getByRole("link", { name: "Permissions", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Permissions", exact: true, level: 1 }),
@@ -116,6 +127,9 @@ test("page, administration, home and browser-history navigation preserve the sig
   await expect(
     page.getByRole("heading", { name: "Permissions", exact: true, level: 1 }),
   ).toBeVisible();
+  await page
+    .getByRole("combobox", { name: "Tenant", exact: true })
+    .selectOption(global);
   await page.getByRole("link", { name: "Appchi home", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "All alerts", exact: true, level: 1 }),
