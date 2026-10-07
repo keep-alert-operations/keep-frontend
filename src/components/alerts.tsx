@@ -11,6 +11,7 @@ import {
   timestamp,
 } from "@/lib/api";
 import { useCommand, useDirtyWarning, useResource } from "@/lib/hooks";
+import { useSearchResource } from "@/lib/search-resource";
 import {
   DEFAULT_SORT,
   nextQuickSort,
@@ -127,27 +128,19 @@ export function AlertFeed(scope: Scope) {
     params.set("sort", quickSort.field);
     params.set("direction", quickSort.direction);
   }
-  const feed = useResource<RecordData[]>(
+  const feed = useSearchResource(
     `${base}/alerts?${params}`,
+    scope.session.csrf_token,
     scope.onDenied,
+    undefined,
     snapshotVersion,
   );
   const counts = useQuickViewCounts(
-    async (expression, includeSuppressed, signal) => {
-      const query = new URLSearchParams({
-        cel: expression,
-        q: applied.q,
-        include_suppressed: String(includeSuppressed),
-        limit: "1",
-      });
-      const result = await request<RecordData[]>(`${base}/alerts?${query}`, {
-        signal,
-      });
-      return result.meta?.total;
-    },
+    scope,
     applied.cel,
     applied.include_suppressed,
-    JSON.stringify([base, applied, snapshotVersion]),
+    applied.q,
+    JSON.stringify([feed.data?.meta?.evaluated_at]),
   );
   const command = useCommand(scope.session.csrf_token, scope.onDenied);
   const rows = feed.data?.data ?? [];

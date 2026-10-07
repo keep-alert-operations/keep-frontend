@@ -91,6 +91,31 @@ test("quick views compose with applied CEL and search without saving a preset", 
   await expect(page.getByLabel("Name", { exact: true })).toHaveValue("");
 });
 
+test("new preset reads direct-link CEL and retains edits when the URL query changes", async ({
+  page,
+}) => {
+  await setup(page);
+  const initial = 'application == "payments"';
+  await page.goto(
+    `/tenants/${tenant}/presets/new?${new URLSearchParams({ cel: initial })}`,
+  );
+  const editor = page.getByLabel(/^(CEL expression|Filter \(CEL\))$/);
+  await expect(editor).toHaveValue(initial);
+  const edited = 'component == "postgres"';
+  await editor.fill(edited);
+  await page.evaluate(() => {
+    const target = new URL(window.location.href);
+    target.searchParams.set("cel", "false");
+    window.history.replaceState(null, "", target);
+  });
+  await expect(page).toHaveURL(/cel=false$/);
+  await expect(editor).toHaveValue(edited);
+  await page.screenshot({
+    path: test.info().outputPath("preset-cel-preserved.png"),
+    fullPage: true,
+  });
+});
+
 test("alert column clicks cycle server sort and restart pagination", async ({
   page,
 }) => {

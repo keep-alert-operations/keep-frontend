@@ -316,21 +316,11 @@ export function PresetEditor({
     return () => controller.abort();
   }, [savedKey, tenantId, csrf]);
   const counts = useQuickViewCounts(
-    (source, include, signal) =>
-      previewTotal(
-        tenantId,
-        csrf,
-        {
-          cel: source,
-          sort,
-          columns: selectedColumns,
-          include_suppressed: include,
-        },
-        signal,
-      ),
+    scope,
     ready && previewCel.trim() ? previewCel : null,
     suppressed,
-    JSON.stringify([previewCel, sort, selectedColumns]),
+    "",
+    JSON.stringify([preview.result?.meta?.evaluated_at]),
   );
   function runPreview() {
     setPreviewCel(cel);

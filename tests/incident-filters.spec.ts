@@ -10,6 +10,40 @@ async function setup(page: Page, role = "edit") {
     queries: [] as URLSearchParams[],
     counts: [] as URLSearchParams[],
   };
+  // These cases exercise filters. A finite route.fulfill SSE body disconnects
+  // immediately and races pagination with reconnect-driven reconciliation.
+  await page.addInitScript(() => {
+    const original = window.fetch.bind(window);
+    window.fetch = (input, options) => {
+      if (typeof input === "string" && input.endsWith("/events")) {
+        let closed = false;
+        return Promise.resolve(
+          new Response(
+            new ReadableStream({
+              start(controller) {
+                controller.enqueue(
+                  new TextEncoder().encode(
+                    'event: state\ndata: {"view_generation":"1"}\n\n',
+                  ),
+                );
+                options?.signal?.addEventListener("abort", () => {
+                  if (!closed) {
+                    closed = true;
+                    controller.close();
+                  }
+                });
+              },
+              cancel() {
+                closed = true;
+              },
+            }),
+            { headers: { "Content-Type": "text/event-stream" } },
+          ),
+        );
+      }
+      return original(input, options);
+    };
+  });
   await page.route("**/auth/session", (route) =>
     route.fulfill({
       json: {
@@ -36,11 +70,6 @@ async function setup(page: Page, role = "edit") {
   );
   await page.route("**/api/tenants/**", (route) => {
     const url = new URL(route.request().url());
-    if (url.pathname.endsWith("/events"))
-      return route.fulfill({
-        contentType: "text/event-stream",
-        body: 'event: state\ndata: {"view_generation":"1"}\n\n',
-      });
     if (url.pathname.endsWith("/view-state"))
       return route.fulfill({ json: { data: { view_generation: "1" } } });
     if (url.pathname.endsWith("/health"))

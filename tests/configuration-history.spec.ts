@@ -195,6 +195,23 @@ test("saved results use the saved preview while quick views and counts use candi
 }) => {
   await setup(page);
   const previews: Record<string, unknown>[] = [];
+  const countQueries: Record<string, unknown>[] = [];
+  await page.route("**/alerts/counts", (route) => {
+    const queries = route.request().postDataJSON().queries as Record<
+      string,
+      unknown
+    >[];
+    countQueries.push(...queries);
+    return route.fulfill({
+      json: {
+        data: {
+          counts: Object.fromEntries(
+            queries.map((q) => [q.id, "9007199254740993"]),
+          ),
+        },
+      },
+    });
+  });
   let changed = false;
   await page.route("**/presets/preview", (route) => {
     const body = route.request().postDataJSON();
@@ -250,13 +267,9 @@ test("saved results use the saved preview while quick views and counts use candi
   expect(saved).not.toHaveProperty("cel");
   expect(saved).not.toHaveProperty("sort");
   expect(saved).not.toHaveProperty("columns");
-  const counts = previews.filter((body) => body.limit === 1);
-  expect(counts.length).toBeGreaterThan(0);
-  for (const body of counts) {
-    expect(body).not.toHaveProperty("preset_id");
-    expect(body).not.toHaveProperty("expected_revision");
-    expect(body).toMatchObject({ sort: preset.sort, columns: preset.columns });
-  }
+  expect(countQueries.length).toBeGreaterThan(0);
+  expect(countQueries.some((query) => query.cel === preset.cel)).toBe(true);
+  expect(previews.filter((body) => body.limit === 1)).toHaveLength(0);
   await page.getByRole("button", { name: "Next results page" }).click();
   await expect(
     page.getByRole("link", { name: "Open Second page alert" }),

@@ -505,6 +505,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/tenants/{tenant_id}/alerts/counts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Quick Counts */
+    post: operations["quick_counts_api_tenants__tenant_id__alerts_counts_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/tenants/{tenant_id}/alerts/snapshot/close": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Close Snapshot */
+    post: operations["close_snapshot_api_tenants__tenant_id__alerts_snapshot_close_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/tenants/{tenant_id}/dashboards/{dashboard_id}/counts": {
     parameters: {
       query?: never;
@@ -2333,6 +2367,31 @@ export interface components {
     ProfileResponse: {
       data: components["schemas"]["Profile"];
     };
+    /** QuickCountQuery */
+    QuickCountQuery: {
+      /** Id */
+      id: string;
+      /**
+       * Cel
+       * @default true
+       */
+      cel: string;
+      /**
+       * Q
+       * @default
+       */
+      q: string;
+      /**
+       * Include Suppressed
+       * @default false
+       */
+      include_suppressed: boolean;
+    };
+    /** QuickCountRequest */
+    QuickCountRequest: {
+      /** Queries */
+      queries: components["schemas"]["QuickCountQuery"][];
+    };
     /** Replace */
     Replace: {
       /** Name */
@@ -2391,6 +2450,11 @@ export interface components {
       end_occurrence?: ("first" | "second") | null;
       /** Cel */
       cel?: string | null;
+    };
+    /** SnapshotClose */
+    SnapshotClose: {
+      /** Token */
+      token: string;
     };
     /** Sort */
     Sort: {
@@ -3833,6 +3897,76 @@ export interface operations {
       cookie?: never;
     };
     requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  quick_counts_api_tenants__tenant_id__alerts_counts_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        tenant_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["QuickCountRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  close_snapshot_api_tenants__tenant_id__alerts_snapshot_close_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        tenant_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SnapshotClose"];
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
@@ -6644,6 +6778,7 @@ export interface operations {
         include_suppressed?: boolean;
         limit?: number;
         cursor?: string | null;
+        replace_cursor?: string | null;
         sort?: string;
         direction?: string;
       };

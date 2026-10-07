@@ -8,6 +8,7 @@ import {
   type RecordData,
 } from "./api";
 import { useResource } from "./hooks";
+import { useSearchResource } from "./search-resource";
 
 // Keep one result page and at most the dashboard's 24 selected references.
 export function usePresetChoices(
@@ -317,63 +318,20 @@ export function usePresetPreview(
   body: Record<string, unknown> | null,
   refresh: string | number = 0,
 ) {
+  const state = useSearchResource(
+    body ? `${tenantPath(tenantId)}/presets/preview` : null,
+    csrf,
+    onDenied,
+    body ?? undefined,
+    refresh,
+  );
   const serialized = body ? JSON.stringify(body) : null;
-  const [state, setState] = useState<{
-    key: string | null;
-    resultKey?: string;
-    result?: Envelope<RecordData[]>;
-    error?: unknown;
-    loading: boolean;
-  }>({ key: null, loading: Boolean(body) });
-  const denied = useRef(onDenied);
-  denied.current = onDenied;
-  useEffect(() => {
-    if (!serialized) return;
-    const controller = new AbortController();
-    setState((previous) => ({ ...previous, key: serialized, loading: true }));
-    request<RecordData[]>(`${tenantPath(tenantId)}/presets/preview`, {
-      method: "POST",
-      csrf,
-      body: JSON.parse(serialized),
-      signal: controller.signal,
-    }).then(
-      (result) => {
-        if (controller.signal.aborted) return;
-        if (!Array.isArray(result.data))
-          setState((previous) => ({
-            ...previous,
-            loading: false,
-            error: new ApiError(
-              502,
-              "invalid_response",
-              "The preview response does not match its API contract.",
-            ),
-          }));
-        else
-          setState({
-            key: serialized,
-            resultKey: serialized,
-            result,
-            loading: false,
-          });
-      },
-      (error) => {
-        if (controller.signal.aborted) return;
-        if (error instanceof ApiError && [401, 403].includes(error.status))
-          denied.current();
-        setState((previous) => ({
-          ...previous,
-          key: serialized,
-          error,
-          loading: false,
-        }));
-      },
-    );
-    return () => controller.abort();
-  }, [tenantId, csrf, serialized, refresh]);
   return {
-    ...state,
-    loading: serialized ? state.loading || state.key !== serialized : false,
+    key: serialized,
+    resultKey: state.dataKey ? JSON.parse(state.dataKey)[1] : undefined,
+    result: state.data,
+    error: state.error,
+    loading: state.loading,
   };
 }
 
@@ -384,10 +342,24 @@ export async function previewTotal(
   body: Record<string, unknown>,
   signal: AbortSignal,
 ) {
-  const result = await request<RecordData[]>(
-    `${tenantPath(tenantId)}/presets/preview`,
-    { method: "POST", csrf, body: { ...body, limit: 1 }, signal },
+  const result = await request<{ counts: Record<string, string> }>(
+    `${tenantPath(tenantId)}/alerts/counts`,
+    {
+      method: "POST",
+      csrf,
+      body: {
+        queries: [
+          {
+            id: "total",
+            cel: body.cel ?? "true",
+            q: body.q ?? "",
+            include_suppressed: body.include_suppressed ?? false,
+          },
+        ],
+      },
+      signal,
+    },
   );
-  const total = result.meta?.total;
+  const total = result.data.counts?.total;
   return typeof total === "string" && /^\d+$/.test(total) ? total : undefined;
 }
