@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   ApiError,
   display,
@@ -13,7 +13,6 @@ import {
   DEFAULT_COLUMNS,
   DEFAULT_SORT,
   nextQuickSort,
-  previewTotal,
   sortItems,
   sortSummary,
   timezoneLabel,
@@ -95,7 +94,10 @@ function searchParam(name: string) {
 }
 
 function NewPreset({ scope }: { scope: Scope }) {
-  const [initialCel] = useState(() => searchParam("cel"));
+  const searchParams = useSearchParams();
+  // App Router can render the destination before window.location is updated.
+  // Capture its query once so later URL changes cannot replace an edited draft.
+  const [initialCel] = useState(() => searchParams.get("cel"));
   const leave = useLeave(scope);
   const list = `/tenants/${scope.tenant.id}/presets`;
   return (
@@ -793,16 +795,15 @@ function PresetResults({
     }
   }, [changed, preset.revision, reload]);
   const counts = useQuickViewCounts(
-    (source, include, signal) =>
-      previewTotal(
-        tenantId,
-        csrf,
-        { cel: source, sort, columns, q, include_suppressed: include },
-        signal,
-      ),
+    scope,
     cel,
     suppressed,
-    JSON.stringify([preset.id, preset.revision, q, scope.version, refresh]),
+    q,
+    JSON.stringify([
+      preset.id,
+      preset.revision,
+      page.result?.meta?.evaluated_at,
+    ]),
   );
   const [newIds, setNewIds] = useState<Set<string>>(new Set());
   const previous = useRef<{ key: string | null; ids: Set<string> }>({

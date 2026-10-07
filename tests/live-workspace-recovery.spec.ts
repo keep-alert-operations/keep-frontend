@@ -123,16 +123,17 @@ test("continuous invalidations refresh within fixed coalescing windows", async (
   await expect.poll(h.feedReads).toBeGreaterThan(before + 1);
 });
 
-test("stalled reconciliation body times out and a later poll can recover", async ({
+test("stalled focus reconciliation times out and later focus can recover", async ({
   page,
 }) => {
   await workspace(page);
+  const baseline = await state(page);
   await page.evaluate(() => {
     (
       window as unknown as { workspaceLiveTest: Harness }
     ).workspaceLiveTest.stall = true;
+    document.dispatchEvent(new Event("visibilitychange"));
   });
-  const baseline = await state(page);
   await page.clock.runFor(2100);
   await expect
     .poll(async () => (await state(page)).polls)
@@ -146,6 +147,7 @@ test("stalled reconciliation body times out and a later poll can recover", async
     (
       window as unknown as { workspaceLiveTest: Harness }
     ).workspaceLiveTest.stall = false;
+    document.dispatchEvent(new Event("visibilitychange"));
   });
   await page.clock.runFor(2100);
   await expect
@@ -162,6 +164,7 @@ test("hiding aborts in-flight reconciliation and visible return starts a fresh o
     (
       window as unknown as { workspaceLiveTest: Harness }
     ).workspaceLiveTest.stall = true;
+    document.dispatchEvent(new Event("visibilitychange"));
   });
   await page.clock.runFor(2100);
   const before = await state(page);

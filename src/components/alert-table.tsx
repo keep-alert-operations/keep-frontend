@@ -1,6 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { display, RecordData, tenantPath, timestamp } from "@/lib/api";
+import {
+  ApiError,
+  display,
+  RecordData,
+  request,
+  tenantPath,
+  timestamp,
+} from "@/lib/api";
 import { alertOperatorLabel } from "@/lib/alert-operator";
 import { useCommand } from "@/lib/hooks";
 import {
@@ -57,66 +64,99 @@ export function composeCel(base: string, key: QuickViewKey) {
 }
 
 /**
- * Exact totals for every quick view plus the number of suppressed alerts the
- * current view hides. `fetchTotal` returns meta.total for one expression.
+ * Fetch exact quick-view totals and the hidden-suppression difference in one batch.
  */
 export function useQuickViewCounts(
-  fetchTotal: (
-    cel: string,
-    includeSuppressed: boolean,
-    signal: AbortSignal,
-  ) => Promise<unknown>,
+  scope: Scope,
   base: string | null,
   includeSuppressed: boolean,
-  key: string,
+  q: string,
+  version: string,
 ) {
+  const key = JSON.stringify([scope.tenant.id, base, includeSuppressed, q]);
   const [state, setState] = useState<{
     key: string;
     counts: Partial<Record<QuickViewKey, string>>;
     hidden?: string;
   }>({ key: "", counts: {} });
-  const fetcher = useRef(fetchTotal);
-  fetcher.current = fetchTotal;
+  const current = useRef(scope);
+  current.current = scope;
+  const trigger = useRef<() => void>(() => {});
   useEffect(() => {
     if (base === null) return;
-    const controller = new AbortController();
-    const numeric = (value: unknown) =>
-      typeof value === "string" && /^\d+$/.test(value) ? value : undefined;
-    void Promise.all(
-      QUICK_VIEWS.map((view) =>
-        fetcher
-          .current(
-            composeCel(base, view.key),
-            includeSuppressed,
-            controller.signal,
-          )
-          .then(numeric)
-          .catch(() => undefined),
-      ),
-    ).then(async (totals) => {
-      if (controller.signal.aborted) return;
-      let hidden: string | undefined;
-      if (!includeSuppressed && totals[0] !== undefined) {
-        const all = await fetcher
-          .current(base, true, controller.signal)
-          .then(numeric)
-          .catch(() => undefined);
-        if (all !== undefined) {
-          const difference = BigInt(all) - BigInt(totals[0]);
-          hidden = difference > 0n ? difference.toString() : undefined;
+    let stopped = false,
+      busy = false,
+      pending = false;
+    async function run() {
+      if (stopped || document.visibilityState !== "visible") return;
+      if (busy) {
+        pending = true;
+        return;
+      }
+      busy = true;
+      try {
+        const queries = QUICK_VIEWS.map((view) => ({
+          id: view.key,
+          cel: composeCel(base!, view.key),
+          q,
+          include_suppressed: includeSuppressed,
+        }));
+        if (!includeSuppressed)
+          queries.push({
+            id: "including_suppressed" as QuickViewKey,
+            cel: base!,
+            q,
+            include_suppressed: true,
+          });
+        const result = await request<{ counts: Record<string, string> }>(
+          `${tenantPath(current.current.tenant.id)}/alerts/counts`,
+          {
+            method: "POST",
+            csrf: current.current.session.csrf_token,
+            body: { queries },
+            signal: AbortSignal.timeout(15000),
+          },
+        );
+        if (stopped) return;
+        const counts = result.data.counts ?? {};
+        const valid = (value: unknown): value is string =>
+          typeof value === "string" && /^\d+$/.test(value);
+        const all = counts.all,
+          including = counts.including_suppressed;
+        const hidden =
+          !includeSuppressed &&
+          valid(all) &&
+          valid(including) &&
+          BigInt(including) > BigInt(all)
+            ? (BigInt(including) - BigInt(all)).toString()
+            : undefined;
+        setState({
+          key,
+          counts: Object.fromEntries(
+            Object.entries(counts).filter(([, v]) => valid(v)),
+          ),
+          hidden,
+        });
+      } catch (error) {
+        if (stopped) return;
+        if (error instanceof ApiError && [401, 403].includes(error.status))
+          current.current.onDenied();
+        setState({ key, counts: {} });
+      } finally {
+        busy = false;
+        if (pending && !stopped) {
+          pending = false;
+          void run();
         }
       }
-      if (controller.signal.aborted) return;
-      setState({
-        key,
-        counts: Object.fromEntries(
-          QUICK_VIEWS.map((view, index) => [view.key, totals[index]]),
-        ),
-        hidden,
-      });
-    });
-    return () => controller.abort();
-  }, [base, includeSuppressed, key]);
+    }
+    trigger.current = () => void run();
+    return () => {
+      stopped = true;
+      trigger.current = () => {};
+    };
+  }, [key]);
+  useEffect(() => trigger.current(), [key, version]);
   return state.key === key ? state : { key, counts: {}, hidden: undefined };
 }
 

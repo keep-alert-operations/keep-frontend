@@ -7,6 +7,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Let npm use the sibling-repository credential instead of GITHUB_TOKEN.
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: "22.17.1"

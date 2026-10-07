@@ -149,21 +149,23 @@ export function Workspace() {
     if (tenant && !requestedTenant)
       router.replace(`/tenants/${tenant.id}/alerts`);
   }, [tenant, requestedTenant, router]);
+  const activitySession = useRef(session);
+  activitySession.current = session;
   useEffect(() => {
-    if (!session) return;
+    if (!session?.principal.id) return;
     const timer = setInterval(() => {
       if (document.visibilityState !== "visible") return;
       void request("/auth/activity", {
         method: "POST",
         body: {},
-        csrf: session.csrf_token,
+        csrf: activitySession.current?.csrf_token,
       }).catch((failure) => {
         if (failure instanceof ApiError && [401, 403].includes(failure.status))
           onDenied();
       });
     }, 60000);
     return () => clearInterval(timer);
-  }, [session, onDenied]);
+  }, [session?.principal.id, onDenied]);
   const navigate = (url: string) => {
     if (
       dirty &&
@@ -574,7 +576,9 @@ function TenantWorkspace(
     }
     stream.setVisible(document.visibilityState === "visible");
     void reconcile();
-    const poll = setInterval(() => void reconcile(), 2000);
+    const poll = setInterval(() => {
+      if (!liveConnected) void reconcile();
+    }, 2000);
     document.addEventListener("visibilitychange", visibility);
     return () => {
       stopped = true;
