@@ -206,7 +206,8 @@ moves, keyboard/mobile/dark presentation, CEL discovery/validation, retained
 configuration comparison/reuse, DST schedule validation and phase restrictions,
 operator prepared-key/clipboard/replacement behavior, and platform administration.
 Fourteen transport/workspace cases cover bounded SSE frames and heartbeat silence,
-reconnect backoff, hidden lifecycle, authorization denial, fixed refresh coalescing,
+reconnect backoff, hidden lifecycle, authorization denial, trailing refresh coalescing
+(one-second quiet window, two-second cap),
 and stalled reconciliation requests. Browser route mocks are not real-service
 end-to-end qualification.
 

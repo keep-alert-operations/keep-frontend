@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { LIVE_QUIET_MS } from "../src/lib/live-coalescer";
 
 const tenant = "00000000-0000-4000-8000-000000000001";
 const preset = "00000000-0000-4000-8000-000000000002";
@@ -143,7 +144,7 @@ async function setup(page: Page, section: string, viewPath = section) {
           window as unknown as { emitLoadingTest: (generation: number) => void }
         ).emitLoadingTest(generation);
       }, h.generation);
-      await page.clock.runFor(300);
+      await page.clock.runFor(LIVE_QUIET_MS + 100);
     },
   };
 }
@@ -157,7 +158,7 @@ for (const [section, emptyText] of cases) {
     await expect(empty).toHaveCount(0);
     initial.release();
     await expect(empty).toBeVisible();
-    await page.clock.runFor(500);
+    await page.clock.runFor(LIVE_QUIET_MS + 500);
     const before = await empty.boundingBox();
     h.block = refresh.promise;
     const reads = h.reads;
@@ -193,7 +194,7 @@ test("a changed preset filter waits for its own result and failures never become
   const { h, initial, refresh, invalidate } = await setup(page, "presets");
   initial.release();
   await expect(page.getByText("No presets yet", { exact: true })).toBeVisible();
-  await page.clock.runFor(500);
+  await page.clock.runFor(LIVE_QUIET_MS + 500);
   h.block = refresh.promise;
   await page.getByLabel("Search presets by name").fill("matched");
   await page.clock.runFor(400);
@@ -258,7 +259,7 @@ test("saved preset results keep a completed empty result only for the same query
   await expect(empty).toHaveCount(0);
   initial.release();
   await expect(empty).toBeVisible();
-  await page.clock.runFor(500);
+  await page.clock.runFor(LIVE_QUIET_MS + 500);
   h.block = refresh.promise;
   const reads = h.reads;
   await invalidate();
@@ -290,7 +291,7 @@ test("a populated alert feed stays in place during refresh and still warns on fa
   initial.release();
   const table = page.getByRole("table", { name: "Alerts", exact: true });
   await expect(table).toBeVisible();
-  await page.clock.runFor(500);
+  await page.clock.runFor(LIVE_QUIET_MS + 500);
   const before = await table.boundingBox();
   h.block = refresh.promise;
   const reads = h.reads;
