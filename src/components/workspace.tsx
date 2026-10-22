@@ -10,7 +10,7 @@ import {
   requestSession,
   tenantPath,
 } from "@/lib/api";
-import { useResource } from "@/lib/hooks";
+import { onOwnCommand, useResource } from "@/lib/hooks";
 import { liveCoalescer } from "@/lib/live-coalescer";
 import { liveStream } from "@/lib/live-stream";
 import { Alerts } from "./alerts";
@@ -476,6 +476,11 @@ function TenantWorkspace(
         setVersion((v) => v + 1);
     });
     pendingLive.current = coalesce;
+    // Search reflects the user's own command only after its projection hint.
+    const scope = `${tenantPath(props.tenant.id)}/`;
+    const stopCommands = onOwnCommand((path) => {
+      if (path.startsWith(scope)) coalesce.expedite();
+    });
     // A direct reload covers every change seen so far; drop the pending merge.
     function reload() {
       coalesce.cancel();
@@ -590,6 +595,7 @@ function TenantWorkspace(
       stream.close();
       clearInterval(poll);
       coalesce.cancel();
+      stopCommands();
       if (pendingLive.current === coalesce) pendingLive.current = undefined;
       document.removeEventListener("visibilitychange", visibility);
     };

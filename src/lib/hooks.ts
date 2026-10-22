@@ -113,6 +113,15 @@ export function useResource<T>(
 
 // The pending body is retained verbatim after transport uncertainty. A retry must
 // preserve its UUID and revision even if the user subsequently edits a form.
+const ownCommandListeners = new Set<(path: string) => void>();
+/** Observes commands this tab committed or may have committed, by request path. */
+export function onOwnCommand(listener: (path: string) => void) {
+  ownCommandListeners.add(listener);
+  return () => void ownCommandListeners.delete(listener);
+}
+function announceCommand(path: string) {
+  for (const listener of ownCommandListeners) listener(path);
+}
 export function useCommand(csrf: string, onDenied: () => void) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<unknown>();
@@ -165,6 +174,7 @@ export function useCommand(csrf: string, onDenied: () => void) {
         csrf,
         signal: controller.current.signal,
       });
+      announceCommand(command.path);
       if (!alive.current) return;
       pending.current = null;
       setUncertain(false);
@@ -182,6 +192,7 @@ export function useCommand(csrf: string, onDenied: () => void) {
       const unknownOutcome =
         !operationRecorded &&
         (!(failure instanceof ApiError) || failure.status >= 500);
+      if (operationRecorded || unknownOutcome) announceCommand(command.path);
       if (!unknownOutcome) pending.current = null;
       setUncertain(unknownOutcome);
       setError(failure);

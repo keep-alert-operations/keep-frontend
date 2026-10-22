@@ -1,8 +1,21 @@
 import { expect, test, type Page } from "@playwright/test";
-import { LIVE_MAX_WAIT_MS, LIVE_QUIET_MS } from "../src/lib/live-coalescer";
+import {
+  LIVE_EXPEDITED_MS,
+  LIVE_MAX_WAIT_MS,
+  LIVE_QUIET_MS,
+} from "../src/lib/live-coalescer";
 import { liveStream } from "../src/lib/live-stream";
 
 const tenant = "00000000-0000-4000-8000-000000000001";
+const row = {
+  id: "00000000-0000-4000-8000-000000000002",
+  revision: "7",
+  message: "Database latency",
+  severity: "critical",
+  status: "firing",
+  acknowledged: false,
+  assignee_id: null,
+};
 interface Harness {
   polls: number;
   aborts: number;
@@ -16,8 +29,9 @@ const state = (page: Page) =>
     return { polls: value.polls, aborts: value.aborts };
   });
 
-async function workspace(page: Page) {
-  let feedReads = 0;
+async function workspace(page: Page, { editor = false } = {}) {
+  let feedReads = 0,
+    commands = 0;
   await page.clock.install();
   await page.addInitScript(() => {
     const original = window.fetch;
@@ -80,7 +94,7 @@ async function workspace(page: Page) {
               id: tenant,
               name: "Global",
               kind: "global",
-              role: "view",
+              role: editor ? "edit" : "view",
               revision: "1",
             },
           ],
@@ -91,12 +105,20 @@ async function workspace(page: Page) {
   await page.route("**/api/tenants/**", (route) => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith("/alerts")) feedReads++;
+    if (url.pathname.endsWith("/commands")) {
+      commands++;
+      return route.fulfill({
+        json: { data: { ...row, assignee_id: "fixture", revision: "8" } },
+      });
+    }
     return route.fulfill({
       json: {
         data: url.pathname.endsWith("view-state")
           ? { view_generation: "1" }
-          : [],
-        meta: { total: "0" },
+          : url.pathname.endsWith("/alerts") && editor
+            ? [row]
+            : [],
+        meta: { total: editor ? "1" : "0" },
       },
     });
   });
@@ -104,7 +126,7 @@ async function workspace(page: Page) {
   await expect(page.getByText("Live", { exact: true })).toBeVisible();
   await expect.poll(() => feedReads).toBeGreaterThan(0);
   await page.clock.runFor(500);
-  return { feedReads: () => feedReads };
+  return { feedReads: () => feedReads, commands: () => commands };
 }
 
 const emit = (page: Page, generation: number) =>
@@ -171,9 +193,28 @@ test("continuous invalidations refresh at the maximum wait", async ({
     await emit(page, generation);
     await page.clock.runFor(100);
   }
-  // No quiet window passed in 6 s; only the 2 s cap refreshed (about three times).
-  await expect.poll(h.feedReads).toBeGreaterThanOrEqual(before + 2);
-  expect(await settled(h.feedReads)).toBeLessThanOrEqual(before + 4);
+  // No quiet window passed in 6 s; only the 1 s cap refreshed (about six times).
+  await expect.poll(h.feedReads).toBeGreaterThanOrEqual(before + 4);
+  expect(await settled(h.feedReads)).toBeLessThanOrEqual(before + 8);
+});
+
+test("the projection hint after the user's own command refreshes within 250 ms", async ({
+  page,
+}) => {
+  test.slow(); // Each settled count waits for real time.
+  const h = await workspace(page, { editor: true });
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
+  await quiet(page, h.feedReads);
+  await page.getByRole("link", { name: "Open Database latency" }).hover();
+  await page.getByRole("button", { name: "Assign to me", exact: true }).click();
+  await expect.poll(h.commands).toBe(1);
+  // The feed reloads at once, but search has not applied the command yet.
+  const reloaded = await settled(h.feedReads);
+  await emit(page, 2);
+  await page.clock.runFor(LIVE_EXPEDITED_MS + 50);
+  // The ordinary window would still be waiting until 500 ms.
+  expect(LIVE_EXPEDITED_MS + 50).toBeLessThan(LIVE_QUIET_MS);
+  await expect.poll(h.feedReads).toBe(reloaded + 1);
 });
 
 test("stalled focus reconciliation times out and later focus can recover", async ({
