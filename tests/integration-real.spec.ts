@@ -306,7 +306,7 @@ test("real HTTPS browser acknowledges an admitted alert and commits its note to 
     expect((await acknowledged).status()).toBe(200);
     await expect(page.locator(".ad-marks .st-acknowledged")).toBeVisible();
     await page
-      .getByRole("textbox", { name: "Add note", exact: true })
+      .getByRole("textbox", { name: "Add a note", exact: true })
       .fill("Real browser investigation note");
     const note = page.waitForResponse(
       (response) =>
@@ -317,7 +317,7 @@ test("real HTTPS browser acknowledges an admitted alert and commits its note to 
     expect((await note).status()).toBe(201);
     await expect(
       page
-        .locator(".note-text")
+        .locator(".ad-note-text")
         .filter({ hasText: "Real browser investigation note" }),
     ).toBeVisible();
     const persisted = JSON.parse(
