@@ -21,9 +21,10 @@ const python =
 // These synthetic identities and sessions exist only in a disposable test DB.
 // Nothing in the application imports this fixture or accepts a test credential.
 const fixture = String.raw`
-import base64, hashlib, ipaddress, json, os, re, secrets, sys
+import asyncio, base64, hashlib, ipaddress, json, os, re, secrets, sys, time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from uuid import uuid4
 import psycopg
 from psycopg import sql
@@ -34,9 +35,13 @@ from cryptography.x509.oid import NameOID
 from appchi.db import Database
 from appchi.migrate import migrate, migration_directory
 from appchi.shared.crypto import EnvelopeCipher
-from appchi.ingestion.service import Admission
+from appchi.ingestion.kafka_admission import KafkaAdmission
 from appchi.ingestion.native import canonical
-from appchi.alerts.processor import process_one
+from appchi.kafka_source import RECEIVE_LEAD_MARGIN, ReceiveTimeAhead, apply_record
+
+class Capture:
+    def __init__(self): self.records=[]
+    async def publish(self, topic, key, value): self.records.append((topic,key,value))
 
 name=os.environ['APPCHI_BROWSER_DATABASE_NAME']
 if not re.fullmatch(r'appchi_browser_test_[a-f0-9]{16}', name):
@@ -49,7 +54,6 @@ if action=='drop':
 elif action=='setup':
     with psycopg.connect(os.environ['APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL'], autocommit=True) as conn:
         conn.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(name)))
-    repo=Path(os.environ['APPCHI_BROWSER_REPOSITORY'])
     dsn=os.environ['APPCHI_DATABASE_URL']
     migrate(dsn, migration_directory())
     cipher=EnvelopeCipher({'browser-test': b'k'*32}, 'browser-test')
@@ -61,16 +65,27 @@ elif action=='setup':
         conn.execute("INSERT INTO principals(id,directory_source,object_id,kind,display_name,eligible,evidence_generation,verified_at) VALUES(%s,'browser-test',%s,'user','Synthetic browser user',true,1,clock_timestamp())", (principal,str(principal)))
         conn.execute("INSERT INTO auth_sessions(handle_hash,principal_id,issuer,subject,provider_sid,csrf_hash,csrf_cipher,auth_time,activity_at,absolute_at,deployment_epoch) VALUES(%s,%s,'https://synthetic.invalid',%s,%s,%s,%s,clock_timestamp(),clock_timestamp(),clock_timestamp()+interval '1 hour','browser-test')", (hashed,principal,str(principal),str(principal),hashlib.sha256(csrf.encode()).digest(),cipher.seal(csrf.encode(),'session-csrf:'+hashed.hex())))
         tenant=conn.execute("SELECT id FROM tenants WHERE kind='global'").fetchone()['id']
-    profile=json.loads((repo/'qualification/development-capacity.json').read_text())
     native={'application':'browser-smoke-'+str(uuid4()),'object':'cpu','node_name':'synthetic-node','message':'Real database browser smoke','operator':'synthetic-legacy','time_created':'22-09-2026 12:00:00','severity':'error'}
-    admission=Admission(db,cipher,profile)
-    receipt=admission.admit(canonical(native),'v1')[1]
-    for _ in range(5):
-        if not process_one(db,tenant): break
-    outcome=admission.receipt(receipt['request_id'],receipt['receipt_token'],'v1')
-    alert=outcome['items'][0]['alert_id']
-    db.close()
     temp=Path(os.environ['APPCHI_BROWSER_TEMP'])
+    # Kafka-first seed: the admission envelope a broker would carry, applied by
+    # the source processor's own PostgreSQL step. No broker or receipt lookup.
+    clock=temp/'clock.json'
+    clock.write_text(json.dumps({'synchronized':True,'offset_seconds':0,'measured_at':datetime.now(timezone.utc).isoformat()}))
+    config=SimpleNamespace(clock_health_file=clock,environment='browser-test',global_tenant_id=tenant,kafka_bootstrap=None)
+    publisher=Capture()
+    status,_=asyncio.run(KafkaAdmission(publisher,environment=config.environment,global_tenant_id=tenant).admit(canonical(native),'v1'))
+    if status!=202: raise RuntimeError('Synthetic admission was not accepted')
+    topic,key,value=publisher.records[-1]
+    for attempt in range(4):
+        try:
+            changed=apply_record(db,topic=topic,partition=0,offset=0,key=key,value=value,settings=config,profile=None)
+            break
+        except ReceiveTimeAhead as ahead:
+            # The receipt is stamped from this host's clock; wait out its lead.
+            if attempt==3: raise
+            time.sleep(ahead.lead+RECEIVE_LEAD_MARGIN)
+    alert=json.loads(changed)['alert_id']
+    db.close()
     key=rsa.generate_private_key(public_exponent=65537,key_size=2048)
     now=datetime.now(timezone.utc)
     subject=x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,'localhost')])
@@ -291,7 +306,7 @@ test("real HTTPS browser acknowledges an admitted alert and commits its note to 
     expect((await acknowledged).status()).toBe(200);
     await expect(page.locator(".ad-marks .st-acknowledged")).toBeVisible();
     await page
-      .getByRole("textbox", { name: "Add note", exact: true })
+      .getByRole("textbox", { name: "Add a note", exact: true })
       .fill("Real browser investigation note");
     const note = page.waitForResponse(
       (response) =>
@@ -302,7 +317,7 @@ test("real HTTPS browser acknowledges an admitted alert and commits its note to 
     expect((await note).status()).toBe(201);
     await expect(
       page
-        .locator(".note-text")
+        .locator(".ad-note-text")
         .filter({ hasText: "Real browser investigation note" }),
     ).toBeVisible();
     const persisted = JSON.parse(

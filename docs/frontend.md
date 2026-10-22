@@ -67,14 +67,16 @@ Remove-Item Env:APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL
 ```
 
 An optional `APPCHI_REAL_BROWSER_PYTHON` selects another backend Python executable;
-otherwise the test uses `backend/.venv`. With this opt-in environment variable set,
+otherwise the test uses `../appchi-delivery/.venv`. With this opt-in environment variable set,
 the ordinary Playwright port-3100 server is disabled. Run the integration file
 explicitly, then clear the variable before running the ordinary browser suite.
 
 The fixture creates a randomly named `appchi_browser_test_<hex>` database, applies
 the real migrations, inserts one synthetic verified principal and a hashed opaque
 session with encrypted CSRF material, and opens the human-auth gate only in that
-disposable database. It admits a native v1 alert and runs the real source processor.
+disposable database. It builds the Kafka-first admission envelope for a native v1
+alert and applies it with the source processor's own PostgreSQL step, without a
+broker or receipt lookup.
 It then launches the actual Uvicorn API and Next.js HTTPS server on dynamically
 allocated loopback ports. A short-lived self-signed test certificate permits a real
 Secure, HttpOnly `__Host-appchi_session` cookie; certificate verification is relaxed
