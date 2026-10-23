@@ -35,57 +35,49 @@ test("native alert reaches the real feed and supports browser acknowledgement an
     (item: { kind: string }) => item.kind === "global",
   ).id;
   const run = randomUUID();
-  const message = "Local demo: CPU usage needs investigation";
+  const message = `Local demo ${run}: CPU usage needs investigation`;
   const now = new Date();
   const pad = (value: number) => String(value).padStart(2, "0");
   const created = `${pad(now.getUTCDate())}-${pad(now.getUTCMonth() + 1)}-${now.getUTCFullYear()} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`;
-  const admission = await page.request.post("/api/ingest/v1/alerts", {
-    headers: { "Idempotency-Key": run },
-    data: {
-      application: "Appchi local demo",
-      object: "cpu",
-      node_name: "demo-node-01",
-      operator: "local-demo",
-      message,
-      severity: "warning",
-      time_created: created,
-      key_field: run,
-    },
-  });
-  expect(admission.status()).toBe(202);
-  const receipt = await admission.json();
-  let alert = "";
-  await expect
-    .poll(
-      async () => {
-        const response = await page.request.get(receipt.receipt_url, {
-          headers: { "X-Receipt-Token": receipt.receipt_token },
-        });
-        const item = (await response.json()).items[0];
-        alert = item.alert_id ?? "";
-        return item.processing_status;
+  const ingestion =
+    process.env.APPCHI_LOCAL_INGESTION_URL ?? "http://127.0.0.1:58001";
+  const admission = await page.request.post(
+    `${ingestion}/api/ingest/v1/alerts`,
+    {
+      data: {
+        application: "Appchi local demo",
+        object: "cpu",
+        node_name: "demo-node-01",
+        operator: "local-demo",
+        message,
+        severity: "warning",
+        time_created: created,
+        key_field: run,
       },
-      { timeout: 30000 },
-    )
-    .toBe("applied");
+    },
+  );
+  expect(admission.status()).toBe(202);
+  let alert = "";
   await expect
     .poll(
       async () => {
         const response = await page.request.get(
           `/api/tenants/${tenant}/alerts`,
-          { params: { q: "investigation" } },
+          { params: { q: run } },
         );
         if (response.status() !== 200) return false;
-        return (await response.json()).data.some(
-          (item: { id: string }) => item.id === alert,
+        const item = (await response.json()).data.find(
+          (item: { id: string; message: string }) => item.message === message,
         );
+        alert = item?.id ?? "";
+        return Boolean(alert);
       },
       { timeout: 30000 },
     )
     .toBe(true);
   await page.goto(`/tenants/${tenant}/alerts`);
   await expect(
-    page.getByRole("heading", { name: "All alerts", exact: true }),
+    page.getByRole("heading", { name: "Feed", exact: true }),
   ).toBeVisible();
   await expect(page.getByText(message, { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Live", { exact: true })).toBeVisible({
@@ -101,17 +93,27 @@ test("native alert reaches the real feed and supports browser acknowledgement an
   await expect(page.locator(".ad-marks .st-acknowledged")).toBeVisible();
   const note =
     "Local runtime verified: received, indexed and reviewed through the browser.";
-  await page.getByRole("textbox", { name: "Add note", exact: true }).fill(note);
+  await page
+    .getByRole("textbox", { name: "Add a note", exact: true })
+    .fill(note);
   await page.getByRole("button", { name: "Add note", exact: true }).click();
   await expect(
-    page.locator(".note-text").filter({ hasText: note }),
+    page.locator(".ad-note-text").filter({ hasText: note }),
   ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.locator(".ad-note-text").filter({ hasText: note }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: resolve(state, "alert-detail.png"),
+    fullPage: true,
+  });
   await expect
     .poll(
       async () => {
         const response = await page.request.get(
           `/api/tenants/${tenant}/alerts`,
-          { params: { cel: 'display_status == "acknowledged"' } },
+          { params: { cel: 'alert.display_status == "acknowledged"' } },
         );
         if (response.status() !== 200) return false;
         return (await response.json()).data.some(

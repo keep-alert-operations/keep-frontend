@@ -20,7 +20,7 @@ import { ErrorNotice } from "./ui";
 import { Icon } from "./icons";
 
 const sections = [
-  ["alerts", "Alerts"],
+  ["alerts", "Feed"],
   ["incidents", "Incidents"],
   ["presets", "Presets"],
   ["correlation-rules", "Correlation rules"],

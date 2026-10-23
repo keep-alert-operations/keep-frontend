@@ -132,7 +132,7 @@ test("page, administration, home and browser-history navigation preserve the sig
     .selectOption(global);
   await page.getByRole("link", { name: "Appchi home", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "All alerts", exact: true, level: 1 }),
+    page.getByRole("heading", { name: "Feed", exact: true, level: 1 }),
   ).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/tenants/${global}/alerts$`));
   expect(state.sessions).toBe(sessions);

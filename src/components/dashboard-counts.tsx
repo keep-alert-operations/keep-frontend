@@ -1,5 +1,13 @@
 "use client";
-import { useEffect, useId, useRef, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import {
   ApiError,
   count,
@@ -12,6 +20,8 @@ import {
 import type { Scope } from "./workspace";
 import { ErrorNotice } from "./ui";
 import { NavLink } from "./page";
+import { DashboardLayout } from "./dashboard-layout";
+import { compactPanels } from "@/lib/dashboard-layout";
 
 export interface Panel {
   id: string;
@@ -374,6 +384,9 @@ export function CountTile({
   onSelect,
   selected,
   placeholder,
+  layoutControls,
+  layoutActive,
+  layoutStyle,
 }: {
   scope: Scope;
   panel: Panel;
@@ -388,6 +401,9 @@ export function CountTile({
   onSelect?: () => void;
   selected?: boolean;
   placeholder?: string;
+  layoutControls?: ReactNode;
+  layoutActive?: boolean;
+  layoutStyle?: CSSProperties;
 }) {
   const threshold = thresholdFor(value, panel.thresholds);
   const tone = threshold?.color ?? "none";
@@ -395,11 +411,13 @@ export function CountTile({
   const size = panel.h >= 3 ? "fs-l" : "fs-m";
   return (
     <article
-      className={`pn pn-${tone} ${isStale ? "pn-stale" : ""} ${selected ? "pn-selected" : ""}`}
+      className={`pn pn-${tone} ${isStale ? "pn-stale" : ""} ${selected ? "pn-selected" : ""} ${layoutControls ? "de-tile" : ""} ${layoutActive ? "de-tile-active" : ""}`}
       aria-label={`${title} count`}
+      data-layout-panel={panel.id}
       style={{
         gridColumn: `${panel.x + 1} / span ${panel.w}`,
         gridRow: `${panel.y + 1} / span ${panel.h}`,
+        ...layoutStyle,
       }}
     >
       <span className="pn-head">
@@ -439,10 +457,10 @@ export function CountTile({
           : "—"}
       </b>
       <span className={`small ${isStale ? "ack-n" : "muted"}`}>
-        {placeholder
-          ? placeholder
-          : unavailable !== undefined
-            ? unavailable
+        {unavailable !== undefined
+          ? unavailable
+          : placeholder
+            ? placeholder
             : value === undefined
               ? "Count unavailable"
               : isStale
@@ -451,6 +469,7 @@ export function CountTile({
                   ? "Captured observation · paused"
                   : "Exact logical alerts"}
       </span>
+      {layoutControls}
     </article>
   );
 }
@@ -485,102 +504,26 @@ function statusWord(scope: Scope, model: DashboardModel) {
     : (scope.liveStatus ?? "Connecting");
 }
 
-function Provenance({
-  batch,
-  names,
-}: {
-  batch: Batch;
-  names: Map<string, string>;
-}) {
-  const known = new Set([
-    "observation_id",
-    "dashboard_revision",
-    "evaluated_at",
-    "preset_revisions",
-    "relative",
-    "updating",
-    "updating_suppression",
-    "panels",
-  ]);
-  const extra = Object.entries(batch).filter(
-    ([key, value]) =>
-      !known.has(key) &&
-      (typeof value === "string" || typeof value === "number"),
-  );
-  return (
-    <section className="panel db-provenance" aria-label="Count provenance">
-      <dl>
-        <div className="fld">
-          <dt>Captured at</dt>
-          <dd className="mono">
-            {timestamp(batch.evaluated_at)}{" "}
-            {Intl.DateTimeFormat().resolvedOptions().timeZone}
-          </dd>
-        </div>
-        <div className="fld">
-          <dt>Dashboard revision</dt>
-          <dd>{batch.dashboard_revision}</dd>
-        </div>
-        <div className="fld">
-          <dt>Observation</dt>
-          <dd className="mono">{batch.observation_id}</dd>
-        </div>
-        <div className="fld">
-          <dt>Relative time</dt>
-          <dd>
-            {batch.relative === undefined
-              ? "Unknown"
-              : batch.relative
-                ? "Refreshes each second"
-                : "Static query"}
-          </dd>
-        </div>
-        <div className="fld">
-          <dt>Index state</dt>
-          <dd>
-            {batch.updating || batch.updating_suppression
-              ? "Updating"
-              : "Caught up"}
-          </dd>
-        </div>
-        {extra.map(([key, value]) => (
-          <div className="fld" key={key}>
-            <dt>{key.replaceAll("_", " ")}</dt>
-            <dd className="mono">{display(value)}</dd>
-          </div>
-        ))}
-        <div className="fld db-prov-presets">
-          <dt>Preset revisions counted</dt>
-          <dd>
-            {Object.entries(batch.preset_revisions ?? {}).length
-              ? Object.entries(batch.preset_revisions)
-                  .map(
-                    ([id, revision]) =>
-                      `${names.get(id) ?? id} · revision ${revision}`,
-                  )
-                  .join("; ")
-              : "None"}
-          </dd>
-        </div>
-      </dl>
-    </section>
-  );
-}
-
 /**
- * Reference S15 body: status line with count provenance, the 12-column panel
- * grid and the fullscreen modal. Page-level actions drive `model`.
+ * Reference S15 body: the 12-column panel grid and fullscreen modal.
+ * Page-level actions drive `model`.
  */
 export function DashboardBoard({
   scope,
   model,
+  draftPanels,
+  editing,
 }: {
   scope: Scope;
   model: DashboardModel;
+  draftPanels?: Panel[];
+  editing?: {
+    disabled: boolean;
+    onChange: (panels: Panel[]) => void;
+    options: (panel: Panel) => ReactNode;
+  };
 }) {
-  const { state, paused, pause, refresh, fullscreen, setFullscreen, trigger } =
-    model;
-  const [provenance, setProvenance] = useState(false);
+  const { state, paused, refresh, fullscreen, setFullscreen, trigger } = model;
   const dialog = useRef<HTMLDialogElement>(null);
   const wasFullscreen = useRef(false);
   const titleId = useId();
@@ -605,7 +548,73 @@ export function DashboardBoard({
   const names = new Map<string, string>();
   for (const item of batch?.panels ?? [])
     if (item.preset_name) names.set(item.preset_id, item.preset_name);
-  const panels = panelsOf(definition);
+  const savedPanels = useMemo(
+    () => compactPanels(panelsOf(definition)),
+    [definition],
+  );
+  const panels = draftPanels ?? savedPanels;
+  const editable = editing && !fullscreen;
+  function renderPanel(
+    panel: Panel,
+    controls?: ReactNode,
+    active?: boolean,
+    style?: CSSProperties,
+  ) {
+    const observation = batch?.panels.find(
+      (item) =>
+        item.panel_id === panel.id && item.preset_id === panel.preset_id,
+    );
+    const failed = observation?.error !== undefined;
+    const value = failed ? undefined : observation?.count;
+    const code =
+      failed &&
+      observation?.error &&
+      typeof observation.error === "object" &&
+      "code" in observation.error
+        ? String((observation.error as { code: unknown }).code)
+        : "";
+    const presetName = observation?.preset_name;
+    const title =
+      panel.title ??
+      presetName ??
+      (code === "preset_unavailable" ? "Preset unavailable" : "Open preset");
+    return (
+      <CountTile
+        key={panel.id}
+        scope={scope}
+        panel={panel}
+        title={title}
+        presetName={presetName}
+        value={value}
+        unavailable={
+          failed
+            ? code === "preset_unavailable"
+              ? "Unavailable · the preset was deleted"
+              : "Unavailable"
+            : undefined
+        }
+        placeholder={
+          draftPanels && !observation
+            ? "Save the dashboard to count this panel"
+            : undefined
+        }
+        stale={stale}
+        paused={paused}
+        capturedAt={batch?.evaluated_at}
+        href={`/tenants/${scope.tenant.id}/presets/${panel.preset_id}?from=dashboard`}
+        layoutControls={
+          editable ? (
+            <>
+              {controls}
+              {editing.options(panel)}
+            </>
+          ) : undefined
+        }
+        layoutActive={active}
+        layoutStyle={style}
+      />
+    );
+  }
   const word = statusWord(scope, model);
   const updateDetail = paused
     ? "Updates are paused. Showing the captured observation."
@@ -620,47 +629,12 @@ export function DashboardBoard({
             : undefined;
   const content = (
     <>
-      <div className="db-status">
-        <span className="db-status-text">
-          <b>
-            {scope.tenant.name} ·{" "}
-            <span className="db-status-word" title={updateDetail}>
-              {word}
-            </span>
-          </b>
-          {batch ? (
-            <>
-              {" "}
-              · captured at{" "}
-              <span className="mono">{timestamp(batch.evaluated_at)}</span>{" "}
-              {Intl.DateTimeFormat().resolvedOptions().timeZone} · dashboard
-              revision {batch.dashboard_revision}
-            </>
-          ) : state.loading ? (
-            " · counting…"
-          ) : null}
-        </span>
-        {panels.length > 0 && (
-          <span className="db-status-hint">
-            <span aria-hidden="true">·</span>
-            <span>Click a panel to open its preset</span>
-          </span>
-        )}
-        {batch && (
-          <button
-            type="button"
-            className="btn btn-sm btn-g"
-            aria-expanded={provenance}
-            onClick={() => setProvenance((value) => !value)}
-          >
-            Count provenance
-          </button>
-        )}
-      </div>
+      <span className="sr-only" data-dashboard-status>
+        <span title={updateDetail}>{word}</span>
+      </span>
       <p role="status" className="sr-only">
         {state.announcement}
       </p>
-      {provenance && batch && <Provenance batch={batch} names={names} />}
       <ErrorNotice error={state.error} />
       {batch?.relative === undefined && batch && (
         <p className="banner bn-warn">
@@ -669,54 +643,30 @@ export function DashboardBoard({
         </p>
       )}
       {panels.length ? (
-        <div className="pg" aria-busy={state.loading}>
-          {panels.map((panel) => {
-            const observation = batch?.panels.find(
-              (item) => item.panel_id === panel.id,
-            );
-            const failed = observation?.error !== undefined;
-            const value = failed ? undefined : observation?.count;
-            const code =
-              failed &&
-              observation?.error &&
-              typeof observation.error === "object" &&
-              "code" in observation.error
-                ? String((observation.error as { code: unknown }).code)
-                : "";
-            const presetName = observation?.preset_name;
-            const title =
-              panel.title ??
-              presetName ??
-              (code === "preset_unavailable"
-                ? "Preset unavailable"
-                : "Open preset");
-            return (
-              <CountTile
-                key={panel.id}
-                scope={scope}
-                panel={panel}
-                title={title}
-                presetName={presetName}
-                value={value}
-                unavailable={
-                  failed
-                    ? code === "preset_unavailable"
-                      ? "Unavailable · the preset was deleted"
-                      : "Unavailable"
-                    : undefined
-                }
-                stale={stale}
-                paused={paused}
-                capturedAt={batch?.evaluated_at}
-                href={`/tenants/${scope.tenant.id}/presets/${panel.preset_id}?from=dashboard`}
-              />
-            );
-          })}
-        </div>
+        editable ? (
+          <DashboardLayout
+            panels={panels}
+            disabled={editing.disabled}
+            label={(panel) =>
+              panel.title ?? names.get(panel.preset_id) ?? "Panel"
+            }
+            onChange={editing.onChange}
+            onSelect={() => {}}
+            renderPanel={renderPanel}
+          />
+        ) : (
+          <div className="pg" aria-busy={state.loading}>
+            {panels.map((panel) => renderPanel(panel))}
+          </div>
+        )
       ) : (
         <div className="panel db-empty">
           <h2>This dashboard has no panels</h2>
-          <p>Edit the dashboard to add panels that count saved presets.</p>
+          <p>
+            {editing
+              ? "Create a panel to count a saved preset."
+              : "Panels created by editors appear here."}
+          </p>
         </div>
       )}
     </>
@@ -756,9 +706,6 @@ export function DashboardBoard({
             <div className="db-fullscreen-bar">
               <h2 id={titleId}>{display(definition.name)}</h2>
               <span style={{ flexGrow: 1 }} />
-              <button type="button" className="btn" onClick={pause}>
-                {paused ? "Resume updates" : "Pause updates"}
-              </button>
               <button type="button" className="btn" onClick={refresh}>
                 Refresh counts
               </button>

@@ -187,7 +187,7 @@ test("reference palette and rail remain stable under dark OS preference and narr
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/tenants/${tenant}/alerts`);
   await expect(
-    page.getByRole("heading", { name: "All alerts", exact: true }),
+    page.getByRole("heading", { name: "Feed", exact: true }),
   ).toBeVisible();
   await expect(page.locator("body")).toHaveCSS(
     "background-color",
@@ -195,11 +195,20 @@ test("reference palette and rail remain stable under dark OS preference and narr
   );
   await expect(page.locator(".rail")).toHaveCSS("width", "76px");
   await expect(
+    page
+      .getByRole("navigation", { name: "Tenant navigation" })
+      .getByRole("link", { name: "Feed", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
     page.getByRole("button", { name: "Save as preset…" }),
   ).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Assign to me", exact: true }),
   ).toHaveCount(0);
+  await page.screenshot({
+    path: test.info().outputPath("feed-desktop.png"),
+    fullPage: true,
+  });
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(
@@ -207,6 +216,10 @@ test("reference palette and rail remain stable under dark OS preference and narr
     ),
   ).toBe(true);
   await expect(page.getByRole("button", { name: /^Account:/ })).toBeVisible();
+  await page.screenshot({
+    path: test.info().outputPath("feed-narrow.png"),
+    fullPage: true,
+  });
   await page.getByRole("button", { name: /^Account:/ }).click();
   await expect(
     page.getByRole("button", { name: "Sign out", exact: true }),
@@ -302,7 +315,9 @@ test("alert detail uses list context, readable history and confirmed note deleti
     page.getByRole("heading", { name: "Database latency", level: 1 }),
   ).toBeVisible();
   const crumbs = page.getByRole("navigation", { name: "Breadcrumb" });
-  await expect(crumbs.getByRole("link", { name: "All alerts" })).toBeVisible();
+  await expect(
+    crumbs.getByRole("link", { name: "Feed", exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Previous alert in list" }),
   ).toBeDisabled();
@@ -341,4 +356,9 @@ test("alert detail uses list context, readable history and confirmed note deleti
   expect(deletion?.["idempotency-key"]).toBeTruthy();
   await page.getByRole("button", { name: "Next alert in list" }).click();
   await expect(page).toHaveURL(new RegExp(`/alerts/${second.id}$`));
+  await crumbs.getByRole("link", { name: "Feed", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/tenants/${tenant}/alerts$`));
+  await expect(
+    page.getByRole("heading", { name: "Feed", exact: true, level: 1 }),
+  ).toBeVisible();
 });

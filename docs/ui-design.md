@@ -4,18 +4,18 @@ The user requested full frontend adoption of their [Claude artifact](https://cla
 
 ## Reference mapping
 
-| Reference screens | Frontend implementation |
-|---|---|
-| 01 Sign-in; shared rail and page frame (tenant breadcrumb, role chip, title, live status, actions, admin tabs, status banners) | `workspace.tsx`, `page.tsx`, `icons.tsx`, `layout.tsx` |
-| 02 Alerts; 03 Alert detail | `alerts.tsx`, `alert-table.tsx`, `cel-editor.tsx`, `alert-evidence.tsx` |
-| 04 Presets; 05 Saved preset; 06 Preset editor; 07 History | `presets-pages.tsx`, `definition-editor.tsx`, `configuration-history.tsx`, `alert-table.tsx` |
-| 08 Incidents; 09 Incident detail | `incidents-pages.tsx`, `incident-list.tsx`, `incident-membership.tsx`, `incident-notes.tsx` |
-| 10 Correlation rules; 11 Rule editor | `rules-pages.tsx`, `correlation-tester.tsx`, `temporal-history.tsx` |
-| 12 Maintenance; 13 Maintenance editor | `maintenance-pages.tsx`, `maintenance-editor.tsx`, `temporal-history.tsx` |
-| 14 Dashboards; 15 Dashboard | `dashboards-pages.tsx`, `definition-editor.tsx`, `dashboard-counts.tsx` |
-| 16 Operators; 17 Operator detail | `admin-pages.tsx`, `operations.tsx` |
-| 18 Permissions; 19 Access audit; 20 Platform | `admin-pages.tsx`, `directory-picker.tsx`, `audit-browser.tsx`, `administration.tsx` |
-| 21 Loading, empty, error, stale and confirmation states | `page.tsx` (`useConfirm`), tenant health banners in `workspace.tsx`, shared styles |
+| Reference screens                                                                                                              | Frontend implementation                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| 01 Sign-in; shared rail and page frame (tenant breadcrumb, role chip, title, live status, actions, admin tabs, status banners) | `workspace.tsx`, `page.tsx`, `icons.tsx`, `layout.tsx`                                       |
+| 02 Alerts; 03 Alert detail                                                                                                     | `alerts.tsx`, `alert-table.tsx`, `cel-editor.tsx`, `alert-evidence.tsx`                      |
+| 04 Presets; 05 Saved preset; 06 Preset editor; 07 History                                                                      | `presets-pages.tsx`, `definition-editor.tsx`, `configuration-history.tsx`, `alert-table.tsx` |
+| 08 Incidents; 09 Incident detail                                                                                               | `incidents-pages.tsx`, `incident-list.tsx`, `incident-membership.tsx`, `incident-notes.tsx`  |
+| 10 Correlation rules; 11 Rule editor                                                                                           | `rules-pages.tsx`, `correlation-tester.tsx`, `temporal-history.tsx`                          |
+| 12 Maintenance; 13 Maintenance editor                                                                                          | `maintenance-pages.tsx`, `maintenance-editor.tsx`, `temporal-history.tsx`                    |
+| 14 Dashboards; 15 Dashboard                                                                                                    | `dashboards-pages.tsx`, `definition-editor.tsx`, `dashboard-counts.tsx`                      |
+| 16 Operators; 17 Operator detail                                                                                               | `admin-pages.tsx`, `operations.tsx`                                                          |
+| 18 Permissions; 19 Access audit; 20 Platform                                                                                   | `admin-pages.tsx`, `directory-picker.tsx`, `audit-browser.tsx`, `administration.tsx`         |
+| 21 Loading, empty, error, stale and confirmation states                                                                        | `page.tsx` (`useConfirm`), tenant health banners in `workspace.tsx`, shared styles           |
 
 Component paths above are relative to `frontend/src/components`; `resources.tsx` only routes a tenant section to its area. Styles: `frontend/src/app/design.css` carries the reference's class vocabulary (reference `.card`/`.tabs` are named `.panel`/`.tabbar` there); per-area rules are in `frontend/src/app/styles/<area>.css`; `globals.css` keeps base element rules.
 
@@ -31,7 +31,7 @@ At the user's request, the entire available alert row opens its detail page in f
 
 Incident, correlation rule and maintenance window list rows use the same full-row title link as preset rows. Deleted rules and windows open their retained history from anywhere in the row.
 
-Alert details opened from saved preset results show a Presets / preset breadcrumb and a Back to preset action (REV-25). Previous and Next follow the visible result page. The source is remembered for the opened alert in the browser tab, so a direct alert link without that context starts at Alerts.
+Alert details opened from saved preset results show a Presets / preset breadcrumb and a Back to preset action (REV-25). Previous and Next follow the visible result page. The source is remembered for the opened alert in the browser tab, so a direct alert link without that context starts at Feed.
 
 The active and deleted preset-list rows open their existing primary destination when clicked anywhere in the row. Row-level Edit, History and action-menu controls stay independent; keyboard focus on the primary link outlines the row (REV-26).
 
@@ -39,7 +39,11 @@ Saved presets and editor previews render every configured field as its own colum
 in the selected order, including the initial default selection. The user's preset
 creation report exposed that REV-14's default-selection shortcut replaced fields
 with composite Alert/Ownership cells; REV-17 removes that exception. The ordinary
-Alerts screen uses its compact layout because it has no preset column selection.
+Feed uses its compact layout because it has no preset column selection.
+
+The user's 2026-10-11 correction renames the Alerts page to Feed in the navigation,
+page title and breadcrumbs. The alert-detail return breadcrumb also uses Feed.
+Existing `/alerts` URLs, API paths and alert terminology for records remain.
 Header arrows reflect the applied sort, wide tables scroll inside their panel,
 and row navigation and suppression remain available when Message is omitted.
 
@@ -60,6 +64,53 @@ revalidation and expiry handling continue. The public expired-sign-in page remai
 outside this layout.
 
 ## Review and verification
+
+The user’s 2026-10-08 correction puts editing on the regular dashboard screen.
+Click its name or adjacent pen icon to rename it. Create panel and each panel’s
+options open a dialog for one panel; Delete panel changes the local draft. Save
+is disabled until the complete name/panel/layout draft differs from the saved
+baseline, including after reverting all changes or successful save. Canceling a panel
+dialog leaves the dashboard draft unchanged. There is no separate
+dashboard editor.
+
+The user’s 2026-10-09 correction replaces Pause updates with Discard changes in
+the primary dashboard toolbar. Discard is available to editors, disabled while
+clean or commands are locked, and confirms before restoring the current saved
+definition. There is one discard entry point. Automatic count updates and manual
+Refresh counts remain, including fullscreen, which has no pause control. Preview
+draft counts and its requests/preview state are removed. New or changed preset
+references show “Save the dashboard to count this panel” until saved.
+
+The later 2026-10-09 user correction removes the visible unsaved-draft reminder,
+preset-opening hint, drag/resize instructions and tenant/live/capture/revision
+status line. The draft’s Unsaved changes chip and Save/Discard controls remain.
+Keyboard instructions stay available to assistive technology through the handles;
+count status is visually hidden. The subsequent same-day correction removes the
+Count provenance button, details panel and reserved action row. Batch metadata
+continues to validate count context internally. Count refresh keeps panels steady;
+actual errors and stale/unavailable count markers remain visible.
+
+Each desktop panel exposes a move grip and a lower-right resize handle. Following
+the later 2026-10-08 user correction, the active panel follows the pointer in CSS
+pixels while a placeholder shows its compacted grid destination. Neighbors and
+the released panel settle smoothly; reduced-motion preference skips settling
+animations. Saved dimensions use the existing grid choices; arrow keys provide the same
+operations. Escape or pointer cancellation restores the pre-gesture draft.
+Width/Height controls and Move up/down actions remain available through panel
+options on narrow screens. Responsive display preserves desktop columns and sizes.
+
+Assistant-selected collision handling pins the edited rectangle, visits other
+panels in saved y/x/UUID order and moves overlapping panels downward until they
+fit, then applies upward gravity while preserving horizontal blocker order.
+Panels settle at the top or immediately beneath supporting panels in overlapping
+columns. This closes empty gaps after moving, shrinking, deleting, creating or
+reordering panels. A gesture whose compacted layout exceeds 100 units keeps the
+last valid preview. New panels fill the first compacted row-major gap. Existing
+sparse saved layouts display compacted for editors, viewers and fullscreen;
+opening alone stays clean and writes nothing. Subsequent explicit edits save the
+compacted coordinates. All changes stay in the per-tab draft until explicit Save,
+using the existing revision and command identity. API validation remains the
+authority for the submitted whole layout.
 
 Browser review uses a temporary, isolated synthetic API that returns shapes from `contracts/openapi.json`, and an isolated Next build directory; the existing developer stack is separate. `APPCHI_NEXT_DIST_DIR` can select this directory without overwriting another running server's output; the normal default remains `.next`. On 2026-09-24 every reference artboard was rendered from its source and compared side by side with the corresponding screen at 1440 × 900; remaining differences come from illustrative prototype data or data the API does not provide (for example incident activity actor names, see REV-13 in the design register).
 

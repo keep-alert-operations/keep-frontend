@@ -65,7 +65,7 @@ test("account theme switch persists across pages and reloads", async ({
   await page.emulateMedia({ colorScheme: "dark" });
   await mockApi(page);
   await page.goto(`/tenants/${tenant}/alerts`);
-  await expect(page.getByRole("heading", { name: "All alerts" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Feed" })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   const lightBackground = await page
     .locator("body")

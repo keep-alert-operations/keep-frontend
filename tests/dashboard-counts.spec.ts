@@ -95,6 +95,7 @@ async function setup(page: Page) {
   const state = {
     definition: initial,
     calls: 0,
+    countRevisions: [] as string[],
     relative: false,
     failure: false,
     conflicts: 0,
@@ -142,6 +143,9 @@ async function setup(page: Page) {
       return route.fulfill({ json: { data: state.definition } });
     if (path === api + "/counts") {
       state.calls++;
+      state.countRevisions.push(
+        route.request().postDataJSON().expected_revision,
+      );
       await state.waitForCounts;
       expect(route.request().headers()["x-csrf-token"]).toBe("counts-csrf");
       if (state.conflicts > 0) {
@@ -254,6 +258,12 @@ for (const mode of ["desktop", "narrow", "fullscreen"] as const) {
       await page
         .getByRole("button", { name: "Fullscreen", exact: true })
         .click();
+    await expect(
+      page.getByRole("button", { name: "Count provenance", exact: true }),
+    ).toHaveCount(0);
+    await expect(page.locator(".db-count-actions, .db-provenance")).toHaveCount(
+      0,
+    );
     const firstPanel = page.getByRole("article", { name: "First panel count" });
     const secondPanel = page.getByRole("article", {
       name: "Second panel count",
@@ -279,7 +289,9 @@ for (const mode of ["desktop", "narrow", "fullscreen"] as const) {
     const calls = state.calls;
     await invalidate();
     await expect.poll(() => state.calls).toBeGreaterThan(calls);
-    await expect(page.locator(".db-status-text")).toContainText("Updating");
+    await expect(page.locator("[data-dashboard-status]")).toContainText(
+      "Updating",
+    );
     expect(await firstPanel.boundingBox()).toEqual(before);
     await expect(firstPanel).not.toHaveClass(/pn-stale/);
     await expect(firstPanel).toContainText("9,007,199,254,740,993");
@@ -290,22 +302,20 @@ for (const mode of ["desktop", "narrow", "fullscreen"] as const) {
     await expect(page.locator(".banner.bn-warn")).toHaveCount(0);
     state.suppressionUpdating = true;
     await invalidate();
-    await expect(page.locator(".db-status-text")).toContainText(
+    await expect(page.locator("[data-dashboard-status]")).toContainText(
       "Updating suppression",
     );
-    const statusFits = await page
-      .locator(".db-status-word")
-      .evaluate((word) => {
-        const clip = word.closest(".db-status-text")!.getBoundingClientRect();
-        return word.getBoundingClientRect().right <= clip.right;
-      });
-    expect(statusFits).toBe(true);
+    const statusBox = (await page
+      .locator("[data-dashboard-status]")
+      .boundingBox())!;
+    expect(statusBox.width).toBeLessThanOrEqual(1);
+    expect(statusBox.height).toBeLessThanOrEqual(1);
     expect(await firstPanel.boundingBox()).toEqual(before);
     state.health.searchable_seq = "2";
     state.countUpdating = false;
     state.suppressionUpdating = false;
     await invalidate();
-    await expect(page.locator(".db-status-text")).toContainText("Live");
+    await expect(page.locator("[data-dashboard-status]")).toContainText("Live");
     expect(await firstPanel.boundingBox()).toEqual(before);
     await expect(page.locator(".pn-stale, .banner.bn-warn")).toHaveCount(0);
     if (mode === "desktop") {
@@ -318,7 +328,7 @@ for (const mode of ["desktop", "narrow", "fullscreen"] as const) {
   });
 }
 
-test("relative dashboards refresh each foreground second and pause or hide without querying", async ({
+test("relative dashboards refresh each foreground second and stop while hidden", async ({
   page,
 }) => {
   const state = await setup(page);
@@ -327,12 +337,9 @@ test("relative dashboards refresh each foreground second and pause or hide witho
   const before = state.calls;
   await page.clock.runFor(1000);
   await expect.poll(() => state.calls).toBeGreaterThan(before);
-  await page.getByRole("button", { name: "Pause updates" }).click();
-  const paused = state.calls;
-  await page.clock.runFor(4000);
-  expect(state.calls).toBe(paused);
-  await page.getByRole("button", { name: "Resume updates" }).click();
-  await expect.poll(() => state.calls).toBeGreaterThan(paused);
+  await expect(
+    page.getByRole("button", { name: /Pause updates|Resume updates/ }),
+  ).toHaveCount(0);
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
@@ -394,15 +401,18 @@ test("a changed count context gets one fresh-definition retry then remains Updat
   state.conflicts = 1;
   const before = state.calls;
   await page.getByRole("button", { name: "Refresh counts" }).click();
-  await expect(page.locator(".db-status-text")).toContainText(
-    /captured at .*dashboard revision 2/,
-  );
+  await expect
+    .poll(() => state.countRevisions.slice(before))
+    .toEqual(["1", "2"]);
+  await expect(page.locator("[data-dashboard-status]")).toHaveText("Live");
   expect(state.calls).toBe(before + 2);
   state.conflicts = 2;
   const again = state.calls;
   await page.getByRole("button", { name: "Refresh counts" }).click();
-  await expect(page.locator(".db-status-word")).toHaveText("Updating");
-  await expect(page.locator(".db-status-word")).toHaveAttribute(
+  await expect(page.locator("[data-dashboard-status] > span")).toHaveText(
+    "Updating",
+  );
+  await expect(page.locator("[data-dashboard-status] > span")).toHaveAttribute(
     "title",
     "The dashboard changed while refreshing. Refresh counts or wait for the next update.",
   );
@@ -442,15 +452,18 @@ test("fullscreen uses a modal focus boundary and Escape restores its opener", as
       ),
     ).toBe(true);
   }
-  await dialog.getByRole("button", { name: "Pause updates" }).focus();
+  await dialog.getByRole("button", { name: "Refresh counts" }).focus();
   await page.keyboard.press("Shift+Tab");
   await expect(
     dialog.getByRole("link", { name: "Second panel", exact: true }),
   ).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(
-    dialog.getByRole("button", { name: "Pause updates" }),
+    dialog.getByRole("button", { name: "Refresh counts" }),
   ).toBeFocused();
+  await expect(
+    dialog.getByRole("button", { name: /Pause updates|Resume updates/ }),
+  ).toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
   await expect(opener).toBeFocused();
