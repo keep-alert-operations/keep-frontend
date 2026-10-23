@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { LIVE_QUIET_MS } from "../src/lib/live-coalescer";
 const tenant = "00000000-0000-4000-8000-000000000001";
 const id = "00000000-0000-4000-8000-000000000010";
 const preset = "00000000-0000-4000-8000-000000000020";
@@ -203,7 +204,8 @@ async function open(page: Page) {
   await expect(
     page.getByRole("article", { name: "First panel count" }),
   ).toContainText("Exact logical alerts");
-  await page.clock.runFor(300);
+  // Let the first observed view state's merged refresh finish.
+  await page.clock.runFor(LIVE_QUIET_MS + 100);
   await expect(
     page.getByRole("article", { name: "First panel count" }),
   ).toContainText("Exact logical alerts");
@@ -276,7 +278,7 @@ for (const mode of ["desktop", "narrow", "fullscreen"] as const) {
           }
         ).emitDashboardChange(generation);
       }, state.generation);
-      await page.clock.runFor(300);
+      await page.clock.runFor(LIVE_QUIET_MS + 100);
     }
     let release!: () => void;
     state.waitForCounts = new Promise<void>((resolve) => {

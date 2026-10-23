@@ -10,7 +10,8 @@ import {
   requestSession,
   tenantPath,
 } from "@/lib/api";
-import { useResource } from "@/lib/hooks";
+import { onOwnCommand, useResource } from "@/lib/hooks";
+import { liveCoalescer } from "@/lib/live-coalescer";
 import { liveStream } from "@/lib/live-stream";
 import { Alerts } from "./alerts";
 import { Resources } from "./resources";
@@ -465,11 +466,26 @@ function TenantWorkspace(
 ) {
   const [version, setVersion] = useState(0),
     [liveStatus, setLiveStatus] = useState("Connecting");
+  const pendingLive = useRef<ReturnType<typeof liveCoalescer>>(undefined);
   useEffect(() => {
-    let coalesce: ReturnType<typeof setTimeout> | undefined;
     let stopped = false,
       lastVector = "",
       liveConnected = false;
+    const coalesce = liveCoalescer(() => {
+      if (!stopped && document.visibilityState === "visible")
+        setVersion((v) => v + 1);
+    });
+    pendingLive.current = coalesce;
+    // Search reflects the user's own command only after its projection hint.
+    const scope = `${tenantPath(props.tenant.id)}/`;
+    const stopCommands = onOwnCommand((path) => {
+      if (path.startsWith(scope)) coalesce.expedite();
+    });
+    // A direct reload covers every change seen so far; drop the pending merge.
+    function reload() {
+      coalesce.cancel();
+      setVersion((v) => v + 1);
+    }
     type PollAttempt = {
       controller: AbortController;
       timer?: ReturnType<typeof setTimeout>;
@@ -485,13 +501,7 @@ function TenantWorkspace(
       const next = JSON.stringify(vector);
       if (next === lastVector) return;
       lastVector = next;
-      if (coalesce !== undefined || document.visibilityState !== "visible")
-        return;
-      coalesce = setTimeout(() => {
-        coalesce = undefined;
-        if (!stopped && document.visibilityState === "visible")
-          setVersion((v) => v + 1);
-      }, 250);
+      if (document.visibilityState === "visible") coalesce.change();
     }
     async function reconcile() {
       if (stopped || polling || document.visibilityState !== "visible") return;
@@ -551,7 +561,7 @@ function TenantWorkspace(
         liveConnected = false;
         setLiveStatus("Reconciling");
         void reconcile();
-        if (document.visibilityState === "visible") setVersion((v) => v + 1);
+        if (document.visibilityState === "visible") reload();
       },
       onDegraded() {
         if (stopped) return;
@@ -567,11 +577,10 @@ function TenantWorkspace(
       if (visible) {
         setLiveStatus("Reconciling");
         void reconcile();
-        setVersion((v) => v + 1);
+        reload();
       } else {
         stopPolling();
-        clearTimeout(coalesce);
-        coalesce = undefined;
+        coalesce.cancel();
       }
     }
     stream.setVisible(document.visibilityState === "visible");
@@ -585,11 +594,16 @@ function TenantWorkspace(
       stopPolling();
       stream.close();
       clearInterval(poll);
-      clearTimeout(coalesce);
+      coalesce.cancel();
+      stopCommands();
+      if (pendingLive.current === coalesce) pendingLive.current = undefined;
       document.removeEventListener("visibilitychange", visibility);
     };
   }, [props.tenant.id, props.onDenied]);
-  const refresh = useCallback(() => setVersion((v) => v + 1), []);
+  const refresh = useCallback(() => {
+    pendingLive.current?.cancel();
+    setVersion((v) => v + 1);
+  }, []);
   const health = useResource<Record<string, unknown>>(
     `${tenantPath(props.tenant.id)}/health`,
     props.onDenied,
