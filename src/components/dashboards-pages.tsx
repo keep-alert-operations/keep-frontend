@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   ApiError,
@@ -8,14 +8,14 @@ import {
   tenantPath,
   timestamp,
 } from "@/lib/api";
-import { useCommand, useResource } from "@/lib/hooks";
+import { useResource } from "@/lib/hooks";
 import type { Scope } from "./workspace";
-import { CommandFeedback, ErrorNotice } from "./ui";
-import { NavLink, Page, personLabel, SearchInput, useConfirm } from "./page";
-import { DashboardEditor, Menu } from "./definition-editor";
+import { ErrorNotice } from "./ui";
+import { NavLink, Page, personLabel, SearchInput } from "./page";
+import { DashboardWorkspace } from "./dashboard-workspace";
 import { ConfigurationHistory } from "./configuration-history";
-import { DashboardBoard, useDashboard, type Panel } from "./dashboard-counts";
-import { returnFocus, useLeave, useReturnFocus } from "./presets-pages";
+import { useDashboard, type Panel } from "./dashboard-counts";
+import { useLeave } from "./presets-pages";
 
 /** Routes this area's list, detail, editor and history screens. */
 export function DashboardPages(
@@ -23,7 +23,15 @@ export function DashboardPages(
 ) {
   const pathname = usePathname();
   const sub = pathname.split("/").filter(Boolean)[4];
-  if (!scope.id) return <DashboardList key={scope.tenant.id} scope={scope} />;
+  const [deletionNotice, setDeletionNotice] = useState(false);
+  if (!scope.id)
+    return (
+      <DashboardList
+        key={scope.tenant.id}
+        scope={scope}
+        deletionNotice={deletionNotice}
+      />
+    );
   if (scope.id === "new")
     return <NewDashboard key={`${scope.tenant.id}:new`} scope={scope} />;
   if (sub === "history")
@@ -40,7 +48,10 @@ export function DashboardPages(
       key={`${scope.tenant.id}:${scope.id}`}
       scope={scope}
       id={scope.id}
-      editing={sub === "edit"}
+      onDeletedClean={() => {
+        setDeletionNotice(true);
+        scope.navigate(`/tenants/${scope.tenant.id}/dashboards`);
+      }}
     />
   );
 }
@@ -49,7 +60,7 @@ function NewDashboard({ scope }: { scope: Scope }) {
   const leave = useLeave(scope);
   const list = `/tenants/${scope.tenant.id}/dashboards`;
   return (
-    <DashboardEditor
+    <DashboardWorkspace
       scope={scope}
       onSaved={(row) => leave(row?.id ? `${list}/${row.id}` : list)}
       onDiscard={() => leave(list)}
@@ -95,7 +106,13 @@ function miniTones(row: RecordData) {
   return { tones, count: countValue };
 }
 
-function DashboardList({ scope }: { scope: Scope }) {
+function DashboardList({
+  scope,
+  deletionNotice,
+}: {
+  scope: Scope;
+  deletionNotice?: boolean;
+}) {
   const [state, setState] = useState<"active" | "deleted">("active");
   const [search, setSearch] = useState("");
   const filter = useDebounced(search.trim());
@@ -133,6 +150,12 @@ function DashboardList({ scope }: { scope: Scope }) {
         )
       }
     >
+      {deletionNotice && (
+        <p className="banner bn-warn" role="status">
+          The open dashboard was deleted. Its retained history is available
+          under Deleted.
+        </p>
+      )}
       <div className="list-bar">
         <div className="seg" role="group" aria-label="Show">
           {(
@@ -287,45 +310,26 @@ function DashboardList({ scope }: { scope: Scope }) {
 function DashboardDetail({
   scope,
   id,
-  editing,
+  onDeletedClean,
 }: {
   scope: Scope;
   id: string;
-  editing: boolean;
+  onDeletedClean: () => void;
 }) {
   const path = `${tenantPath(scope.tenant.id)}/dashboards/${id}`;
   const result = useResource<RecordData>(path, scope.onDenied, scope.version);
   const dashboard = result.data?.data;
-  const [base, setBase] = useState<RecordData | null>(null);
-  const leave = useLeave(scope);
+  const retained = useRef<RecordData | undefined>(undefined);
+  if (dashboard) retained.current = dashboard;
+  const deleted =
+    result.error instanceof ApiError && result.error.status === 404;
+  const denied =
+    result.error instanceof ApiError &&
+    [401, 403].includes(result.error.status);
+  if (denied) retained.current = undefined;
+  const available = denied ? undefined : (dashboard ?? retained.current);
   const detailHref = `/tenants/${scope.tenant.id}/dashboards/${id}`;
-  useEffect(() => {
-    if (editing && !base && dashboard) setBase(dashboard);
-    if (!editing && base) setBase(null);
-  }, [editing, base, dashboard]);
-  if (editing && base)
-    return (
-      <DashboardEditor
-        key={`${id}:${base.revision}`}
-        scope={scope}
-        existing={base}
-        current={dashboard}
-        onSaved={(row) => {
-          result.reload();
-          returnFocus.pending = !row?.id || row.id === id;
-          leave(
-            row?.id && row.id !== id
-              ? `/tenants/${scope.tenant.id}/dashboards/${row.id}`
-              : detailHref,
-          );
-        }}
-        onDiscard={() => {
-          returnFocus.pending = true;
-          leave(detailHref);
-        }}
-      />
-    );
-  if (!dashboard)
+  if (!available)
     return (
       <Page
         scope={scope}
@@ -350,7 +354,14 @@ function DashboardDetail({
       </Page>
     );
   return (
-    <DashboardView scope={scope} dashboard={dashboard} reload={result.reload} />
+    <DashboardView
+      scope={scope}
+      dashboard={available}
+      deleted={deleted}
+      onDeletedClean={onDeletedClean}
+      reload={result.reload}
+      install={(row) => result.install({ data: row })}
+    />
   );
 }
 
@@ -358,143 +369,38 @@ function DashboardView({
   scope,
   dashboard,
   reload,
+  install,
+  deleted,
+  onDeletedClean,
 }: {
   scope: Scope;
   dashboard: RecordData;
   reload: () => void;
+  install: (row: RecordData) => void;
+  deleted: boolean;
+  onDeletedClean: () => void;
 }) {
   const model = useDashboard(scope, dashboard, reload);
-  useReturnFocus(true);
-  const command = useCommand(scope.session.csrf_token, scope.onDenied);
-  const [dialog, confirm] = useConfirm();
-  const definition = model.state.definition;
-  const canEdit = scope.tenant.role !== "view";
-  const list = `/tenants/${scope.tenant.id}/dashboards`;
-  const href = `${list}/${dashboard.id}`;
-  const panels = Array.isArray(definition.panels)
-    ? definition.panels.length
-    : 0;
-  async function remove() {
-    if (
-      !(await confirm({
-        title: `Delete dashboard “${display(definition.name)}”?`,
-        body: (
-          <p>
-            It is removed for everyone in {scope.tenant.name}. Its presets and
-            alerts are kept. Retained history stays readable; there is no
-            undelete.
-          </p>
-        ),
-        confirmLabel: "Delete dashboard",
-        danger: true,
-      }))
-    )
-      return;
-    const result = await command.execute(
-      `${tenantPath(scope.tenant.id)}/dashboards/${definition.id}`,
-      {},
-      "DELETE",
-      {
-        "Idempotency-Key": crypto.randomUUID(),
-        "If-Match": `"${definition.revision}"`,
-      },
-    );
-    if (result) scope.navigate(list);
-  }
+  const leave = useLeave(scope);
   return (
-    <Page
+    <DashboardWorkspace
       scope={scope}
-      className="dashboard-view"
-      title={display(definition.name)}
-      crumbs={[{ label: "Dashboards", href: list }]}
-      extra={
-        <span className="page-subtitle">
-          Shared · revision {definition.revision} · {panels} panel
-          {panels === 1 ? "" : "s"}
-        </span>
-      }
-      actions={
-        <>
-          <button type="button" className="btn" onClick={model.pause}>
-            {model.paused ? "Resume updates" : "Pause updates"}
-          </button>
-          <button type="button" className="btn" onClick={model.refresh}>
-            Refresh counts
-          </button>
-          <button
-            ref={model.trigger}
-            type="button"
-            className="btn"
-            onClick={() => model.setFullscreen(true)}
-          >
-            Fullscreen
-          </button>
-          {canEdit && (
-            <NavLink
-              data-edit-trigger
-              scope={scope}
-              className="btn"
-              href={`${href}/edit`}
-            >
-              Edit dashboard
-            </NavLink>
-          )}
-          <Menu
-            label="More dashboard actions"
-            className="btn"
-            style={{ padding: "0 10px" }}
-            content={
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <circle cx="5" cy="12" r="1.8" />
-                <circle cx="12" cy="12" r="1.8" />
-                <circle cx="19" cy="12" r="1.8" />
-              </svg>
-            }
-          >
-            {(close) => (
-              <>
-                <NavLink
-                  scope={scope}
-                  role="menuitem"
-                  className="menu-item"
-                  href={`${href}/history`}
-                  onClick={close}
-                >
-                  History
-                </NavLink>
-                {canEdit && (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="menu-item menu-danger"
-                    disabled={command.busy}
-                    onClick={() => {
-                      close();
-                      void remove();
-                    }}
-                  >
-                    Delete dashboard
-                  </button>
-                )}
-              </>
-            )}
-          </Menu>
-        </>
-      }
-    >
-      {dialog}
-      {(command.error || command.uncertain) && (
-        <div className="pe-feedback">
-          <CommandFeedback command={command} />
-        </div>
-      )}
-      <DashboardBoard scope={scope} model={model} />
-    </Page>
+      existing={dashboard}
+      current={dashboard}
+      deleted={deleted}
+      onDeletedClean={onDeletedClean}
+      model={model}
+      reload={reload}
+      onSaved={(row) => {
+        if (row) {
+          if (row.id !== dashboard.id)
+            leave(`/tenants/${scope.tenant.id}/dashboards/${row.id}`);
+          else {
+            install(row);
+            reload();
+          }
+        }
+      }}
+    />
   );
 }

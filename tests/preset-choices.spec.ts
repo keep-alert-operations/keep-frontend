@@ -13,7 +13,7 @@ const preset = (id: string) => ({
 async function setup(page: Page) {
   const state = {
     expired: false,
-    preview: undefined as unknown,
+    saved: undefined as unknown,
     searches: [] as string[],
   };
   await page.route("**/auth/session", (route) =>
@@ -70,14 +70,36 @@ async function setup(page: Page) {
       return route.fulfill({ json: { data: preset(first) } });
     if (url.pathname.endsWith(`/presets/${later}`))
       return route.fulfill({ json: { data: preset(later) } });
-    if (url.pathname.endsWith("/dashboards/preview")) {
-      state.preview = route.request().postDataJSON();
-      return route.fulfill({ json: { data: { panels: [] } } });
+    if (
+      url.pathname.endsWith("/dashboards") &&
+      route.request().method() === "POST"
+    ) {
+      state.saved = route.request().postDataJSON();
+      return route.fulfill({
+        status: 201,
+        json: {
+          data: {
+            ...(state.saved as Record<string, unknown>),
+            id: first,
+            revision: "1",
+          },
+        },
+      });
     }
+    if (url.pathname.endsWith(`/dashboards/${first}`))
+      return route.fulfill({
+        json: {
+          data: {
+            ...(state.saved as Record<string, unknown>),
+            id: first,
+            revision: "1",
+          },
+        },
+      });
     return route.fulfill({ json: { data: [], next_cursor: null } });
   });
   await page.goto(`/tenants/${tenant}/dashboards/new`);
-  await page.getByRole("button", { name: "Add panel", exact: true }).click();
+  await page.getByRole("button", { name: "Create panel", exact: true }).click();
   return state;
 }
 
@@ -90,29 +112,40 @@ test("dashboard preset choices page and search without losing selected reference
     exact: true,
   });
   await picker.selectOption(first);
-  await page.getByRole("button", { name: "Next preset page" }).click();
+  await page.getByRole("button", { name: "Next page" }).click();
   await expect(picker.locator(`option[value="${later}"]`)).toHaveText(
     "Later preset",
   );
   await expect(picker).toHaveValue(first);
   await picker.selectOption(later);
-  await page.getByRole("button", { name: "First preset page" }).click();
+  await page.getByRole("button", { name: "First page" }).click();
   await expect(picker).toHaveValue(later);
   await expect(picker.locator(`option[value="${later}"]`)).toHaveText(
     "Later preset",
   );
-  await page.getByRole("button", { name: "Preview draft" }).click();
-  await expect
-    .poll(() => state.preview)
-    .toMatchObject({ preset_revisions: { [later]: "9007199254740999" } });
-  await page.getByLabel("Find shared presets").fill("Later");
-  await page
-    .getByRole("button", { name: "Search presets", exact: true })
-    .click();
+  await page.getByLabel("Search presets", { exact: true }).fill("Later");
   await expect
     .poll(() => state.searches.some((search) => search.includes("name=Later")))
     .toBe(true);
   await expect(picker).toHaveValue(later);
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Create panel", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Edit dashboard name", exact: true })
+    .click();
+  await page
+    .getByLabel("Dashboard name", { exact: true })
+    .fill("Saved dashboard");
+  await page.getByLabel("Dashboard name", { exact: true }).press("Enter");
+  await expect(
+    page.getByRole("button", { name: "More dashboard actions", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect
+    .poll(() => state.saved)
+    .toMatchObject({ name: "Saved dashboard", panels: [{ preset_id: later }] });
 });
 
 test("changed preset collection preserves the dashboard draft and can restart", async ({
@@ -120,20 +153,20 @@ test("changed preset collection preserves the dashboard draft and can restart", 
 }) => {
   const state = await setup(page);
   await page
-    .getByLabel("Name", { exact: true })
-    .fill("Preserved dashboard draft");
+    .getByLabel("Custom title (optional)")
+    .fill("Preserved panel draft");
   await page
     .getByRole("combobox", { name: "Saved preset", exact: true })
     .selectOption(first);
   state.expired = true;
-  await page.getByRole("button", { name: "Next preset page" }).click();
+  await page.getByRole("button", { name: "Next page" }).click();
   await expect(
     page.getByText("Configuration changed; restart the list."),
   ).toBeVisible();
-  await expect(page.getByLabel("Name", { exact: true })).toHaveValue(
-    "Preserved dashboard draft",
+  await expect(page.getByLabel("Custom title (optional)")).toHaveValue(
+    "Preserved panel draft",
   );
-  await page.getByRole("button", { name: "Refresh preset choices" }).click();
+  await page.getByRole("button", { name: "Retry loading presets" }).click();
   await expect(
     page.getByText("Configuration changed; restart the list."),
   ).toHaveCount(0);

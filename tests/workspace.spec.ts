@@ -840,7 +840,7 @@ test("dark narrow layout retains keyboard access and semantic content", async ({
   ).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(
-    page.getByRole("heading", { name: "All alerts", exact: true }),
+    page.getByRole("heading", { name: "Feed", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("table")).toBeVisible();
 });

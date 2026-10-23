@@ -482,10 +482,16 @@ test("deleted dashboard history creates a new named identity with new panel IDs 
   await page
     .getByRole("button", { name: "Save as new draft…", exact: true })
     .click();
-  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("");
   await page
-    .getByLabel("Name", { exact: true })
+    .getByRole("button", { name: "Edit dashboard name", exact: true })
+    .click();
+  await expect(page.getByLabel("Dashboard name", { exact: true })).toHaveValue(
+    "",
+  );
+  await page
+    .getByLabel("Dashboard name", { exact: true })
     .fill("Explicit recovered dashboard");
+  await page.getByLabel("Dashboard name", { exact: true }).press("Enter");
   let submitted: Record<string, unknown> | undefined;
   await page.route(`**/api/tenants/${tenant}/dashboards`, (route) => {
     submitted = route.request().postDataJSON();
@@ -500,9 +506,7 @@ test("deleted dashboard history creates a new named identity with new panel IDs 
       },
     });
   });
-  await page
-    .getByRole("button", { name: "Create dashboard", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Open saved definition" }),
   ).toBeVisible();

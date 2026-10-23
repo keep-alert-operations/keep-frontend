@@ -1,4 +1,5 @@
 "use client";
+import { DashboardWorkspace } from "./dashboard-workspace";
 import { useEffect, useRef, useState } from "react";
 import {
   ApiError,
@@ -15,7 +16,7 @@ import {
   timezoneLabel,
 } from "@/lib/preset-choices";
 import type { Scope } from "./workspace";
-import { CelCode, DashboardEditor, PresetEditor } from "./definition-editor";
+import { CelCode, PresetEditor } from "./definition-editor";
 import { ErrorNotice } from "./ui";
 import { NavLink, Page } from "./page";
 
@@ -223,7 +224,7 @@ export function ConfigurationHistory({
   const listHref = `/tenants/${scope.tenant.id}/${section}`;
   const detailHref = `${listHref}/${id}`;
   if (draft) {
-    const Editor = section === "presets" ? PresetEditor : DashboardEditor;
+    const Editor = section === "presets" ? PresetEditor : DashboardWorkspace;
     return (
       <Editor
         key={`${id}:${draft.source}:${draft.existing ? "reuse" : "copy"}`}

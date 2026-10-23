@@ -95,7 +95,7 @@ function readAlertList(tenantId: string, id: string) {
 }
 
 /* ------------------------------------------------------------------------ */
-/* S02 · All alerts (ad-hoc feed)                                            */
+/* S02 · Feed (ad-hoc alert queries)                                         */
 
 export function AlertFeed(scope: Scope) {
   const [quickView, setQuickView] = useState<QuickViewKey>("all");
@@ -194,9 +194,9 @@ export function AlertFeed(scope: Scope) {
   return (
     <Page
       scope={scope}
-      title="All alerts"
+      title="Feed"
       className="alerts-page"
-      crumbs={[{ label: "Alerts" }]}
+      crumbs={[{ label: "Feed" }]}
       extra={
         <span className="page-subtitle">
           Ad-hoc feed · nothing here is saved until you save it as a preset
@@ -308,7 +308,7 @@ export function AlertFeed(scope: Scope) {
             ?.match(/\/alerts\/([^/?#]+)$/);
           if (match)
             rememberAlertList(scope.tenant.id, {
-              label: "All alerts",
+              label: "Feed",
               href: `/tenants/${scope.tenant.id}/alerts`,
               ids: rows.map((row) => row.id),
               current: decodeURIComponent(match[1]),
@@ -914,10 +914,7 @@ function AlertDetail(scope: Scope & { id: string }) {
           { label: "Presets", href: `/tenants/${scope.tenant.id}/presets` },
           { label: list.label, href: list.href },
         ]
-      : [
-          { label: "Alerts", href: `/tenants/${scope.tenant.id}/alerts` },
-          ...(list ? [{ label: list.label, href: list.href }] : []),
-        ];
+      : [{ label: "Feed", href: `/tenants/${scope.tenant.id}/alerts` }];
   const title = alert
     ? display(alert.message ?? alert.application)
     : detail.error
