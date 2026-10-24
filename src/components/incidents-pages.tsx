@@ -31,9 +31,8 @@ export function IncidentPages(scope: Scope & { section: string; id?: string }) {
 }
 
 const SEVERITIES = ["critical", "high", "medium", "low"] as const;
-const DAY = 24 * 60 * 60 * 1000;
+/** Describes recorded inactivity resolutions only; the sweep is deferred (REV-34). */
 const INACTIVITY_DAYS = 30;
-const RETENTION_DAYS = 90;
 
 function cap(value: unknown) {
   return typeof value === "string" && value
@@ -46,12 +45,6 @@ function str(value: unknown) {
 function num(value: unknown) {
   return typeof value === "number" || typeof value === "string"
     ? String(value)
-    : undefined;
-}
-function addDays(value: unknown, days: number) {
-  const at = typeof value === "string" ? Date.parse(value) : NaN;
-  return Number.isFinite(at)
-    ? new Date(at + days * DAY).toISOString()
     : undefined;
 }
 /** Principal label that also accepts rows carrying only a display name. */
@@ -247,12 +240,8 @@ function IncidentCreate({ scope }: { scope: Scope }) {
               <li>Status and assignment are independent.</li>
               <li>An alert can belong to only one active incident.</li>
               <li>
-                Active incidents resolve automatically after {INACTIVITY_DAYS}{" "}
-                days without activity.
-              </li>
-              <li>
-                Resolved incidents are retained for {RETENTION_DAYS} days from
-                their latest resolution.
+                Incidents stay active until someone resolves them; nothing
+                resolves or removes an incident automatically.
               </li>
             </ul>
           </aside>
@@ -441,8 +430,6 @@ function IncidentDetail({ scope, id }: { scope: Scope; id: string }) {
   const lastActivity = incident.last_activity ?? incident.updated_at;
   const resolvedAt = incident.resolved_at ?? current?.resolved_at;
   const cause = str(current?.cause);
-  const retention =
-    str(incident.retention_at) ?? addDays(resolvedAt, RETENTION_DAYS);
 
   const correlation = incident.origin === "correlation";
   const originChip = correlation ? (
@@ -599,45 +586,24 @@ function IncidentDetail({ scope, id }: { scope: Scope; id: string }) {
             </div>
             <div className="inc-times">
               {resolved ? (
-                <>
-                  <span className="small muted">
-                    Resolved{" "}
-                    <span className="mono inc-strong">
-                      {timestamp(resolvedAt)}
-                    </span>
-                    {cause === "inactivity"
-                      ? ` · after ${INACTIVITY_DAYS} days without activity`
-                      : cause === "manual"
-                        ? " · manually"
-                        : ""}
+                <span className="small muted">
+                  Resolved{" "}
+                  <span className="mono inc-strong">
+                    {timestamp(resolvedAt)}
                   </span>
-                  {retention && (
-                    <span className="small muted">
-                      Retained until{" "}
-                      <span className="mono">{timestamp(retention)}</span>
-                    </span>
-                  )}
-                </>
+                  {cause === "inactivity"
+                    ? ` · after ${INACTIVITY_DAYS} days without activity`
+                    : cause === "manual"
+                      ? " · manually"
+                      : ""}
+                </span>
               ) : (
-                <>
-                  <span className="small muted">
-                    Last activity{" "}
-                    <span className="mono inc-strong">
-                      {timestamp(lastActivity)}
-                    </span>
+                <span className="small muted">
+                  Last activity{" "}
+                  <span className="mono inc-strong">
+                    {timestamp(lastActivity)}
                   </span>
-                  <span
-                    className="small muted"
-                    title={
-                      addDays(lastActivity, INACTIVITY_DAYS)
-                        ? `Deadline ${timestamp(addDays(lastActivity, INACTIVITY_DAYS))}`
-                        : undefined
-                    }
-                  >
-                    Resolves automatically after {INACTIVITY_DAYS} days without
-                    activity
-                  </span>
-                </>
+                </span>
               )}
               <span className="small muted">
                 Opened{" "}
