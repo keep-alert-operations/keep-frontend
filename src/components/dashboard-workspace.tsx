@@ -16,8 +16,8 @@ import {
 } from "@/lib/dashboard-layout";
 import type { Scope } from "./workspace";
 import { Page, NavLink, useConfirm } from "./page";
-import { Dialog, Menu } from "./definition-editor";
-import { CommandFeedback } from "./ui";
+import { Dialog } from "./definition-editor";
+import { CommandFeedback, Menu } from "./ui";
 import { Icon } from "./icons";
 import {
   DashboardBoard,
@@ -474,13 +474,7 @@ export function DashboardWorkspace({
           display(latest?.name ?? base?.name)
         )
       }
-      extra={
-        <span className="page-subtitle">
-          Shared{base ? ` · revision ${base.revision}` : ""} ·{" "}
-          {draft.panels.length} panel{draft.panels.length === 1 ? "" : "s"}
-          {dirty && <span className="chip chip-warn">Unsaved changes</span>}
-        </span>
-      }
+      extra={dirty && <span className="chip chip-warn">Unsaved changes</span>}
       actions={
         <>
           {canEdit && (
@@ -631,9 +625,8 @@ export function DashboardWorkspace({
       )}
       {newer && dirty && (
         <p className="banner bn-warn" role="status">
-          A newer shared revision {latest!.revision} is available. Your draft is
-          based on revision {base!.revision}. Discard changes to load it, or
-          save as a new dashboard.
+          A newer shared version is available. Your draft is based on an earlier
+          version. Discard changes to load it, or save as a new dashboard.
         </p>
       )}
       {save.error instanceof ApiError && save.error.status === 409 && (

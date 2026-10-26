@@ -1,6 +1,14 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { alertStatus } from "@/lib/alert-status";
+import { timestamp } from "@/lib/api";
+import { timezoneLabel } from "@/lib/preset-choices";
 import type { Scope } from "./workspace";
 import { Icon } from "./icons";
 
@@ -10,7 +18,7 @@ export interface Crumb {
 }
 
 /**
- * Reference page frame: tenant breadcrumb, role chip, title row, live status
+ * Reference page frame: tenant breadcrumb, role chip, title row, update notice
  * and page actions, then the optional administration tabs and a full-height
  * body. Status banners supplied by the workspace are shown above the body.
  */
@@ -33,7 +41,13 @@ export function Page({
   className?: string;
   children?: React.ReactNode;
 }) {
-  const live = scope.liveStatus === "Live hints connected";
+  // Healthy delivery and the brief connect/reconcile steps show nothing; only
+  // lost live delivery or lagging search earns a notice (REV-43).
+  const degraded =
+    scope.liveStatus !== undefined &&
+    !["Live hints connected", "Connecting", "Reconciling"].includes(
+      scope.liveStatus,
+    );
   const roleLabel =
     role ??
     `${scope.tenant.role === "view" ? "View" : scope.tenant.role === "admin" ? "Admin" : "Edit"} access`;
@@ -91,32 +105,38 @@ export function Page({
         </div>
         <div className="page-actions">
           <span
-            className="live-pill"
+            className="update-note"
             role="status"
-            data-live={live}
-            data-updating={scope.searchUpdating}
-            title={
-              scope.searchUpdating
-                ? "Search is catching up with the latest changes. Counts may be slightly behind."
-                : scope.liveStatus
-            }
+            data-live-status={scope.liveStatus}
           >
-            <i aria-hidden="true" />
-            {live
-              ? scope.searchUpdating
-                ? "Updating"
-                : "Live"
-              : (scope.liveStatus ?? "Connecting")}
-            {!live && scope.refresh && (
-              <button
-                type="button"
-                aria-label="Refresh now"
-                title="Refresh now"
-                onClick={scope.refresh}
+            {degraded ? (
+              <>
+                <i aria-hidden="true" />
+                <span>
+                  {scope.liveStatus === "Updates unavailable"
+                    ? "Updates unavailable"
+                    : "Live updates degraded · reconnecting"}
+                </span>
+                {scope.refresh && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-g"
+                    onClick={scope.refresh}
+                  >
+                    <Icon name="refresh" size={13} />
+                    Refresh
+                  </button>
+                )}
+              </>
+            ) : scope.searchUpdating ? (
+              <span
+                className="update-note-wait"
+                title="Search is catching up with the latest changes. Counts may be slightly behind."
               >
-                <Icon name="refresh" size={13} />
-              </button>
-            )}
+                <i aria-hidden="true" />
+                Catching up · counts may lag
+              </span>
+            ) : null}
           </span>
           {actions}
         </div>
@@ -259,13 +279,22 @@ function ConfirmDialog({
   );
 }
 
-/** Reference severity mark with its text label. */
-export function Severity({ value }: { value: unknown }) {
+/**
+ * Severity text in its color, with the reference shape mark unless `plain`
+ * (Feed and preset rows show color alone).
+ */
+export function Severity({
+  value,
+  plain,
+}: {
+  value: unknown;
+  plain?: boolean;
+}) {
   const text = typeof value === "string" ? value : "";
   const label = text ? text[0].toUpperCase() + text.slice(1) : "—";
   return (
     <span className={`sev sev-${text}`}>
-      <i aria-hidden="true" />
+      {!plain && <i aria-hidden="true" />}
       {label}
     </span>
   );
@@ -275,31 +304,96 @@ export function Severity({ value }: { value: unknown }) {
 export function AlertStatus({
   value,
   assigneeId,
+  plain,
 }: {
   value: unknown;
   assigneeId?: unknown;
+  plain?: boolean;
 }) {
   const text = alertStatus(value, assigneeId);
   return (
     <span className={`st st-${text}`}>
-      <i aria-hidden="true" />
+      {!plain && <i aria-hidden="true" />}
       {text ? text[0].toUpperCase() + text.slice(1) : "—"}
     </span>
   );
 }
 
-/** Time split into the reference's two-line time/date cell. */
-export function TimeCell({ value }: { value: string }) {
-  const [date, time] = value.split(" ");
+// One shared clock for every relative time on the page: it ticks every five
+// seconds while visible, and catches up at once when the tab returns.
+const clock = {
+  now: Date.now(),
+  listeners: new Set<() => void>(),
+  stop: undefined as (() => void) | undefined,
+};
+function tick() {
+  if (document.visibilityState !== "visible") return;
+  clock.now = Date.now();
+  clock.listeners.forEach((listener) => listener());
+}
+function subscribeClock(listener: () => void) {
+  clock.listeners.add(listener);
+  if (!clock.stop) {
+    clock.now = Date.now();
+    const timer = setInterval(tick, 5000);
+    document.addEventListener("visibilitychange", tick);
+    clock.stop = () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }
+  return () => {
+    clock.listeners.delete(listener);
+    if (!clock.listeners.size) {
+      clock.stop?.();
+      clock.stop = undefined;
+    }
+  };
+}
+const readClock = () => clock.now;
+
+const relativeFormat = new Intl.RelativeTimeFormat("en", { numeric: "always" });
+const relativeUnits: [number, Intl.RelativeTimeFormatUnit][] = [
+  [60, "second"],
+  [60, "minute"],
+  [24, "hour"],
+  [30, "day"],
+  [12, "month"],
+];
+
+/** "30 seconds ago", "2 hours ago", "3 days ago"; under five seconds "just now". */
+export function relativeTime(value: string, now: number) {
+  let amount = (now - Date.parse(value)) / 1000;
+  if (amount < 5) return "just now";
+  for (const [size, unit] of relativeUnits) {
+    if (amount < size) return relativeFormat.format(-Math.floor(amount), unit);
+    amount /= size;
+  }
+  return relativeFormat.format(-Math.floor(amount), "year");
+}
+
+/**
+ * Time relative to now (REV-43). The exact time, in the selected date format
+ * with the browser timezone label, stays available as the tooltip.
+ */
+export function RelativeTime({
+  value,
+  className,
+}: {
+  value: unknown;
+  className?: string;
+}) {
+  const now = useSyncExternalStore(subscribeClock, readClock, readClock);
+  if (typeof value !== "string" || !Number.isFinite(Date.parse(value)))
+    return <span className={className}>—</span>;
   return (
-    <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <span className="mono" style={{ fontSize: 13, fontWeight: 500 }}>
-        {time ?? "—"}
-      </span>
-      <span className="mono" style={{ fontSize: 11, color: "var(--subtle)" }}>
-        {date}
-      </span>
-    </span>
+    <time
+      className={className}
+      dateTime={new Date(value).toISOString()}
+      title={`${timestamp(value)} ${timezoneLabel()}`}
+    >
+      {relativeTime(value, now)}
+    </time>
   );
 }
 

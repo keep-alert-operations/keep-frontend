@@ -1,13 +1,6 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import {
-  ApiError,
-  display,
-  RecordData,
-  request,
-  tenantPath,
-  timestamp,
-} from "@/lib/api";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { ApiError, display, RecordData, request, tenantPath } from "@/lib/api";
 import { alertOperatorLabel } from "@/lib/alert-operator";
 import { useCommand } from "@/lib/hooks";
 import {
@@ -19,41 +12,31 @@ import {
 } from "@/lib/preset-choices";
 import type { Scope } from "./workspace";
 import { DirectoryPicker } from "./directory-picker";
-import { ErrorNotice } from "./ui";
-import { AlertStatus, NavLink, personLabel, Severity, TimeCell } from "./page";
+import { ErrorNotice, Menu } from "./ui";
+import {
+  AlertStatus,
+  NavLink,
+  personLabel,
+  RelativeTime,
+  Severity,
+} from "./page";
 
-/** Transient quick views (reference S02/S05); never saved into a preset. */
+/**
+ * Transient quick views (reference S02/S05); never saved into a preset.
+ * REV-43 drops the former Active view; every severity and status view
+ * carries a colored dot.
+ */
 export const QUICK_VIEWS = [
   { key: "all", label: "All", cel: "" },
-  {
-    key: "critical",
-    label: "Critical",
-    cel: 'severity == "critical"',
-    severity: true,
-  },
-  {
-    key: "high",
-    label: "High",
-    cel: 'severity == "high"',
-    severity: true,
-  },
-  {
-    key: "warning",
-    label: "Warning",
-    cel: 'severity == "warning"',
-    severity: true,
-  },
-  {
-    key: "firing",
-    label: "Firing",
-    cel: 'display_status == "firing"',
-  },
+  { key: "critical", label: "Critical", cel: 'severity == "critical"' },
+  { key: "high", label: "High", cel: 'severity == "high"' },
+  { key: "warning", label: "Warning", cel: 'severity == "warning"' },
+  { key: "firing", label: "Firing", cel: 'display_status == "firing"' },
   {
     key: "acknowledged",
     label: "Acknowledged",
     cel: 'display_status == "acknowledged"',
   },
-  { key: "active", label: "Active", cel: 'status == "firing"' },
   { key: "resolved", label: "Resolved", cel: 'status == "resolved"' },
 ] as const;
 export type QuickViewKey = (typeof QUICK_VIEWS)[number]["key"];
@@ -182,33 +165,35 @@ export function QuickViews({
       <div
         role="group"
         aria-label="Quick views, not saved"
+        title="Quick views are not saved"
         className="quick-view-group"
       >
         {QUICK_VIEWS.map((view) => (
-          <button
-            key={view.key}
-            type="button"
-            className={`qv ${value === view.key ? "qv-on" : ""}`}
-            aria-pressed={value === view.key}
-            aria-label={view.label}
-            disabled={disabled}
-            onClick={() => onChange(view.key)}
-          >
-            {"severity" in view && (
-              <span className={`sev sev-${view.key}`} aria-hidden="true">
-                <i />
-              </span>
+          <Fragment key={view.key}>
+            {view.key === "firing" && (
+              <span className="qv-div" aria-hidden="true" />
             )}
-            {view.label}
-            {counts?.[view.key] !== undefined && (
-              <b>{BigInt(counts[view.key]!).toLocaleString()}</b>
-            )}
-          </button>
+            <button
+              type="button"
+              className={`qv ${value === view.key ? "qv-on" : ""}`}
+              aria-pressed={value === view.key}
+              aria-label={view.label}
+              disabled={disabled}
+              onClick={() => onChange(view.key)}
+            >
+              {view.key !== "all" && (
+                <span className={`qv-dot qv-${view.key}`} aria-hidden="true" />
+              )}
+              {view.label}
+              {counts?.[view.key] !== undefined && (
+                <span className="qv-count">
+                  {BigInt(counts[view.key]!).toLocaleString()}
+                </span>
+              )}
+            </button>
+          </Fragment>
         ))}
       </div>
-      <span className="help" style={{ marginLeft: 6 }}>
-        Quick views are not saved
-      </span>
       <div style={{ flexGrow: 1 }} />
       <label className="plain">
         <input
@@ -244,9 +229,11 @@ function AlertField({
   scope: Scope;
 }) {
   const value = row[field];
-  if (field === "severity") return <Severity value={value} />;
+  if (field === "severity") return <Severity value={value} plain />;
   if (field === "display_status" || field === "status")
-    return <AlertStatus value={row.status} assigneeId={row.assignee_id} />;
+    return (
+      <AlertStatus value={row.status} assigneeId={row.assignee_id} plain />
+    );
   if (field === "assignee_id")
     return personLabel(scope, value, row.assignee_display_name);
   if (field === "operator") return alertOperatorLabel(row);
@@ -260,7 +247,7 @@ function AlertField({
       "resolved_at",
     ].includes(field)
   )
-    return <TimeCell value={timestamp(value)} />;
+    return <RelativeTime value={value} className="ago" />;
   if (field === "active_incident_id" && typeof value === "string")
     return (
       <NavLink
@@ -325,9 +312,25 @@ function ColumnHeading({
   );
 }
 
+const dots = (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <circle cx="5" cy="12" r="1.8" />
+    <circle cx="12" cy="12" r="1.8" />
+    <circle cx="19" cy="12" r="1.8" />
+  </svg>
+);
+
 /**
  * Explicit columns render in their configured order, including preset defaults.
  * Without columns, use the compact alert grid. `narrow` hides row actions.
+ * Rows show severity and status as colored text and times relative to now;
+ * the ⋯ menu holds assignment and resolution (REV-43).
  */
 export function AlertTable({
   scope,
@@ -337,7 +340,6 @@ export function AlertTable({
   onRowCommand,
   busy,
   narrow,
-  newIds,
   columns,
   sort = DEFAULT_SORT,
   onSort,
@@ -349,7 +351,6 @@ export function AlertTable({
   onRowCommand?: RowCommand;
   busy?: boolean;
   narrow?: boolean;
-  newIds?: Set<string>;
   columns?: string[];
   sort?: SortItem[];
   onSort?: (field: string) => void;
@@ -363,13 +364,14 @@ export function AlertTable({
       ? "g-narrow"
       : `g-full ${showControls ? "" : "g-full-no-actions"}`;
   const widths = columns?.map((field) => (field === "message" ? 280 : 146));
+  const controlsWidth = needsOpen ? 196 : 48;
   const gridStyle = widths
     ? {
-        gridTemplateColumns: `18px ${widths.map((width) => `minmax(${width}px, 1fr)`).join(" ")}${showControls ? " 196px" : ""}`,
+        gridTemplateColumns: `18px ${widths.map((width) => `minmax(${width}px, 1fr)`).join(" ")}${showControls ? ` ${controlsWidth}px` : ""}`,
         minWidth:
           54 +
           widths.reduce((total, width) => total + width + 14, 0) +
-          (showControls ? 210 : 0),
+          (showControls ? controlsWidth + 14 : 0),
       }
     : undefined;
   const selectable = Boolean(selection && onSelectionChange);
@@ -445,6 +447,7 @@ export function AlertTable({
         const message = display(row.message ?? row.application);
         const selected = selection?.has(row.id) ?? false;
         const resolved = row.status === "resolved";
+        const mine = row.assignee_id === scope.session.principal.id;
         const assignee = personLabel(
           scope,
           row.assignee_id,
@@ -485,9 +488,6 @@ export function AlertTable({
                       >
                         {message}
                       </NavLink>
-                      {newIds?.has(row.id) && (
-                        <span className="chip chip-new">New</span>
-                      )}
                       {row.suppressed === true && (
                         <span className="chip chip-supp">Suppressed</span>
                       )}
@@ -500,7 +500,7 @@ export function AlertTable({
             ) : (
               <>
                 <span role="cell" className="cell">
-                  <Severity value={row.severity} />
+                  <Severity value={row.severity} plain />
                 </span>
                 <span role="cell" className="alert-cell">
                   <span className="alert-title">
@@ -512,27 +512,20 @@ export function AlertTable({
                     >
                       {message}
                     </NavLink>
-                    {newIds?.has(row.id) && (
-                      <span className="chip chip-new">New</span>
-                    )}
                     {row.suppressed === true && (
                       <span className="chip chip-supp">Suppressed</span>
                     )}
-                  </span>
-                  <span className="sub">
-                    {[row.application, row.component, row.node_name, row.site]
-                      .map(display)
-                      .join(" · ")}
                   </span>
                 </span>
                 <span role="cell" className="cell">
                   <AlertStatus
                     value={row.status}
                     assigneeId={row.assignee_id}
+                    plain
                   />
                 </span>
-                <span role="cell">
-                  <TimeCell value={timestamp(row.timestamp)} />
+                <span role="cell" className="cell">
+                  <RelativeTime value={row.timestamp} className="ago" />
                 </span>
                 {!narrow && (
                   <>
@@ -582,48 +575,49 @@ export function AlertTable({
                   </>
                 )}
                 {actions && !narrow && (
-                  <>
-                    <button
-                      type="button"
-                      className="ibtn"
-                      disabled={busy}
-                      onClick={() =>
-                        onRowCommand!(
-                          row,
-                          "set_assignee",
-                          row.assignee_id === scope.session.principal.id
-                            ? null
-                            : scope.session.principal.id,
-                        )
-                      }
-                    >
-                      {row.assignee_id === scope.session.principal.id
-                        ? "Unassign"
-                        : "Assign to me"}
-                    </button>
-                    <button
-                      type="button"
-                      className="ibtn"
-                      disabled={busy}
-                      onClick={() =>
-                        onRowCommand!(
-                          row,
-                          "set_status",
-                          resolved ? "firing" : "resolved",
-                        )
-                      }
-                    >
-                      {resolved ? "Reopen" : "Resolve"}
-                    </button>
-                    <NavLink
-                      scope={scope}
-                      className="ibtn"
-                      href={`/tenants/${scope.tenant.id}/alerts/${row.id}`}
-                      aria-label={`More actions for ${message}`}
-                    >
-                      ⋯
-                    </NavLink>
-                  </>
+                  <Menu
+                    label={`Actions for ${message}`}
+                    className="row-menu"
+                    content={dots}
+                    flip
+                  >
+                    {(close) => (
+                      <>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="menu-item"
+                          disabled={busy}
+                          onClick={() => {
+                            close();
+                            onRowCommand!(
+                              row,
+                              "set_assignee",
+                              mine ? null : scope.session.principal.id,
+                            );
+                          }}
+                        >
+                          {mine ? "Unassign" : "Assign to me"}
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="menu-item"
+                          disabled={busy}
+                          onClick={() => {
+                            close();
+                            onRowCommand!(
+                              row,
+                              "set_status",
+                              resolved ? "firing" : "resolved",
+                            );
+                          }}
+                        >
+                          {resolved ? "Reopen" : "Resolve"}
+                        </button>
+                      </>
+                    )}
+                  </Menu>
                 )}
               </span>
             )}

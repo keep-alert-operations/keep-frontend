@@ -1,13 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import {
-  ApiError,
-  display,
-  RecordData,
-  tenantPath,
-  timestamp,
-} from "@/lib/api";
+import { ApiError, display, RecordData, tenantPath } from "@/lib/api";
 import { useCommand, useResource } from "@/lib/hooks";
 import {
   DEFAULT_COLUMNS,
@@ -15,13 +9,19 @@ import {
   nextQuickSort,
   sortItems,
   sortSummary,
-  timezoneLabel,
   usePresetPreview,
   type SortItem,
 } from "@/lib/preset-choices";
 import type { Scope } from "./workspace";
-import { CommandFeedback, ErrorNotice } from "./ui";
-import { NavLink, Page, personLabel, SearchInput, useConfirm } from "./page";
+import { CommandFeedback, ErrorNotice, Menu } from "./ui";
+import {
+  NavLink,
+  Page,
+  personLabel,
+  RelativeTime,
+  SearchInput,
+  useConfirm,
+} from "./page";
 import {
   AlertTable,
   BulkBar,
@@ -31,7 +31,7 @@ import {
   type QuickViewKey,
 } from "./alert-table";
 import { rememberAlertList } from "./alerts";
-import { CelCode, Dialog, Menu, PresetEditor } from "./definition-editor";
+import { CelCode, Dialog, PresetEditor } from "./definition-editor";
 import { ConfigurationHistory } from "./configuration-history";
 
 /** Routes this area's list, detail, editor and history screens. */
@@ -364,7 +364,6 @@ function PresetList({ scope }: { scope: Scope }) {
             <span role="columnheader">
               {state === "deleted" ? "Deleted" : "Last modified"}
             </span>
-            <span role="columnheader">Revision</span>
             <span role="columnheader">
               <span className="sr-only">Actions</span>
             </span>
@@ -413,15 +412,14 @@ function PresetList({ scope }: { scope: Scope }) {
                         "—",
                       )}
                 </span>
-                <span role="cell" className="cell mono small">
-                  {timestamp(
-                    isDeleted
-                      ? (row.deleted_at ?? row.recorded_at)
-                      : row.updated_at,
-                  )}
-                </span>
-                <span role="cell" className="cell mono small">
-                  {display(row.revision)}
+                <span role="cell" className="cell small">
+                  <RelativeTime
+                    value={
+                      isDeleted
+                        ? (row.deleted_at ?? row.recorded_at)
+                        : row.updated_at
+                    }
+                  />
                 </span>
                 <span role="cell" className="acts">
                   {!isDeleted && canEdit && (
@@ -805,21 +803,6 @@ function PresetResults({
       page.result?.meta?.evaluated_at,
     ]),
   );
-  const [newIds, setNewIds] = useState<Set<string>>(new Set());
-  const previous = useRef<{ key: string | null; ids: Set<string> }>({
-    key: null,
-    ids: new Set(),
-  });
-  useEffect(() => {
-    if (!page.result || page.loading) return;
-    const ids = new Set(page.result.data.map((row) => row.id));
-    if (previous.current.key === page.key && !cursor)
-      setNewIds(
-        new Set([...ids].filter((item) => !previous.current.ids.has(item))),
-      );
-    else setNewIds(new Set());
-    previous.current = { key: page.key, ids };
-  }, [page.result, page.loading, page.key, cursor]);
   async function rowCommand(
     row: RecordData,
     kind: "set_status" | "set_assignee",
@@ -844,12 +827,6 @@ function PresetResults({
     typeof meta?.total === "string" && /^\d+$/.test(meta.total)
       ? BigInt(meta.total).toLocaleString()
       : undefined;
-  const editor = personLabel(
-    scope,
-    preset.updated_by,
-    preset.updated_by_display_name,
-    "",
-  );
   return (
     <Page
       scope={scope}
@@ -859,11 +836,6 @@ function PresetResults({
       extra={
         <>
           <PresetSwitcher scope={scope} current={preset.id} />
-          <span className="page-subtitle ps-meta">
-            Shared · revision {preset.revision}
-            {editor ? ` · edited by ${editor}` : ""}
-            {preset.updated_at ? `, ${timestamp(preset.updated_at)}` : ""}
-          </span>
         </>
       }
       actions={
@@ -1054,7 +1026,6 @@ function PresetResults({
                 void rowCommand(row, kind, value)
               }
               busy={command.busy}
-              newIds={newIds}
             />
           </div>
         ) : (
@@ -1082,12 +1053,13 @@ function PresetResults({
                 ? `${total} matching alerts`
                 : "Matching alerts unavailable"}
             </b>
-            {meta?.evaluated_at
-              ? ` · evaluated ${timestamp(meta.evaluated_at)}`
-              : ""}
-            {cursor
-              ? ` · page ${pageNumber} · live updates apply to page 1`
-              : " · updates live on page 1"}
+            {typeof meta?.evaluated_at === "string" && (
+              <>
+                {" "}
+                · evaluated <RelativeTime value={meta.evaluated_at} />
+              </>
+            )}
+            {cursor ? ` · page ${pageNumber}` : ""}
             {page.loading && page.result ? " · updating…" : ""}
             {meta?.updating ? " · index catching up" : ""}
             {fromDashboard
@@ -1125,7 +1097,6 @@ function PresetResults({
               </button>
             </>
           )}
-          <span className="ps-tz">Times in {timezoneLabel()}</span>
         </div>
       </div>
       <BulkBar

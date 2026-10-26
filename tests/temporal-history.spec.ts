@@ -277,7 +277,7 @@ test("new saved maintenance revision discards an in-flight test result", async (
   await page.getByRole("button", { name: "Test", exact: true }).click();
   await expect.poll(() => calls).toBe(1);
   revision = "9007199254740994";
-  await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(
     page.getByText(new RegExp(`^Revision ${revision} ·`)),
   ).toBeVisible();

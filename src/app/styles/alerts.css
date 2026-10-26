@@ -378,8 +378,8 @@
   outline-offset: 2px;
 }
 .alert-results .g-full {
-  min-width: 1200px;
-  grid-template-columns: 18px 96px minmax(0, 1fr) 128px 132px 150px 168px 196px;
+  min-width: 1052px;
+  grid-template-columns: 18px 96px minmax(0, 1fr) 128px 132px 150px 168px 48px;
 }
 .alert-results .g-full.g-full-no-actions {
   min-width: 1004px;
@@ -407,6 +407,22 @@
 }
 .alert-results .arow.r-sel > .alert-actions-cell {
   background: var(--accent-soft);
+}
+/* Keep an open row menu above the following rows and the sticky header. */
+.alert-results .arow:has(.menu-pop) {
+  z-index: 4;
+}
+.alert-results .ago {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.alert-results .r-res .ago {
+  color: var(--subtle);
+}
+/* Relative times read as interface copy, not machine values. */
+.ad-tl .tl-m {
+  font-family: inherit;
 }
 .alert-link-row {
   position: relative;
@@ -478,9 +494,6 @@
 }
 .table-footer-bar > .grow {
   flex-grow: 1;
-}
-.alerts-tz {
-  white-space: nowrap;
 }
 .table-footer-bar > span:first-child {
   white-space: nowrap;
@@ -737,9 +750,6 @@ ul.tl {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px 16px;
-}
-.ad-tz {
-  padding: 0 16px 14px;
 }
 .ad-notes {
   flex-grow: 1;

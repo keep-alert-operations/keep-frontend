@@ -153,6 +153,7 @@ test("alert column clicks cycle server sort and restart pagination", async ({
   ).toHaveAttribute("aria-sort", "descending");
 });
 
+/** Requirements: REV-43; alert operations 17. The row ⋯ menu assigns. */
 test("row assignment sends the observed revision and select-all captures the displayed rows", async ({
   page,
 }) => {
@@ -168,10 +169,16 @@ test("row assignment sends the observed revision and select-all captures the dis
     });
   });
   await page.goto(`/tenants/${tenant}/alerts`);
-  await page.getByRole("link", { name: "Open Database latency" }).hover();
-  await page.getByRole("button", { name: "Assign to me", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Actions for Database latency", exact: true })
+    .click();
+  await page
+    .getByRole("menuitem", { name: "Assign to me", exact: true })
+    .click();
   await expect.poll(() => command?.kind).toBe("set_assignee");
   expect(command?.value).toBe(alertId);
+  await expect(page).toHaveURL(`/tenants/${tenant}/alerts`);
+  await expect(page.getByRole("menu")).toHaveCount(0);
   expect(command?.expected_revision).toBe(row.revision);
   await page.getByLabel("Select all on this page").check();
   await expect(page.getByText("1 selected", { exact: true })).toBeVisible();
@@ -205,6 +212,9 @@ test("reference palette and rail remain stable under dark OS preference and narr
   await expect(
     page.getByRole("button", { name: "Assign to me", exact: true }),
   ).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Actions for / })).toHaveCount(
+    0,
+  );
   await page.screenshot({
     path: test.info().outputPath("feed-desktop.png"),
     fullPage: true,

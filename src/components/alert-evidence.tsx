@@ -1,10 +1,10 @@
 "use client";
-import { display, type RecordData, timestamp } from "@/lib/api";
+import { display, type RecordData } from "@/lib/api";
 import { useResource } from "@/lib/hooks";
 import { useState } from "react";
 import type { Scope } from "./workspace";
 import { ErrorNotice } from "./ui";
-import { personLabel } from "./page";
+import { personLabel, RelativeTime } from "./page";
 
 function value(item: unknown) {
   if (item === null || item === undefined || item === "") return "—";
@@ -43,7 +43,9 @@ export function SourceEvent({
             ? "creation time defaulted at admission."
             : "creation time supplied by sender."}
         </div>
-        <div className="tl-m">{timestamp(event.received_at)}</div>
+        <div className="tl-m">
+          <RelativeTime value={event.received_at} />
+        </div>
         <button
           type="button"
           className="cel-link ev-toggle"
@@ -152,7 +154,7 @@ export function AlertNoteHistory({
                   <span className="small muted">
                     Revision {display(row.revision)} ·{" "}
                     {row.deleted ? "Deleted" : "Saved"} ·{" "}
-                    <span className="mono">{timestamp(row.recorded_at)}</span> ·{" "}
+                    <RelativeTime value={row.recorded_at} /> ·{" "}
                     {personLabel(
                       scope,
                       row.actor_id,

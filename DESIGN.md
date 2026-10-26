@@ -255,13 +255,16 @@ components:
   button-danger-solid-hover:
     backgroundColor: "{colors.danger-hover}"
   quick-view:
-    textColor: "{colors.ink-soft}"
+    textColor: "{colors.muted}"
     typography: "{typography.control}"
     rounded: "{rounded.control}"
-    padding: "0 12px"
-    height: "34px"
+    padding: "0 10px"
+    height: "30px"
   quick-view-hover:
     backgroundColor: "{colors.line}"
+    textColor: "{colors.text}"
+  quick-view-count:
+    textColor: "{colors.subtle}"
   quick-view-selected:
     backgroundColor: "{colors.primary-soft}"
     textColor: "{colors.accent}"
@@ -301,11 +304,6 @@ components:
     rounded: "{rounded.chip}"
     padding: "0 8px"
     height: "22px"
-  chip-new:
-    backgroundColor: "{colors.primary-soft}"
-    textColor: "{colors.info}"
-    rounded: "{rounded.chip}"
-    height: "22px"
   chip-warning:
     backgroundColor: "{colors.warning-soft}"
     textColor: "{colors.warning}"
@@ -321,15 +319,18 @@ components:
     textColor: "{colors.ink-soft}"
     rounded: "{rounded.chip}"
     height: "22px"
-  live-pill:
-    backgroundColor: "{colors.ok-soft}"
-    textColor: "{colors.ok-ink}"
-    rounded: "{rounded.pill}"
-    padding: "0 10px"
+  update-notice:
+    textColor: "{colors.muted}"
+  update-notice-dot:
+    backgroundColor: "{colors.amber-mark}"
+  row-menu:
+    textColor: "{colors.subtle}"
+    rounded: "{rounded.chip}"
     height: "30px"
-  live-pill-degraded:
-    backgroundColor: "{colors.warning-soft}"
-    textColor: "{colors.warning}"
+    width: "30px"
+  row-menu-hover:
+    backgroundColor: "{colors.fill}"
+    textColor: "{colors.text}"
   rail:
     backgroundColor: "{colors.side}"
     textColor: "{colors.side-ink}"
@@ -398,7 +399,7 @@ components:
 
 Appchi is an Operate surface: operators work it at desk monitors through a shift, and dashboards also run fullscreen on NOC wall displays read from across the room. The system as built is the incumbent Appchi workspace (structure of commit `f58c7d0`) recoloured with the user-chosen Ocean palette on 2026-10-26. Nothing moved: the same 76px icon rail, crumb-and-title page header, CEL bar, quick views, white table panels, Geist and Geist Mono, 8px controls and 12px panels. What changed is temperature. The shell reads as a cool blue tint instead of warm grey, and the blue marks exactly two things: where to act and where you are.
 
-Density is moderate and even. Body text is 13.5px, rows are 48–52px, panels are flat white cards with a hairline border on a faintly blue canvas. Colour is semantic, not decorative: every colour in the feature styles resolves to one role in `src/app/theme.css`, defined once for light (the default) and once for dark. Status and severity keep their red, orange, amber and green meanings, tuned to sit inside the palette, and each severity pairs a readable text colour with a shape-coded mark.
+Density is moderate and even. Body text is 13.5px, rows are 48–52px, panels are flat white cards with a hairline border on a faintly blue canvas. Colour is semantic, not decorative: every colour in the feature styles resolves to one role in `src/app/theme.css`, defined once for light (the default) and once for dark. Status and severity keep their red, orange, amber and green meanings, tuned to sit inside the palette, and every severity and status colour sits beside its text label. Dense Feed and preset rows show the coloured label alone; detail headers and other lists add the shape-coded mark. Since REV-43 the header shows update status only when something is wrong, and no revision numbers appear on the alert, preset or dashboard screens.
 
 The confirmed rejections come from the user: no black-and-white or grayscale palette, no black primary buttons, no generic SaaS admin look, no neon hacker console, no playful consumer styling, and nothing structural from the Ocean prototype (no 228px labelled sidebar, no Mulish or IBM Plex Mono, no halo on firing dots, none of its spacing or size changes).
 
@@ -407,7 +408,7 @@ The confirmed rejections come from the user: no black-and-white or grayscale pal
 - One solid blue for primary actions, Run, the active rail tile, the brand mark and the selected tab underline; a soft blue pill for the selected quick view.
 - Semantic roles only, light and dark, each text role at 4.5:1 or better on its surfaces.
 - Flat bordered panels at rest; navy-tinted shadows only on things that float.
-- Geist for interface text, Geist Mono for CEL, timestamps, source lines and board counts.
+- Geist for interface text, including times relative to now; Geist Mono for CEL, exact timestamps, source lines and board counts.
 
 ## Colors
 
@@ -417,7 +418,7 @@ A cool, restrained Ocean palette: blue-tinted neutrals carry the screen, one sat
 - **Ocean Blue** (`primary` #0a6fb0 light / `primary-dark` #4fb3f0 dark): solid fill for primary buttons, the CEL Run button, the active rail tile, the "A" brand mark, the selected tab underline, the user-event timeline dot and the blue threshold accent. Light fills carry white text (`primary-text`); dark fills carry near-black navy text (`primary-text-dark` #04121f).
 - **Deep Ocean** (`primary-hover` #085c93 / #74c4f4): hover state of every blue fill. In dark the hover lightens rather than darkens.
 - **Harbour Link** (`accent` #075e96 / #74c4f4): link text, the selected quick view's label and count, CEL keywords.
-- **Shallow Water** (`primary-soft` #ddeefa / #173d5c): the selected quick-view pill, "new" chips and text selection highlight.
+- **Shallow Water** (`primary-soft` #ddeefa / #173d5c): the selected quick-view pill and text selection highlight.
 - **Sea Mist** (`accent-soft` #eef6fd / #14304a): selected table row, highlighted completion option, info banner ground.
 - **Focus Blue** (`focus` #0a6fb0 / #4fb3f0, with `focus-ring` #cfe5f6 / #1c4b70): 2px focus outlines on every interactive element and the 3px ring around an active code field.
 - **Info Ink** (`info` #075e96 / #9bd3f7, with `info-line` #c5dcef / #1f4a6b): Acknowledged status, info banners and notices.
@@ -438,8 +439,8 @@ A cool, restrained Ocean palette: blue-tinted neutrals carry the screen, one sat
 
 ### Severity and Feedback
 - **Severity text / mark pairs**: Critical `critical` #b42318 / `critical-mark` #d92d20 (dark #ff958c / #f0645a); High `high` #b4480c / `high-mark` #ec6a13 (dark #f6a774 / #f08a4b); Warning and Medium `amber` #8a6100 / `amber-mark` #d99a06 (dark #ecc76a / #e5b53d). Low and Clear use `muted` text with a `faint` ring. The text colour is tuned for 4.5:1; the mark colour is tuned for presence.
-- **OK** (`ok` #2e9e62 mark, `ok-ink` #1d6e45 text, `ok-soft`/`ok-soft-2` grounds, `ok-line`): the Live pill, Resolved status, success banners, string literals in CEL.
-- **Warning** (`warning` #7a5600 text on `warning-bg`/`warning-soft`, `warning-line`, `warning-hover`): degraded live pill, notices, unsaved-change chips.
+- **OK** (`ok` #2e9e62 mark, `ok-ink` #1d6e45 text, `ok-soft`/`ok-soft-2` grounds, `ok-line`): Resolved status and its quick-view dot, success banners, string literals in CEL.
+- **Warning** (`warning` #7a5600 text on `warning-bg`/`warning-soft`, `warning-line`, `warning-hover`): notices and unsaved-change chips. The update notice's dot is `amber-mark`.
 - **Error** (`error` #a01d13 on `error-bg` #fdeeec with `error-line`): error banners and inline errors.
 - **Danger** (`danger` #b42318 / #b4413b with white `danger-text`, `danger-hover`): solid destructive confirmation buttons only.
 
@@ -466,7 +467,7 @@ A cool, restrained Ocean palette: blue-tinted neutrals carry the screen, one sat
 - **Mono** (Geist Mono, 12.5px on a 21px line in CEL fields; 11.5px for source sub-lines, timeline meta and filter chips; 12px for inline code).
 
 ### Named Rules
-**The Mono-for-Machine Rule.** Geist Mono is reserved for CEL, timestamps and source sub-lines, filter chips and board counts. Everything a person reads as interface copy is Geist. Counts and paging numbers use tabular figures.
+**The Mono-for-Machine Rule.** Geist Mono is reserved for CEL, exact timestamps and source sub-lines, filter chips and board counts. Everything a person reads as interface copy is Geist, including times relative to now (“30 seconds ago”), whose exact timestamp stays in the tooltip. Counts and paging numbers use tabular figures.
 
 ## Layout
 
@@ -505,11 +506,12 @@ Quiet white controls with one blue voice.
 - **Run:** the CEL bar's primary button, 26px tall inside the field, with a 10.5px Ctrl+Enter hint at 0.9 opacity.
 
 ### Quick views
-- **Style:** borderless 34px pills at 8px radius in `ink-soft` 13px 500, count in 600 tabular `text`; hover `line`.
-- **Selected:** `primary-soft` ground with `accent` label and count. Severity quick views lead with their severity mark.
+- **Style:** the light “quiet text” filters the user chose (REV-43): borderless 30px buttons at 8px radius in `muted` 13px 500, with the count in 12px 400 tabular `subtle`; hover is `line` with `text`. “Quick views are not saved” is the group's tooltip, not visible copy.
+- **Dots:** every view but All leads with a 6px dot: Critical `critical-mark`, High `high-mark`, Warning `amber-mark`, Firing `critical`, Acknowledged `primary`, Resolved `ok`. A 1px `input-border` divider separates the severity views from the status views. There is no Active view.
+- **Selected:** `primary-soft` ground with `accent` label and count.
 
 ### Chips
-- **Style:** 22px tall, 6px radius, 11.5px 600. Incident: `incident-ink` on `incident-soft`. New: `info` on `primary-soft`. Warning: `warning` on `warning-soft`. OK: `ok-ink` on `ok-soft`. Suppressed: `ink-soft` on `fill` with a dashed `faint` border. Neutral: `ink-soft` on `fill`. Access and role chips are outlined pills with an `input-border` hairline.
+- **Style:** 22px tall, 6px radius, 11.5px 600. Incident: `incident-ink` on `incident-soft`. Warning: `warning` on `warning-soft`. OK: `ok-ink` on `ok-soft`. Suppressed: `ink-soft` on `fill` with a dashed `faint` border. Neutral: `ink-soft` on `fill`. Access and role chips are outlined pills with an `input-border` hairline.
 
 ### Cards / Containers
 - **Corner Style:** 12px.
@@ -519,10 +521,10 @@ Quiet white controls with one blue voice.
 - **Internal Padding:** 13px 18px header, 16px 18px body.
 
 ### Tables and rows
-Grid rows of 48px (alert rows 52px) separated by `line`, with a 36px header row in 12px 500 `muted` on a sticky `surface` ground. Hover is `row-hover`; a selected row is `accent-soft`. Resolved rows drop to `subtle` and their message to 500 `muted`. Generic row actions reveal on hover and focus; the Feed's actions (Assign to me, Resolve, more) stay visible in a sticky right column. A 44px footer bar holds counts and paging in 12.5px `ink-soft`.
+Grid rows of 48px (alert rows 52px) separated by `line`, with a 36px header row in 12px 500 `muted` on a sticky `surface` ground. Hover is `row-hover`; a selected row is `accent-soft`. Resolved rows drop to `subtle` and their message to 500 `muted`. Generic row actions reveal on hover and focus. Feed and preset alert rows are one line (the message and its chips, with no source sub-line or New chip), show Last received relative to now, and keep a 48px sticky right column holding a borderless 30px ⋯ button (`subtle`, 6px radius, hover `fill`). It opens a menu with Assign to me or Unassign, and Resolve or Reopen; the menu opens upward when the table has no room below it. A 44px footer bar holds counts and paging in 12.5px `ink-soft`.
 
 ### Severity and status marks
-Severity is 12.5px 600 text in its text colour, preceded by its shape-coded mark in the mark colour. Status is 12.5px 500: Firing is `critical` with a filled dot, Acknowledged is `info` with a filled dot, Resolved is `ok-ink` with an `ok` ring.
+Severity is 12.5px 600 text in its text colour, preceded by its shape-coded mark in the mark colour. Status is 12.5px 500: Firing is `critical` with a filled dot, Acknowledged is `info` with a filled dot, Resolved is `ok-ink` with an `ok` ring. Feed and preset rows drop the marks and show the coloured label alone (REV-43); the alert detail header and other lists keep them.
 
 ### Inputs / Fields
 - **Style:** 34px, 8px radius, `surface` with an `input-border` hairline, 13px text, `subtle` placeholders.
@@ -534,8 +536,8 @@ Severity is 12.5px 600 text in its text colour, preceded by its shape-coded mark
 - **Rail:** 76px fixed column in `side` with a `side-edge` right border; the 34px blue "A" brand mark at the top, then 60×54px tiles at 10px radius with an icon over a 10.5px label in `side-ink`. Hover is `side-hover` with `text`; the current page is a solid `primary` tile with `primary-text`. Admin and the account avatar sit at the bottom. At 639px and below the rail is 60px with 50px tiles.
 - **Tabs:** 38px, 13px 500 `muted`; selected is 600 `text` with a 2px `primary` underline. **Segmented control:** `fill-strong` track at 9px radius, selected thumb `surface` with the segment shadow.
 
-### Live pill
-A 30px rounded pill beside the page actions. Live: `ok-ink` on `ok-soft` with an `ok` dot. Degraded or reconnecting: `warning` on `warning-soft` with an `amber-mark` dot and a refresh button. Updating: `muted` on `fill`.
+### Update notice
+Nothing shows beside the page actions while live delivery is healthy or briefly connecting. When delivery is degraded or unavailable, a quiet 12.5px `muted` line with a 7px `amber-mark` dot reads “Live updates degraded · reconnecting” or “Updates unavailable”, followed by a ghost Refresh button. While search catches up, it reads “Catching up · counts may lag” with a `faint` dot; below 1024px, where the header wraps, that routine line is screen-reader-only so it never moves content, while degraded notices stay visible and wrap. It replaces the former Live pill (REV-43).
 
 ### Banners
 10px radius, 9px 14px padding, 12.5px, 1px border in the matching line role: info (`info` on `accent-soft`), warning (`warning` on `warning-bg`), error (`error` on `error-bg`), success (`ok-ink` on `ok-soft-2`).
@@ -567,9 +569,9 @@ The application's signed-out, sign-in and expired screens use a 472px `surface` 
 - **Do** keep text roles at 4.5:1 or better on their surfaces in both themes, placeholders included.
 - **Do** use solid Ocean blue (`primary`) only for the primary action, Run, the current rail tile, the brand mark, the selected tab underline and focus.
 - **Do** show a selected filter or quick view as the soft blue pill (`primary-soft` with `accent` text).
-- **Do** pair each severity's text colour with its shape-coded mark so meaning never rests on hue alone.
+- **Do** keep a text label beside every severity and status colour so meaning never rests on hue alone; add the shape-coded mark outside dense alert rows.
 - **Do** keep resting panels flat (12px radius, 1px `border`, no shadow) and reserve navy-tinted shadows for floating objects.
-- **Do** use Geist Mono for CEL, timestamps, source sub-lines and counts, with tabular figures for numbers.
+- **Do** use Geist Mono for CEL, exact timestamps, source sub-lines and counts, with tabular figures for numbers; show times relative to now in Geist, with the exact time in the tooltip.
 
 ### Don't:
 - **Don't** use black primary buttons or a black-and-white or grayscale palette; the user superseded them with Ocean.
@@ -577,4 +579,5 @@ The application's signed-out, sign-in and expired screens use a 472px `surface` 
 - **Don't** write raw hex or rgba in feature styles.
 - **Don't** add coloured accent borders to cards other than threshold count panels.
 - **Don't** add eyebrow or kicker labels above page titles; the header is crumb row, title and subtitle.
+- **Don't** show a standing Live indicator or revision numbers on the alert, preset or dashboard screens; the header reports update status only when something is wrong.
 - **Don't** treat the "A" square as a finished logo.

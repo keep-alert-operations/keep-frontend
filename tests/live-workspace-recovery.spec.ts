@@ -123,7 +123,9 @@ async function workspace(page: Page, { editor = false } = {}) {
     });
   });
   await page.goto(`/tenants/${tenant}/alerts`);
-  await expect(page.getByText("Live", { exact: true })).toBeVisible();
+  await expect(
+    page.locator('[data-live-status="Live hints connected"]'),
+  ).toBeAttached();
   await expect.poll(() => feedReads).toBeGreaterThan(0);
   await page.clock.runFor(500);
   return { feedReads: () => feedReads, commands: () => commands };
@@ -205,8 +207,12 @@ test("the projection hint after the user's own command refreshes within 250 ms",
   const h = await workspace(page, { editor: true });
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
   await quiet(page, h.feedReads);
-  await page.getByRole("link", { name: "Open Database latency" }).hover();
-  await page.getByRole("button", { name: "Assign to me", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Actions for Database latency", exact: true })
+    .click();
+  await page
+    .getByRole("menuitem", { name: "Assign to me", exact: true })
+    .click();
   await expect.poll(h.commands).toBe(1);
   // The feed reloads at once, but search has not applied the command yet.
   const reloaded = await settled(h.feedReads);
@@ -247,7 +253,9 @@ test("stalled focus reconciliation times out and later focus can recover", async
   await expect
     .poll(async () => (await state(page)).polls)
     .toBeGreaterThan(first.polls);
-  await expect(page.getByText("Live", { exact: true })).toBeVisible();
+  await expect(
+    page.locator('[data-live-status="Live hints connected"]'),
+  ).toBeAttached();
 });
 
 test("hiding aborts in-flight reconciliation and visible return starts a fresh one", async ({

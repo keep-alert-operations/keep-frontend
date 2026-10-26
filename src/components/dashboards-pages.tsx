@@ -1,17 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import {
-  ApiError,
-  display,
-  RecordData,
-  tenantPath,
-  timestamp,
-} from "@/lib/api";
+import { ApiError, display, RecordData, tenantPath } from "@/lib/api";
 import { useResource } from "@/lib/hooks";
 import type { Scope } from "./workspace";
 import { ErrorNotice } from "./ui";
-import { NavLink, Page, personLabel, SearchInput } from "./page";
+import { NavLink, Page, personLabel, RelativeTime, SearchInput } from "./page";
 import { DashboardWorkspace } from "./dashboard-workspace";
 import { ConfigurationHistory } from "./configuration-history";
 import { useDashboard, type Panel } from "./dashboard-counts";
@@ -241,19 +235,15 @@ function DashboardList({
                   ))}
                 </span>
                 <span className="small muted">
-                  {isDeleted ? "Deleted · " : ""}Revision{" "}
-                  {display(row.revision)}
-                  {editor
-                    ? ` · ${isDeleted ? "by" : "updated by"} ${editor}`
-                    : ""}
-                  {" · "}
-                  <span className="mono">
-                    {timestamp(
+                  {isDeleted ? "Deleted" : "Updated"}
+                  {editor ? ` by ${editor}` : ""} ·{" "}
+                  <RelativeTime
+                    value={
                       isDeleted
                         ? (row.deleted_at ?? row.recorded_at)
-                        : row.updated_at,
-                    )}
-                  </span>
+                        : row.updated_at
+                    }
+                  />
                 </span>
               </NavLink>
             );

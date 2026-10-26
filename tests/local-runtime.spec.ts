@@ -80,9 +80,11 @@ test("native alert reaches the real feed and supports browser acknowledgement an
     page.getByRole("heading", { name: "Feed", exact: true }),
   ).toBeVisible();
   await expect(page.getByText(message, { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Live", { exact: true })).toBeVisible({
-    timeout: 45000,
-  });
+  // Requirements: REV-43. Healthy delivery shows no header notice.
+  await expect(
+    page.locator('[data-live-status="Live hints connected"]'),
+  ).toBeAttached({ timeout: 45000 });
+  await expect(page.locator(".update-note")).toBeEmpty();
   await page.screenshot({ path: resolve(state, "alerts.png"), fullPage: true });
   await page.goto(`/tenants/${tenant}/alerts/${alert}`);
   await expect(

@@ -397,7 +397,9 @@ test("remote saves update a clean board and preserve a dirty draft until explici
     .getByRole("button", { name: "Refresh counts", exact: true })
     .click();
   await expect(
-    page.getByRole("status").filter({ hasText: "A newer shared revision 9" }),
+    page
+      .getByRole("status")
+      .filter({ hasText: "A newer shared version is available" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Edit dashboard name", exact: true }),
@@ -426,7 +428,7 @@ test("tenant refresh adopts shared definitions and preserves dirty drafts", asyn
     name: "Refreshed remote",
     revision: "8",
   };
-  await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Edit dashboard name", exact: true }),
   ).toHaveText("Refreshed remote");
@@ -445,9 +447,11 @@ test("tenant refresh adopts shared definitions and preserves dirty drafts", asyn
     name: "New refreshed remote",
     revision: "9",
   };
-  await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(
-    page.getByRole("status").filter({ hasText: "A newer shared revision 9" }),
+    page
+      .getByRole("status")
+      .filter({ hasText: "A newer shared version is available" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Edit dashboard name", exact: true }),
@@ -1438,7 +1442,9 @@ test("a newer shared revision preserves an active drag in a dirty local draft", 
     .getByRole("button", { name: "Refresh counts", exact: true })
     .dispatchEvent("click");
   await expect(
-    page.getByRole("status").filter({ hasText: "A newer shared revision 8" }),
+    page
+      .getByRole("status")
+      .filter({ hasText: "A newer shared version is available" }),
   ).toBeVisible();
   await expect(page.locator(".de-tile-active")).toHaveCount(1);
   await page.mouse.up();

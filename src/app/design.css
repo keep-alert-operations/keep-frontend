@@ -101,55 +101,30 @@
   gap: 14px;
   flex-shrink: 0;
 }
-.live-pill {
+/* Quiet update notice: empty while live delivery is healthy (REV-43). */
+.update-note,
+.update-note-wait {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 104px;
   gap: 8px;
   font-size: 12.5px;
-  color: var(--ok-ink);
-  padding: 0 10px;
-  height: 30px;
-  border-radius: 15px;
-  background: var(--ok-soft);
+  color: var(--muted);
   white-space: nowrap;
 }
-.live-pill i {
-  width: 8px;
-  height: 8px;
+/* Stay in the accessibility tree so a notice is announced, without a gap. */
+.update-note:empty {
+  margin-right: -14px;
+}
+.update-note i {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--ok);
-  display: inline-block;
-}
-.live-pill[data-live="false"] {
-  background: var(--warning-soft);
-  color: var(--warning);
-}
-.live-pill[data-live="false"] i {
   background: var(--amber-mark);
+  display: inline-block;
+  flex-shrink: 0;
 }
-.live-pill[data-live="true"][data-updating="true"] {
-  background: var(--fill);
-  color: var(--muted);
-}
-.live-pill[data-live="true"][data-updating="true"] i {
-  background: var(--muted);
-}
-.live-pill button {
-  all: unset;
-  cursor: pointer;
-  display: inline-grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 11px;
-}
-.live-pill button:hover {
-  background: var(--warning-hover);
-}
-.live-pill button:focus-visible {
-  outline: 2px solid var(--focus);
+.update-note-wait i {
+  background: var(--faint);
 }
 .page-subnav {
   margin: 0 24px 14px;
@@ -239,38 +214,93 @@
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
+/* Quick views, the light "quiet text" style the user chose (REV-43). */
 .qv {
   all: unset;
   cursor: pointer;
-  height: 34px;
+  height: 30px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 12px;
+  gap: 7px;
+  padding: 0 10px;
   border-radius: 8px;
   font-size: 13px;
-  color: var(--ink-soft);
+  color: var(--muted);
   font-weight: 500;
+  white-space: nowrap;
 }
 .qv:hover {
   background: var(--line);
-}
-.qv b {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
   color: var(--text);
+}
+.qv-count {
+  font-size: 12px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--subtle);
 }
 .qv-on,
 .qv-on:hover {
   background: var(--primary-soft);
   color: var(--accent);
 }
-.qv-on b {
+.qv-on .qv-count {
   color: var(--accent);
 }
 .qv:disabled {
   cursor: not-allowed;
   opacity: 0.6;
+}
+.qv-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.qv-critical {
+  background: var(--critical-mark);
+}
+.qv-high {
+  background: var(--high-mark);
+}
+.qv-warning {
+  background: var(--amber-mark);
+}
+.qv-firing {
+  background: var(--critical);
+}
+.qv-acknowledged {
+  background: var(--primary);
+}
+.qv-resolved {
+  background: var(--ok);
+}
+.qv-div {
+  width: 1px;
+  height: 16px;
+  margin: 0 6px;
+  background: var(--input-border);
+  flex-shrink: 0;
+}
+/* Borderless ⋯ trigger for a row's action menu. */
+.row-menu {
+  all: unset;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--subtle);
+}
+.row-menu:hover,
+.row-menu[aria-expanded="true"] {
+  background: var(--fill);
+  color: var(--text);
+}
+.row-menu:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 .ibtn {
   all: unset;
@@ -538,7 +568,6 @@ a.chip:hover {
   background: var(--incident-soft);
   color: var(--incident-ink);
 }
-.chip-new,
 .b-blue {
   background: var(--primary-soft);
   color: var(--info);
@@ -991,6 +1020,25 @@ textarea.inp {
   .page-header {
     flex-wrap: wrap;
   }
+  /* Routine catching-up status must not reflow a wrapped header (REV-43);
+     degraded delivery stays visible because it is a failure. */
+  .update-note-wait {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .update-note:empty,
+  .update-note:has(> .update-note-wait) {
+    margin-right: -8px;
+  }
+  .update-note {
+    flex-wrap: wrap;
+    row-gap: 4px;
+    white-space: normal;
+  }
   .page-actions {
     margin-left: 0;
     flex-wrap: wrap;
@@ -1035,7 +1083,7 @@ textarea.inp {
   padding: 0 16px 0 18px;
 }
 .g-full {
-  grid-template-columns: 18px 96px minmax(0, 1fr) 128px 132px 150px 168px 176px;
+  grid-template-columns: 18px 96px minmax(0, 1fr) 128px 132px 150px 168px 48px;
 }
 .g-narrow {
   grid-template-columns: 18px 96px minmax(0, 1fr) 128px 132px;
@@ -1067,7 +1115,8 @@ textarea.inp {
 }
 .quick-view-group {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 2px;
   flex-wrap: wrap;
 }
 .bulkbar-wrap {
@@ -1125,7 +1174,7 @@ textarea.inp {
     min-height: 480px;
   }
   .g-full {
-    min-width: 1180px;
+    min-width: 1052px;
   }
   .g-narrow {
     min-width: 720px;

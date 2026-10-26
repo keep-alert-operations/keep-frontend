@@ -2,20 +2,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { components } from "@/lib/generated";
 import { alertOperatorLabel } from "@/lib/alert-operator";
-import {
-  count,
-  display,
-  RecordData,
-  request,
-  tenantPath,
-  timestamp,
-} from "@/lib/api";
+import { count, display, RecordData, request, tenantPath } from "@/lib/api";
 import { useCommand, useDirtyWarning, useResource } from "@/lib/hooks";
 import { useSearchResource } from "@/lib/search-resource";
 import {
   DEFAULT_SORT,
   nextQuickSort,
-  timezoneLabel,
   type SortItem,
 } from "@/lib/preset-choices";
 import type { Scope } from "./workspace";
@@ -27,6 +19,7 @@ import {
   AlertStatus,
   NavLink,
   Page,
+  RelativeTime,
   SearchInput,
   Severity,
   personLabel,
@@ -145,23 +138,6 @@ export function AlertFeed(scope: Scope) {
   const command = useCommand(scope.session.csrf_token, scope.onDenied);
   const rows = feed.data?.data ?? [];
   const locked = command.busy || command.uncertain;
-
-  // "New" marks rows that were not on the previous refresh of the same query.
-  const queryKey = `${base}|${params}`;
-  const seen = useRef<{ key: string; ids: Set<string> } | null>(null);
-  const [newIds, setNewIds] = useState<Set<string>>(new Set());
-  useEffect(() => {
-    const current = feed.data?.data;
-    if (!current) return;
-    const ids = new Set(current.map((row) => row.id));
-    const previous = seen.current;
-    setNewIds(
-      previous && previous.key === queryKey
-        ? new Set([...ids].filter((id) => !previous.ids.has(id)))
-        : new Set(),
-    );
-    seen.current = { key: queryKey, ids };
-  }, [feed.data, queryKey]);
 
   function reset() {
     setCursor(null);
@@ -327,7 +303,6 @@ export function AlertFeed(scope: Scope) {
               void rowCommand(row, kind, value)
             }
             busy={locked}
-            newIds={newIds}
             sort={quickSort ? [quickSort] : DEFAULT_SORT}
             onSort={(field) => {
               setQuickSort((current) => nextQuickSort(current, field));
@@ -400,8 +375,6 @@ export function AlertFeed(scope: Scope) {
               ))}
             </select>
           </div>
-          <div className="grow" />
-          <span className="alerts-tz">Times in {timezoneLabel()}</span>
         </div>
       </section>
       <BulkBar
@@ -734,7 +707,12 @@ function ActivityItem({
       dot={item.dot}
       what={item.what}
       detail={item.detail}
-      meta={`${timestamp(row.recorded_at ?? row.created_at)} · ${item.who}`}
+      meta={
+        <>
+          <RelativeTime value={row.recorded_at ?? row.created_at} /> ·{" "}
+          {item.who}
+        </>
+      }
     >
       {extra.length > 0 && (
         <details className="tl-more">
@@ -926,14 +904,13 @@ function AlertDetail(scope: Scope & { id: string }) {
     /^https?:\/\//.test(alert.runbook_url)
       ? alert.runbook_url
       : undefined;
-  const tz = timezoneLabel();
   const noteRows = notes.data?.data ?? [];
   const counts: Partial<Record<Tab, string | undefined>> = {
     notes: pageCount(notes.data),
     occurrences: pageCount(occurrenceCount.data),
     "source-events": pageCount(sourceCount.data),
   };
-  const fields: [string, React.ReactNode, boolean?][] = alert
+  const fields: [string, React.ReactNode][] = alert
     ? [
         ["Application", display(alert.application)],
         ["Component", display(alert.component)],
@@ -943,20 +920,27 @@ function AlertDetail(scope: Scope & { id: string }) {
         ["Impact", display(alert.impact)],
         [
           "First received",
-          timestamp(alert.first_received_at ?? alert.opened_at),
-          true,
+          <RelativeTime
+            key="first"
+            value={alert.first_received_at ?? alert.opened_at}
+          />,
         ],
-        ["Last received", timestamp(alert.timestamp), true],
+        ["Last received", <RelativeTime key="last" value={alert.timestamp} />],
         [
           "Occurrence",
           alert.occurrence_number !== undefined &&
-          alert.occurrence_number !== null
-            ? `#${display(alert.occurrence_number)}${
-                typeof alert.opened_at === "string"
-                  ? ` · opened ${timestamp(alert.opened_at).split(" ")[1] ?? ""}`
-                  : ""
-              }`
-            : "—",
+          alert.occurrence_number !== null ? (
+            <>
+              #{display(alert.occurrence_number)}
+              {typeof alert.opened_at === "string" && (
+                <>
+                  , opened <RelativeTime value={alert.opened_at} />
+                </>
+              )}
+            </>
+          ) : (
+            "—"
+          ),
         ],
         ["Schema", display(alert.schema_version)],
       ]
@@ -1020,17 +1004,6 @@ function AlertDetail(scope: Scope & { id: string }) {
                 {alert.suppressed === true && (
                   <span className="chip chip-supp">Suppressed</span>
                 )}
-                <div className="grow" />
-                <span className="sub">
-                  {[
-                    alert.application,
-                    alert.component,
-                    alert.node_name,
-                    alert.site,
-                  ]
-                    .map(display)
-                    .join(" · ")}
-                </span>
               </div>
               {(edit || runbook || alert) && (
                 <div className="ad-actions">
@@ -1238,7 +1211,17 @@ function AlertDetail(scope: Scope & { id: string }) {
                                 ? "Current text hidden."
                                 : `“${display(item.text)}”`
                             }
-                            meta={`${timestamp(item.created_at)} · ${personLabel(scope, item.actor_id, item.actor_display_name, "—")}`}
+                            meta={
+                              <>
+                                <RelativeTime value={item.created_at} /> ·{" "}
+                                {personLabel(
+                                  scope,
+                                  item.actor_id,
+                                  item.actor_display_name,
+                                  "—",
+                                )}
+                              </>
+                            }
                           />
                         ) : (
                           <TimelineItem
@@ -1246,15 +1229,24 @@ function AlertDetail(scope: Scope & { id: string }) {
                             dot="tl-src"
                             what={`Occurrence #${display(item.occurrence_number ?? item.number)} opened.`}
                             detail={
-                              typeof item.resolved_at === "string"
-                                ? `Resolved ${timestamp(item.resolved_at)}.`
-                                : "Still open."
+                              typeof item.resolved_at === "string" ? (
+                                <>
+                                  Resolved{" "}
+                                  <RelativeTime value={item.resolved_at} />.
+                                </>
+                              ) : (
+                                "Still open."
+                              )
                             }
-                            meta={`${timestamp(item.opened_at ?? item.recorded_at)}${
-                              typeof item.actor_display_name === "string"
-                                ? ` · ${item.actor_display_name}`
-                                : ""
-                            }`}
+                            meta={
+                              <>
+                                <RelativeTime
+                                  value={item.opened_at ?? item.recorded_at}
+                                />
+                                {typeof item.actor_display_name === "string" &&
+                                  ` · ${item.actor_display_name}`}
+                              </>
+                            }
                           />
                         ),
                       )}
@@ -1332,24 +1324,17 @@ function AlertDetail(scope: Scope & { id: string }) {
             <section className="panel" aria-labelledby="alert-details-h">
               <div className="panel-h">
                 <h2 id="alert-details-h">Details</h2>
-                <div className="grow" />
-                <span className="small muted">Revision {alert.revision}</span>
               </div>
               <dl className="ad-fields">
-                {fields.map(([label, value, mono]) => (
+                {fields.map(([label, value]) => (
                   <div className="fld" key={label}>
                     <dt>{label}</dt>
-                    <dd
-                      className={mono ? "mono" : undefined}
-                      style={mono ? { fontSize: 12 } : undefined}
-                      title={typeof value === "string" ? value : undefined}
-                    >
+                    <dd title={typeof value === "string" ? value : undefined}>
                       {value}
                     </dd>
                   </div>
                 ))}
               </dl>
-              <div className="help ad-tz">Times in {tz}</div>
             </section>
             <section className="panel ad-notes" aria-labelledby="alert-notes-h">
               <div className="panel-h">
@@ -1394,10 +1379,7 @@ function AlertDetail(scope: Scope & { id: string }) {
                               "—",
                             )}
                           </b>{" "}
-                          ·{" "}
-                          <span className="mono">
-                            {timestamp(item.created_at)}
-                          </span>
+                          · <RelativeTime value={item.created_at} />
                         </span>
                         <span
                           className={`ad-note-text ${item.deleted ? "muted" : ""}`}

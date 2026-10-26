@@ -103,7 +103,9 @@ Elasticsearch, Kafka, Redis, company integrations, capacity, or production readi
   foreground activity heartbeat, session reauthorization and access-loss clearing.
 - Alert CEL/text/suppression query, exact decimal count presentation, snapshot page
   controls, detail, lifecycle, derived ownership status, one self/other/unassign menu, notes
-  create/edit/delete, history/occurrences/source reads and explicit bulk status.
+  create/edit/delete, history/occurrences/source reads and explicit bulk status. Feed and
+  preset rows put self-assignment and resolution in a ⋯ menu and show times relative to now,
+  with the exact time in the tooltip (REV-43).
 - Incident lists default to Active, last activity descending, and 50 rows.
   Active/Resolved/All views combine with status, severity, assignee (me, unassigned,
   or user UUID), source, originating-rule UUID, linked-alert UUID, exact incident

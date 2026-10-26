@@ -466,7 +466,10 @@ test("unauthenticated shell offers company sign-in without protected data", asyn
     page.getByRole("navigation", { name: "Tenant navigation" }),
   ).toHaveCount(0);
 });
-test("feed preserves exact decimal count and source text", async ({ page }) => {
+/** Requirements: REV-43; shared system 3. Rows drop the source line. */
+test("feed preserves exact decimal count without the source line", async ({
+  page,
+}) => {
   await setup(page);
   await page.goto(`/tenants/${global}/alerts`);
   await expect(
@@ -477,7 +480,7 @@ test("feed preserves exact decimal count and source text", async ({ page }) => {
   ).toBeVisible();
   await expect(
     page.getByRole("row", { name: /Synthetic firing alert/ }),
-  ).toContainText("test · test");
+  ).not.toContainText("test · test");
   await expect(
     page
       .getByRole("region", { name: "Matching alerts" })
@@ -882,7 +885,7 @@ test("shared editor keeps its original revision when a remote save arrives", asy
   await expect(page).toHaveURL(`/tenants/${global}/presets/${alert}/edit`);
   await page.getByLabel("Name", { exact: true }).fill("My protected draft");
   revision = "2";
-  await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(
     page.getByText("A newer shared revision 2", { exact: false }),
   ).toBeVisible();
@@ -919,7 +922,7 @@ test("bulk status captures selected revisions instead of silently upgrading them
   await page.goto(`/tenants/${global}/alerts`);
   await page.getByRole("checkbox", { name: `Select ${row.message}` }).check();
   revision = "2";
-  await page.getByRole("button", { name: "Refresh now", exact: true }).click();
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await page
     .getByRole("toolbar", { name: "Bulk actions" })
     .getByRole("button", { name: "Resolve", exact: true })

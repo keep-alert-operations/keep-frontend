@@ -19,7 +19,7 @@ import {
 } from "@/lib/api";
 import type { Scope } from "./workspace";
 import { ErrorNotice } from "./ui";
-import { NavLink } from "./page";
+import { NavLink, RelativeTime } from "./page";
 import { DashboardLayout } from "./dashboard-layout";
 import { compactPanels } from "@/lib/dashboard-layout";
 
@@ -457,17 +457,27 @@ export function CountTile({
           : "—"}
       </b>
       <span className={`small ${isStale ? "ack-n" : "muted"}`}>
-        {unavailable !== undefined
-          ? unavailable
-          : placeholder
-            ? placeholder
-            : value === undefined
-              ? "Count unavailable"
-              : isStale
-                ? `Previous observation · stale${capturedAt ? ` · captured ${timestamp(capturedAt)}` : ""}`
-                : paused
-                  ? "Captured observation · paused"
-                  : "Exact logical alerts"}
+        {unavailable !== undefined ? (
+          unavailable
+        ) : placeholder ? (
+          placeholder
+        ) : value === undefined ? (
+          "Count unavailable"
+        ) : isStale ? (
+          <>
+            Previous observation · stale
+            {capturedAt && (
+              <>
+                {" "}
+                · captured <RelativeTime value={capturedAt} />
+              </>
+            )}
+          </>
+        ) : paused ? (
+          "Captured observation · paused"
+        ) : (
+          "Exact logical alerts"
+        )}
       </span>
       {layoutControls}
     </article>

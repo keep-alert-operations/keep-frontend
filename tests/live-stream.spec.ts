@@ -341,6 +341,7 @@ test("stalled headers time out and late responses after close cannot deliver hin
   });
 });
 
+/** Requirements: REV-43; alert history technical 19. Only lost delivery shows a notice. */
 test("workspace visibly degrades on silent fetch stream and clears it at logout", async ({
   page,
 }) => {
@@ -406,17 +407,23 @@ test("workspace visibly degrades on silent fetch stream and clears it at logout"
     }),
   );
   await page.goto(`/tenants/${tenant}/alerts`);
-  await expect(page.getByText("Live", { exact: true })).toBeVisible();
+  await expect(
+    page.locator('[data-live-status="Live hints connected"]'),
+  ).toBeAttached();
+  await expect(page.locator(".update-note")).toBeEmpty();
   // Development StrictMode deliberately mounts, cleans up and remounts effects.
   const initialOpens = await page.evaluate(
     () => (window as unknown as { liveTest: { opens: number } }).liveTest.opens,
   );
   await page.clock.fastForward(30000);
   await expect(
-    page.getByText("Live delivery degraded · reconciling", { exact: true }),
+    page.getByText("Live updates degraded · reconnecting", { exact: true }),
   ).toBeVisible();
   await page.clock.fastForward(1200);
-  await expect(page.getByText("Live", { exact: true })).toBeVisible();
+  await expect(
+    page.locator('[data-live-status="Live hints connected"]'),
+  ).toBeAttached();
+  await expect(page.locator(".update-note")).toBeEmpty();
   expect(
     await page.evaluate(
       () =>

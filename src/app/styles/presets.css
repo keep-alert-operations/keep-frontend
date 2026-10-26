@@ -83,6 +83,10 @@
 .menu-right {
   right: 0;
 }
+.menu-up {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
 .menu-left {
   left: 0;
 }
@@ -153,7 +157,7 @@
 
 /* S04 · preset list ------------------------------------------------- */
 .pl-row {
-  grid-template-columns: minmax(0, 1fr) 150px 150px 170px 70px 150px;
+  grid-template-columns: minmax(0, 1fr) 150px 150px 170px 150px;
 }
 .pl-item {
   min-height: 58px;
@@ -184,9 +188,6 @@
 /* S05 · preset results ---------------------------------------------- */
 .ps-switch {
   padding: 0 6px;
-}
-.ps-meta {
-  font-size: 12.5px;
 }
 .preset-view .page-title {
   gap: 10px;
@@ -290,10 +291,6 @@ a.ps-filter:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.ps-tz {
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 /* S06 · preset editor ----------------------------------------------- */
@@ -734,16 +731,13 @@ a.ps-filter:focus-visible {
     max-height: 360px;
   }
   .pl-row {
-    min-width: 820px;
+    min-width: 750px;
   }
   .ps-bar {
     flex-wrap: wrap;
   }
   .ps-filter {
     flex-basis: 100%;
-  }
-  .ps-tz {
-    display: none;
   }
   .hist-foot {
     flex-wrap: wrap;

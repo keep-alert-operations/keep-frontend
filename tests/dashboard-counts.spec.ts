@@ -497,7 +497,9 @@ test("dashboard list exposes panel and editor metadata and resets paging when so
   await page.goto(`/tenants/${tenant}/dashboards`);
   const card = page.getByRole("link", { name: /First page dashboard/ });
   await expect(card).toContainText("2 panels");
-  await expect(card).toContainText(`updated by ${preset} (you)`);
+  // Requirements: REV-43; dashboard operations 16. No revision on cards.
+  await expect(card).toContainText(`Updated by ${preset} (you)`);
+  await expect(card).not.toContainText("Revision");
   await expect(card).toHaveAttribute(
     "href",
     `/tenants/${tenant}/dashboards/${id}`,
