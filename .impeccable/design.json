@@ -1,0 +1,2575 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-26T10:40:49+00:00",
+  "title": "Design System: Appchi",
+  "extensions": {
+    "themes": {
+      "mechanism": "Light default; dark stored as appchi-theme in localStorage and applied as data-theme on <html> before first paint. Dark values are the *-dark colour tokens.",
+      "source": "src/app/theme.css (:root and :root[data-theme=\"dark\"])",
+      "browserSurfaces": {
+        "accent-color": "primary",
+        "caret-color": "primary",
+        "::selection": "primary-soft background, text colour",
+        "::placeholder": "subtle, opacity 1",
+        "scrollbar-color": "border-hover on transparent",
+        "focus": "2px solid focus outline",
+        "color-scheme": "light / dark per theme"
+      },
+      "keycloak": "keycloak/themes/appchi/login/resources/css/appchi.css mirrors the palette through light-dark() --ap-* tokens."
+    },
+    "contrast": {
+      "floor": "4.5:1 for every text role on its surfaces, both themes, placeholders included",
+      "measured": {
+        "subtle-on-surface": "5.65 light / 6.66 dark",
+        "muted-on-surface": "6.37 / 7.92",
+        "primary-text-on-primary": "5.37 / 8.13",
+        "run-kbd-0.9-on-primary": "4.67 / 6.99",
+        "side-ink-on-side": "8.44 / 10.38",
+        "danger-text-on-danger": "6.57 / 5.59"
+      },
+      "exceptions": [
+        "Refreshing tables dim to 0.62 opacity (.is-stale): muted/subtle drop to about 2.6-3.9:1 while the refetch is in flight."
+      ]
+    },
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Ocean Canvas",
+        "canonical": "#f7fafd",
+        "purpose": "Page ground (light)",
+        "oklch": "oklch(98.4% 0.005 248)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242526",
+          "#404244",
+          "#5f6164",
+          "#808385",
+          "#a3a5a7",
+          "#c8c9cb",
+          "#eeeeef"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Panel White",
+        "canonical": "#ffffff",
+        "purpose": "Panels, tables, inputs, buttons, dialogs (light)",
+        "oklch": "oklch(100.0% 0.000 90)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "surface-2": {
+        "role": "neutral",
+        "displayName": "Panel Stripe",
+        "canonical": "#f8fbfe",
+        "purpose": "Alternate stripe on stale count panels (light)",
+        "oklch": "oklch(98.7% 0.005 248)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242526",
+          "#404244",
+          "#5f6164",
+          "#808385",
+          "#a3a5a7",
+          "#c8c9cb",
+          "#eeeeef"
+        ]
+      },
+      "fill": {
+        "role": "neutral",
+        "displayName": "Tide Fill",
+        "canonical": "#f0f5fa",
+        "purpose": "Hover fills, neutral chips, disabled fields (light)",
+        "oklch": "oklch(96.8% 0.009 248)",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#232527",
+          "#3f4245",
+          "#5e6266",
+          "#7e8387",
+          "#a2a5a9",
+          "#c7c9cc",
+          "#edeff0"
+        ]
+      },
+      "fill-strong": {
+        "role": "neutral",
+        "displayName": "Deep Fill",
+        "canonical": "#e4edf6",
+        "purpose": "Segmented track, theme switch track (light)",
+        "oklch": "oklch(94.2% 0.016 248)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#222529",
+          "#3d4348",
+          "#5b626a",
+          "#7b838b",
+          "#9fa6ac",
+          "#c5cace",
+          "#eceff1"
+        ]
+      },
+      "row-hover": {
+        "role": "neutral",
+        "displayName": "Row Hover",
+        "canonical": "#f4f8fc",
+        "purpose": "Table row hover (light)",
+        "oklch": "oklch(97.7% 0.007 248)",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#242527",
+          "#404245",
+          "#5e6265",
+          "#7f8386",
+          "#a2a5a8",
+          "#c7c9cb",
+          "#edeef0"
+        ]
+      },
+      "code-bg": {
+        "role": "neutral",
+        "displayName": "Code Ground",
+        "canonical": "#fbfdff",
+        "purpose": "CEL field ground (light)",
+        "oklch": "oklch(99.3% 0.003 248)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242526",
+          "#414243",
+          "#606163",
+          "#818284",
+          "#a4a5a6",
+          "#c8c9ca",
+          "#eeeeef"
+        ]
+      },
+      "code-gutter": {
+        "role": "neutral",
+        "displayName": "Code Gutter",
+        "canonical": "#f1f6fb",
+        "purpose": "CEL line-number column (light)",
+        "oklch": "oklch(97.1% 0.009 248)",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#232527",
+          "#3f4245",
+          "#5e6266",
+          "#7e8387",
+          "#a2a5a9",
+          "#c7c9cc",
+          "#edeff0"
+        ]
+      },
+      "side": {
+        "role": "neutral",
+        "displayName": "Rail Tint",
+        "canonical": "#eaf3fb",
+        "purpose": "Icon rail ground (light)",
+        "oklch": "oklch(96.0% 0.014 245)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#222629",
+          "#3d4348",
+          "#5b6269",
+          "#7b838a",
+          "#a0a6ac",
+          "#c5cace",
+          "#eceff1"
+        ]
+      },
+      "side-edge": {
+        "role": "neutral",
+        "displayName": "Rail Edge",
+        "canonical": "#d3e3f2",
+        "purpose": "Icon rail right border (light)",
+        "oklch": "oklch(90.8% 0.027 246)",
+        "tonalRamp": [
+          "#090c0e",
+          "#20262c",
+          "#39434c",
+          "#556370",
+          "#768492",
+          "#9ba7b1",
+          "#c2cad2",
+          "#eaeff4"
+        ]
+      },
+      "side-hover": {
+        "role": "neutral",
+        "displayName": "Rail Hover",
+        "canonical": "#dcebf8",
+        "purpose": "Rail tile hover (light)",
+        "oklch": "oklch(93.3% 0.024 244)",
+        "tonalRamp": [
+          "#090c0e",
+          "#20262b",
+          "#3a434b",
+          "#56636e",
+          "#778490",
+          "#9ca7b0",
+          "#c3cad1",
+          "#ebeff3"
+        ]
+      },
+      "side-ink": {
+        "role": "neutral",
+        "displayName": "Rail Ink",
+        "canonical": "#2b4865",
+        "purpose": "Rail labels and icons (light)",
+        "oklch": "oklch(39.2% 0.061 250)",
+        "tonalRamp": [
+          "#060c13",
+          "#192634",
+          "#2f445a",
+          "#466482",
+          "#6786a5",
+          "#90a8c1",
+          "#bacbde",
+          "#e6f0fb"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Navy Ink",
+        "canonical": "#0e1b2a",
+        "purpose": "Primary text (light)",
+        "oklch": "oklch(21.8% 0.035 253)",
+        "tonalRamp": [
+          "#080b10",
+          "#1f262e",
+          "#384350",
+          "#546375",
+          "#748497",
+          "#9aa6b6",
+          "#c1cad5",
+          "#eaeff6"
+        ]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Soft Ink",
+        "canonical": "#3a4e63",
+        "purpose": "Quick-view and field labels, dialog copy (light)",
+        "oklch": "oklch(41.6% 0.043 250)",
+        "tonalRamp": [
+          "#070c10",
+          "#1d2630",
+          "#354453",
+          "#4f6379",
+          "#6f859b",
+          "#96a7b9",
+          "#becbd8",
+          "#e8eff7"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "#4e6176",
+        "purpose": "Secondary text, crumbs, table headers (light)",
+        "oklch": "oklch(48.5% 0.041 251)",
+        "tonalRamp": [
+          "#080c10",
+          "#1d262f",
+          "#364352",
+          "#506378",
+          "#71849a",
+          "#97a7b8",
+          "#bfcad7",
+          "#e9eff7"
+        ]
+      },
+      "subtle": {
+        "role": "neutral",
+        "displayName": "Subtle Ink",
+        "canonical": "#56697e",
+        "purpose": "Help text, timestamps, mono sub-lines, placeholders (light)",
+        "oklch": "oklch(51.3% 0.041 251)",
+        "tonalRamp": [
+          "#080c10",
+          "#1d262f",
+          "#364352",
+          "#516378",
+          "#71849a",
+          "#97a7b8",
+          "#bfcad7",
+          "#e9eff7"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Panel Border",
+        "canonical": "#dce6f0",
+        "purpose": "Panel and table-head borders (light)",
+        "oklch": "oklch(92.0% 0.017 248)",
+        "tonalRamp": [
+          "#090b0d",
+          "#222629",
+          "#3d4349",
+          "#5a626b",
+          "#7b838c",
+          "#9fa6ad",
+          "#c5cacf",
+          "#eceff2"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Row Line",
+        "canonical": "#ebf1f7",
+        "purpose": "Row separators, quick-view hover (light)",
+        "oklch": "oklch(95.5% 0.010 248)",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#232528",
+          "#3f4246",
+          "#5d6267",
+          "#7e8388",
+          "#a1a6aa",
+          "#c6c9cc",
+          "#edeff0"
+        ]
+      },
+      "input-border": {
+        "role": "neutral",
+        "displayName": "Control Border",
+        "canonical": "#c9d8e6",
+        "purpose": "Control hairlines (light)",
+        "oklch": "oklch(87.5% 0.025 246)",
+        "tonalRamp": [
+          "#090c0e",
+          "#20262b",
+          "#3a434c",
+          "#56636f",
+          "#778491",
+          "#9ca7b1",
+          "#c2cad2",
+          "#eaeff3"
+        ]
+      },
+      "border-hover": {
+        "role": "neutral",
+        "displayName": "Border Hover",
+        "canonical": "#a9c1d8",
+        "purpose": "Scrollbar thumb, stronger hairline (light)",
+        "oklch": "oklch(80.0% 0.042 247)",
+        "tonalRamp": [
+          "#070c10",
+          "#1c262f",
+          "#344452",
+          "#4e6478",
+          "#6f859a",
+          "#96a7b8",
+          "#becbd7",
+          "#e8eff7"
+        ]
+      },
+      "faint": {
+        "role": "neutral",
+        "displayName": "Faint Mark",
+        "canonical": "#8296ab",
+        "purpose": "Low-severity rings, neutral timeline dots; never text (light)",
+        "oklch": "oklch(66.5% 0.039 250)",
+        "tonalRamp": [
+          "#080c10",
+          "#1e262f",
+          "#364351",
+          "#516376",
+          "#718599",
+          "#98a7b7",
+          "#bfcbd6",
+          "#e9eff6"
+        ]
+      },
+      "primary": {
+        "role": "primary",
+        "displayName": "Ocean Blue",
+        "canonical": "#0a6fb0",
+        "purpose": "Primary actions, Run, active rail tile, brand mark, tab underline (light)",
+        "oklch": "oklch(52.4% 0.131 246)",
+        "tonalRamp": [
+          "#000c1a",
+          "#012743",
+          "#044570",
+          "#0966a2",
+          "#3388ca",
+          "#6fabdf",
+          "#a4cef4",
+          "#e2f1ff"
+        ]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "Deep Ocean",
+        "canonical": "#085c93",
+        "purpose": "Hover of blue fills (light)",
+        "oklch": "oklch(46.0% 0.114 246)",
+        "tonalRamp": [
+          "#010c19",
+          "#062740",
+          "#0f456d",
+          "#1b669d",
+          "#4288c1",
+          "#77abd8",
+          "#a9ceef",
+          "#e1f1ff"
+        ]
+      },
+      "primary-text": {
+        "role": "primary",
+        "displayName": "On Ocean",
+        "canonical": "#ffffff",
+        "purpose": "Text on blue fills (light)",
+        "oklch": "oklch(100.0% 0.000 90)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "primary-soft": {
+        "role": "primary",
+        "displayName": "Shallow Water",
+        "canonical": "#ddeefa",
+        "purpose": "Selected quick view, new chips, selection (light)",
+        "oklch": "oklch(94.0% 0.024 238)",
+        "tonalRamp": [
+          "#080c0e",
+          "#1f262b",
+          "#39444b",
+          "#55636e",
+          "#76858f",
+          "#9ba7af",
+          "#c2cbd1",
+          "#eaeff3"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Harbour Link",
+        "canonical": "#075e96",
+        "purpose": "Links, selected quick-view label, CEL keywords (light)",
+        "oklch": "oklch(46.6% 0.116 246)",
+        "tonalRamp": [
+          "#010c19",
+          "#052741",
+          "#0d456d",
+          "#18669d",
+          "#4088c2",
+          "#76abd9",
+          "#a9ceef",
+          "#e2f1fe"
+        ]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Sea Mist",
+        "canonical": "#eef6fd",
+        "purpose": "Selected row, highlighted option, info ground (light)",
+        "oklch": "oklch(96.9% 0.013 244)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#222528",
+          "#3e4347",
+          "#5b6268",
+          "#7c8389",
+          "#a0a6ab",
+          "#c6cacd",
+          "#eceff1"
+        ]
+      },
+      "focus": {
+        "role": "primary",
+        "displayName": "Focus Blue",
+        "canonical": "#0a6fb0",
+        "purpose": "Focus outlines (light)",
+        "oklch": "oklch(52.4% 0.131 246)",
+        "tonalRamp": [
+          "#000c1a",
+          "#012743",
+          "#044570",
+          "#0966a2",
+          "#3388ca",
+          "#6fabdf",
+          "#a4cef4",
+          "#e2f1ff"
+        ]
+      },
+      "focus-ring": {
+        "role": "primary",
+        "displayName": "Focus Ring",
+        "canonical": "#cfe5f6",
+        "purpose": "3px ring around active code fields (light)",
+        "oklch": "oklch(91.1% 0.033 241)",
+        "tonalRamp": [
+          "#080c0f",
+          "#1e262d",
+          "#36444e",
+          "#516472",
+          "#718594",
+          "#98a7b4",
+          "#c0cbd4",
+          "#e9eff5"
+        ]
+      },
+      "info": {
+        "role": "primary",
+        "displayName": "Info Ink",
+        "canonical": "#075e96",
+        "purpose": "Acknowledged status, info banners (light)",
+        "oklch": "oklch(46.6% 0.116 246)",
+        "tonalRamp": [
+          "#010c19",
+          "#052741",
+          "#0d456d",
+          "#18669d",
+          "#4088c2",
+          "#76abd9",
+          "#a9ceef",
+          "#e2f1fe"
+        ]
+      },
+      "info-line": {
+        "role": "primary",
+        "displayName": "Info Line",
+        "canonical": "#c5dcef",
+        "purpose": "Info banner border (light)",
+        "oklch": "oklch(88.3% 0.036 243)",
+        "tonalRamp": [
+          "#070c0f",
+          "#1d262e",
+          "#364450",
+          "#506474",
+          "#708596",
+          "#97a7b5",
+          "#bfcbd5",
+          "#e9eff5"
+        ]
+      },
+      "avatar": {
+        "role": "primary",
+        "displayName": "Avatar Tint",
+        "canonical": "#cfe3f5",
+        "purpose": "Account initials circle (light)",
+        "oklch": "oklch(90.7% 0.033 245)",
+        "tonalRamp": [
+          "#080c0f",
+          "#1e262d",
+          "#37444f",
+          "#526373",
+          "#738595",
+          "#99a7b4",
+          "#c0cbd4",
+          "#e9eff5"
+        ]
+      },
+      "critical": {
+        "role": "status",
+        "displayName": "Critical Text",
+        "canonical": "#b42318",
+        "purpose": "Critical severity, Firing status, danger text (light)",
+        "oklch": "oklch(50.0% 0.182 30)",
+        "tonalRamp": [
+          "#1d0101",
+          "#490804",
+          "#7b140d",
+          "#b02217",
+          "#d94c3c",
+          "#ef8171",
+          "#fdb4a8",
+          "#fee9e5"
+        ]
+      },
+      "critical-mark": {
+        "role": "status",
+        "displayName": "Critical Mark",
+        "canonical": "#d92d20",
+        "purpose": "Critical square, red threshold (light)",
+        "oklch": "oklch(57.6% 0.209 29)",
+        "tonalRamp": [
+          "#1f0000",
+          "#4c0201",
+          "#7f0703",
+          "#b60f07",
+          "#e33c2d",
+          "#f87a68",
+          "#feb3a7",
+          "#ffe9e5"
+        ]
+      },
+      "high": {
+        "role": "status",
+        "displayName": "High Text",
+        "canonical": "#b4480c",
+        "purpose": "High severity, CEL operators (light)",
+        "oklch": "oklch(53.9% 0.154 43)",
+        "tonalRamp": [
+          "#1a0400",
+          "#421500",
+          "#702801",
+          "#a13d03",
+          "#ca5e2c",
+          "#e28c68",
+          "#f7b99f",
+          "#ffe9e1"
+        ]
+      },
+      "high-mark": {
+        "role": "status",
+        "displayName": "High Mark",
+        "canonical": "#ec6a13",
+        "purpose": "High diamond (light)",
+        "oklch": "oklch(67.3% 0.181 47)",
+        "tonalRamp": [
+          "#190500",
+          "#3f1702",
+          "#6b2d05",
+          "#9b440b",
+          "#cd5c14",
+          "#ea8755",
+          "#feb694",
+          "#ffeae0"
+        ]
+      },
+      "amber": {
+        "role": "status",
+        "displayName": "Warning Text",
+        "canonical": "#8a6100",
+        "purpose": "Warning and Medium severity (light)",
+        "oklch": "oklch(52.2% 0.108 80)",
+        "tonalRamp": [
+          "#120900",
+          "#332100",
+          "#583c01",
+          "#7f5902",
+          "#a47a2c",
+          "#c0a069",
+          "#ddc6a0",
+          "#faedd7"
+        ]
+      },
+      "amber-mark": {
+        "role": "status",
+        "displayName": "Warning Mark",
+        "canonical": "#d99a06",
+        "purpose": "Warning ring, amber threshold, degraded dot (light)",
+        "oklch": "oklch(72.9% 0.150 79)",
+        "tonalRamp": [
+          "#120900",
+          "#332102",
+          "#573c05",
+          "#7f590b",
+          "#a97814",
+          "#cb9c4a",
+          "#e5c48e",
+          "#feeccf"
+        ]
+      },
+      "ok": {
+        "role": "status",
+        "displayName": "OK Mark",
+        "canonical": "#2e9e62",
+        "purpose": "Live dot, Resolved ring, green threshold (light)",
+        "oklch": "oklch(62.2% 0.135 155)",
+        "tonalRamp": [
+          "#000f05",
+          "#012e17",
+          "#02502b",
+          "#047442",
+          "#2a995e",
+          "#6db889",
+          "#a5d8b5",
+          "#daf7e3"
+        ]
+      },
+      "ok-ink": {
+        "role": "status",
+        "displayName": "OK Ink",
+        "canonical": "#1d6e45",
+        "purpose": "Live pill, Resolved, success text, CEL strings (light)",
+        "oklch": "oklch(47.9% 0.102 157)",
+        "tonalRamp": [
+          "#020f06",
+          "#092d1a",
+          "#164e31",
+          "#247249",
+          "#499469",
+          "#7db491",
+          "#aed4bb",
+          "#dff5e6"
+        ]
+      },
+      "ok-soft": {
+        "role": "status",
+        "displayName": "OK Ground",
+        "canonical": "#dff4ea",
+        "purpose": "Live pill and OK chip ground (light)",
+        "oklch": "oklch(94.9% 0.026 166)",
+        "tonalRamp": [
+          "#080c0a",
+          "#1f2723",
+          "#39453f",
+          "#54665e",
+          "#75877f",
+          "#9aa9a2",
+          "#c1ccc7",
+          "#eaf0ed"
+        ]
+      },
+      "ok-soft-2": {
+        "role": "status",
+        "displayName": "OK Banner Ground",
+        "canonical": "#eef9f3",
+        "purpose": "Success banner ground (light)",
+        "oklch": "oklch(97.2% 0.014 162)",
+        "tonalRamp": [
+          "#0a0c0b",
+          "#222624",
+          "#3d4440",
+          "#5b645f",
+          "#7b8580",
+          "#9fa7a3",
+          "#c5cbc8",
+          "#ecefed"
+        ]
+      },
+      "ok-line": {
+        "role": "status",
+        "displayName": "OK Line",
+        "canonical": "#bfe3cf",
+        "purpose": "Success banner border (light)",
+        "oklch": "oklch(88.4% 0.047 161)",
+        "tonalRamp": [
+          "#060d09",
+          "#1a2921",
+          "#31483c",
+          "#4a6a59",
+          "#6a8b79",
+          "#92ac9e",
+          "#bccec4",
+          "#e7f2eb"
+        ]
+      },
+      "warning": {
+        "role": "status",
+        "displayName": "Warning Ink",
+        "canonical": "#7a5600",
+        "purpose": "Notices, degraded pill, unsaved chips (light)",
+        "oklch": "oklch(47.9% 0.099 80)",
+        "tonalRamp": [
+          "#120a00",
+          "#322202",
+          "#563d05",
+          "#7e5a0c",
+          "#a17b37",
+          "#bea06e",
+          "#dbc6a3",
+          "#f9edd9"
+        ]
+      },
+      "warning-bg": {
+        "role": "status",
+        "displayName": "Warning Banner Ground",
+        "canonical": "#fff8e6",
+        "purpose": "Warning banners and notices (light)",
+        "oklch": "oklch(98.0% 0.025 89)",
+        "tonalRamp": [
+          "#0c0b08",
+          "#28251e",
+          "#464237",
+          "#676152",
+          "#888272",
+          "#aaa598",
+          "#ccc9c0",
+          "#f0eee9"
+        ]
+      },
+      "warning-soft": {
+        "role": "status",
+        "displayName": "Warning Ground",
+        "canonical": "#fdf1cf",
+        "purpose": "Degraded pill, warning chips (light)",
+        "oklch": "oklch(95.9% 0.046 91)",
+        "tonalRamp": [
+          "#0d0b05",
+          "#292517",
+          "#49412c",
+          "#6b6143",
+          "#8c8263",
+          "#ada58d",
+          "#cfc9b8",
+          "#f2eee4"
+        ]
+      },
+      "warning-line": {
+        "role": "status",
+        "displayName": "Warning Line",
+        "canonical": "#f0dca6",
+        "purpose": "Warning banner border (light)",
+        "oklch": "oklch(89.8% 0.073 90)",
+        "tonalRamp": [
+          "#0f0b02",
+          "#2c240d",
+          "#4d411d",
+          "#715f2d",
+          "#93814e",
+          "#b2a47e",
+          "#d3c9ad",
+          "#f4eede"
+        ]
+      },
+      "warning-hover": {
+        "role": "status",
+        "displayName": "Warning Hover",
+        "canonical": "#f8e3a8",
+        "purpose": "Refresh button hover in degraded pill (light)",
+        "oklch": "oklch(91.9% 0.079 91)",
+        "tonalRamp": [
+          "#0f0b02",
+          "#2d240b",
+          "#4e4119",
+          "#725f28",
+          "#94814a",
+          "#b3a47a",
+          "#d3c9ab",
+          "#f4eedd"
+        ]
+      },
+      "error": {
+        "role": "status",
+        "displayName": "Error Ink",
+        "canonical": "#a01d13",
+        "purpose": "Error banners and inline errors (light)",
+        "oklch": "oklch(45.8% 0.168 30)",
+        "tonalRamp": [
+          "#1c0201",
+          "#470d08",
+          "#771c13",
+          "#ab2c21",
+          "#d35343",
+          "#ea8575",
+          "#feb4a8",
+          "#ffe9e5"
+        ]
+      },
+      "error-bg": {
+        "role": "status",
+        "displayName": "Error Ground",
+        "canonical": "#fdeeec",
+        "purpose": "Error banners, danger hover (light)",
+        "oklch": "oklch(96.0% 0.017 27)",
+        "tonalRamp": [
+          "#0d0a0a",
+          "#292323",
+          "#48403e",
+          "#6a5e5c",
+          "#8c7f7d",
+          "#ada2a1",
+          "#cfc7c6",
+          "#f2eded"
+        ]
+      },
+      "error-line": {
+        "role": "status",
+        "displayName": "Error Line",
+        "canonical": "#f4c9c4",
+        "purpose": "Error borders, danger button border (light)",
+        "oklch": "oklch(87.2% 0.050 26)",
+        "tonalRamp": [
+          "#110908",
+          "#31201e",
+          "#543a38",
+          "#7b5753",
+          "#9e7773",
+          "#bc9d99",
+          "#dac3c0",
+          "#f8ebe9"
+        ]
+      },
+      "danger": {
+        "role": "status",
+        "displayName": "Danger Fill",
+        "canonical": "#b42318",
+        "purpose": "Solid destructive buttons (light)",
+        "oklch": "oklch(50.0% 0.182 30)",
+        "tonalRamp": [
+          "#1d0101",
+          "#490804",
+          "#7b140d",
+          "#b02217",
+          "#d94c3c",
+          "#ef8171",
+          "#fdb4a8",
+          "#fee9e5"
+        ]
+      },
+      "danger-hover": {
+        "role": "status",
+        "displayName": "Danger Hover",
+        "canonical": "#8e1b12",
+        "purpose": "Hover of solid destructive buttons (light)",
+        "oklch": "oklch(42.2% 0.152 30)",
+        "tonalRamp": [
+          "#1a0302",
+          "#44110b",
+          "#73221a",
+          "#a53529",
+          "#cc594a",
+          "#e4887a",
+          "#f9b6ab",
+          "#ffe9e5"
+        ]
+      },
+      "danger-text": {
+        "role": "status",
+        "displayName": "On Danger",
+        "canonical": "#ffffff",
+        "purpose": "Text on danger fills (light)",
+        "oklch": "oklch(100.0% 0.000 90)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "incident": {
+        "role": "tertiary",
+        "displayName": "Incident Violet",
+        "canonical": "#5b4bd1",
+        "purpose": "Incident timeline dots (light)",
+        "oklch": "oklch(51.0% 0.198 282)",
+        "tonalRamp": [
+          "#090623",
+          "#201955",
+          "#3a2f8d",
+          "#5746ca",
+          "#756bf1",
+          "#9898fb",
+          "#c0c3fd",
+          "#ecedfe"
+        ]
+      },
+      "incident-ink": {
+        "role": "tertiary",
+        "displayName": "Incident Ink",
+        "canonical": "#4136a8",
+        "purpose": "Incident chip text (light)",
+        "oklch": "oklch(42.0% 0.175 280)",
+        "tonalRamp": [
+          "#080720",
+          "#1e1c50",
+          "#383485",
+          "#534ebf",
+          "#7171e6",
+          "#959bf6",
+          "#bec4fd",
+          "#ebedfe"
+        ]
+      },
+      "incident-soft": {
+        "role": "tertiary",
+        "displayName": "Incident Ground",
+        "canonical": "#efedfc",
+        "purpose": "Incident chip ground (light)",
+        "oklch": "oklch(95.2% 0.020 292)",
+        "tonalRamp": [
+          "#0b0b0e",
+          "#25242a",
+          "#42414a",
+          "#615f6c",
+          "#82808e",
+          "#a5a3ae",
+          "#c9c8d0",
+          "#eeeef2"
+        ]
+      },
+      "incident-soft-2": {
+        "role": "tertiary",
+        "displayName": "Incident Wash",
+        "canonical": "#f7f6fe",
+        "purpose": "Incident panel wash (light)",
+        "oklch": "oklch(97.6% 0.011 292)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#252528",
+          "#424146",
+          "#616067",
+          "#828188",
+          "#a5a4aa",
+          "#c9c8cc",
+          "#eeeef0"
+        ]
+      },
+      "incident-line": {
+        "role": "tertiary",
+        "displayName": "Incident Line",
+        "canonical": "#dcd8f8",
+        "purpose": "Incident panel border (light)",
+        "oklch": "oklch(89.5% 0.044 291)",
+        "tonalRamp": [
+          "#0b0a10",
+          "#252330",
+          "#423f53",
+          "#615d78",
+          "#827e9b",
+          "#a5a2b9",
+          "#c9c7d7",
+          "#eeedf7"
+        ]
+      },
+      "syntax-number": {
+        "role": "tertiary",
+        "displayName": "CEL Number",
+        "canonical": "#6b46c1",
+        "purpose": "Numbers in CEL (light)",
+        "oklch": "oklch(50.3% 0.183 292)",
+        "tonalRamp": [
+          "#0d0520",
+          "#28174f",
+          "#472d83",
+          "#6843bc",
+          "#8867e3",
+          "#a893f4",
+          "#cabffe",
+          "#eeecff"
+        ]
+      },
+      "bar-bg": {
+        "role": "neutral",
+        "displayName": "Bulk Bar Navy",
+        "canonical": "#0b2545",
+        "purpose": "Floating bulk bar ground (light)",
+        "oklch": "oklch(26.4% 0.068 255)",
+        "tonalRamp": [
+          "#060b14",
+          "#192636",
+          "#2f435d",
+          "#476387",
+          "#6784aa",
+          "#90a7c5",
+          "#bacbe1",
+          "#e6effc"
+        ]
+      },
+      "bar-ink": {
+        "role": "neutral",
+        "displayName": "Bulk Bar Ink",
+        "canonical": "#f2f7fc",
+        "purpose": "Bulk bar text, light button fill (light)",
+        "oklch": "oklch(97.4% 0.009 248)",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#232527",
+          "#3f4245",
+          "#5e6266",
+          "#7e8387",
+          "#a2a5a9",
+          "#c7c9cc",
+          "#edeff0"
+        ]
+      },
+      "bar-muted": {
+        "role": "neutral",
+        "displayName": "Bulk Bar Muted",
+        "canonical": "#c3d5e6",
+        "purpose": "Bulk bar ghost buttons (light)",
+        "oklch": "oklch(86.5% 0.031 247)",
+        "tonalRamp": [
+          "#080c0f",
+          "#1f262d",
+          "#38434e",
+          "#546372",
+          "#748494",
+          "#9aa7b3",
+          "#c1cad3",
+          "#eaeff4"
+        ]
+      },
+      "bar-line": {
+        "role": "neutral",
+        "displayName": "Bulk Bar Line",
+        "canonical": "#34587c",
+        "purpose": "Bulk bar button borders, separators (light)",
+        "oklch": "oklch(45.0% 0.073 250)",
+        "tonalRamp": [
+          "#050c14",
+          "#162637",
+          "#2a445e",
+          "#406488",
+          "#6186ac",
+          "#8ba8c7",
+          "#b7cce2",
+          "#e4f0fd"
+        ]
+      },
+      "bar-hover": {
+        "role": "neutral",
+        "displayName": "Bulk Bar Hover",
+        "canonical": "#173a5e",
+        "purpose": "Bulk bar button hover (light)",
+        "oklch": "oklch(34.2% 0.075 251)",
+        "tonalRamp": [
+          "#050c14",
+          "#162638",
+          "#2b445f",
+          "#41648a",
+          "#6185ae",
+          "#8ba8c8",
+          "#b7cce3",
+          "#e4f0fe"
+        ]
+      },
+      "bar-light-hover": {
+        "role": "neutral",
+        "displayName": "Bulk Bar Light Hover",
+        "canonical": "#d5e5f3",
+        "purpose": "Light bar button hover (light)",
+        "oklch": "oklch(91.4% 0.026 244)",
+        "tonalRamp": [
+          "#090c0e",
+          "#20262b",
+          "#3a434c",
+          "#55636f",
+          "#768491",
+          "#9ba7b1",
+          "#c2cad2",
+          "#eaeff3"
+        ]
+      },
+      "bg-dark": {
+        "role": "neutral",
+        "displayName": "Ocean Canvas (dark)",
+        "canonical": "#0b141e",
+        "purpose": "Page ground (dark)",
+        "oklch": "oklch(18.8% 0.025 252)",
+        "tonalRamp": [
+          "#090b0e",
+          "#21262b",
+          "#3b434c",
+          "#57626f",
+          "#788491",
+          "#9da6b1",
+          "#c3cad2",
+          "#ebeff3"
+        ]
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Panel White (dark)",
+        "canonical": "#122030",
+        "purpose": "Panels, tables, inputs, buttons, dialogs (dark)",
+        "oklch": "oklch(23.9% 0.037 253)",
+        "tonalRamp": [
+          "#080b10",
+          "#1e262e",
+          "#384351",
+          "#536376",
+          "#738498",
+          "#99a7b6",
+          "#c1cad6",
+          "#e9eff6"
+        ]
+      },
+      "surface-2-dark": {
+        "role": "neutral",
+        "displayName": "Panel Stripe (dark)",
+        "canonical": "#15263a",
+        "purpose": "Alternate stripe on stale count panels (dark)",
+        "oklch": "oklch(26.4% 0.044 253)",
+        "tonalRamp": [
+          "#070c11",
+          "#1d2630",
+          "#364354",
+          "#50637a",
+          "#70849c",
+          "#97a7ba",
+          "#bfcad8",
+          "#e8eff7"
+        ]
+      },
+      "fill-dark": {
+        "role": "neutral",
+        "displayName": "Tide Fill (dark)",
+        "canonical": "#1a2e44",
+        "purpose": "Hover fills, neutral chips, disabled fields (dark)",
+        "oklch": "oklch(29.5% 0.048 252)",
+        "tonalRamp": [
+          "#070c11",
+          "#1c2631",
+          "#344355",
+          "#4e637c",
+          "#6e859e",
+          "#95a7bc",
+          "#becbda",
+          "#e8eff8"
+        ]
+      },
+      "fill-strong-dark": {
+        "role": "neutral",
+        "displayName": "Deep Fill (dark)",
+        "canonical": "#213a54",
+        "purpose": "Segmented track, theme switch track (dark)",
+        "oklch": "oklch(34.1% 0.056 251)",
+        "tonalRamp": [
+          "#060c12",
+          "#1a2633",
+          "#314458",
+          "#4a6480",
+          "#6a85a3",
+          "#92a8bf",
+          "#bbcbdc",
+          "#e6f0fa"
+        ]
+      },
+      "row-hover-dark": {
+        "role": "neutral",
+        "displayName": "Row Hover (dark)",
+        "canonical": "#172a3f",
+        "purpose": "Table row hover (dark)",
+        "oklch": "oklch(28.0% 0.046 252)",
+        "tonalRamp": [
+          "#070c11",
+          "#1c2631",
+          "#344354",
+          "#4e637b",
+          "#6f859d",
+          "#96a7bb",
+          "#becbd9",
+          "#e8eff8"
+        ]
+      },
+      "code-bg-dark": {
+        "role": "neutral",
+        "displayName": "Code Ground (dark)",
+        "canonical": "#0f1c2a",
+        "purpose": "CEL field ground (dark)",
+        "oklch": "oklch(22.2% 0.033 251)",
+        "tonalRamp": [
+          "#080b0f",
+          "#1f262d",
+          "#38434f",
+          "#546374",
+          "#748496",
+          "#9aa7b5",
+          "#c1cad4",
+          "#eaeff5"
+        ]
+      },
+      "code-gutter-dark": {
+        "role": "neutral",
+        "displayName": "Code Gutter (dark)",
+        "canonical": "#142538",
+        "purpose": "CEL line-number column (dark)",
+        "oklch": "oklch(26.0% 0.043 252)",
+        "tonalRamp": [
+          "#070c10",
+          "#1d2630",
+          "#364353",
+          "#506379",
+          "#71849b",
+          "#97a7b9",
+          "#bfcad8",
+          "#e9eff7"
+        ]
+      },
+      "side-dark": {
+        "role": "neutral",
+        "displayName": "Rail Tint (dark)",
+        "canonical": "#0e1c2b",
+        "purpose": "Icon rail ground (dark)",
+        "oklch": "oklch(22.2% 0.035 251)",
+        "tonalRamp": [
+          "#080c10",
+          "#1e262e",
+          "#384350",
+          "#536375",
+          "#738497",
+          "#99a7b6",
+          "#c1cad5",
+          "#e9eff6"
+        ]
+      },
+      "side-edge-dark": {
+        "role": "neutral",
+        "displayName": "Rail Edge (dark)",
+        "canonical": "#1a2d40",
+        "purpose": "Icon rail right border (dark)",
+        "oklch": "oklch(29.0% 0.043 250)",
+        "tonalRamp": [
+          "#070c10",
+          "#1d2630",
+          "#354453",
+          "#4f6379",
+          "#6f859b",
+          "#96a7b9",
+          "#becbd8",
+          "#e8eff7"
+        ]
+      },
+      "side-hover-dark": {
+        "role": "neutral",
+        "displayName": "Rail Hover (dark)",
+        "canonical": "#16293c",
+        "purpose": "Rail tile hover (dark)",
+        "oklch": "oklch(27.5% 0.043 250)",
+        "tonalRamp": [
+          "#070c10",
+          "#1d2630",
+          "#354453",
+          "#4f6379",
+          "#6f859b",
+          "#96a7b9",
+          "#becbd8",
+          "#e8eff7"
+        ]
+      },
+      "side-ink-dark": {
+        "role": "neutral",
+        "displayName": "Rail Ink (dark)",
+        "canonical": "#bacbdc",
+        "purpose": "Rail labels and icons (dark)",
+        "oklch": "oklch(83.5% 0.030 248)",
+        "tonalRamp": [
+          "#080c0f",
+          "#1f262d",
+          "#39434e",
+          "#546372",
+          "#758494",
+          "#9aa7b3",
+          "#c1cad3",
+          "#eaeff4"
+        ]
+      },
+      "text-dark": {
+        "role": "neutral",
+        "displayName": "Navy Ink (dark)",
+        "canonical": "#e6eef6",
+        "purpose": "Primary text (dark)",
+        "oklch": "oklch(94.5% 0.014 248)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#222528",
+          "#3e4347",
+          "#5b6269",
+          "#7c838a",
+          "#a0a6ab",
+          "#c5cace",
+          "#eceff1"
+        ]
+      },
+      "ink-soft-dark": {
+        "role": "neutral",
+        "displayName": "Soft Ink (dark)",
+        "canonical": "#c3d2e0",
+        "purpose": "Quick-view and field labels, dialog copy (dark)",
+        "oklch": "oklch(85.7% 0.025 246)",
+        "tonalRamp": [
+          "#090c0e",
+          "#20262b",
+          "#3a434c",
+          "#56636f",
+          "#778491",
+          "#9ca7b1",
+          "#c2cad2",
+          "#eaeff3"
+        ]
+      },
+      "muted-dark": {
+        "role": "neutral",
+        "displayName": "Muted Ink (dark)",
+        "canonical": "#a3b6c9",
+        "purpose": "Secondary text, crumbs, table headers (dark)",
+        "oklch": "oklch(76.8% 0.034 248)",
+        "tonalRamp": [
+          "#080c0f",
+          "#1e262e",
+          "#37434f",
+          "#526374",
+          "#738596",
+          "#99a7b5",
+          "#c0cad5",
+          "#e9eff5"
+        ]
+      },
+      "subtle-dark": {
+        "role": "neutral",
+        "displayName": "Subtle Ink (dark)",
+        "canonical": "#93a7bb",
+        "purpose": "Help text, timestamps, mono sub-lines, placeholders (dark)",
+        "oklch": "oklch(72.0% 0.037 248)",
+        "tonalRamp": [
+          "#080c10",
+          "#1e262e",
+          "#364450",
+          "#516375",
+          "#728598",
+          "#98a7b6",
+          "#c0cbd6",
+          "#e9eff6"
+        ]
+      },
+      "border-dark": {
+        "role": "neutral",
+        "displayName": "Panel Border (dark)",
+        "canonical": "#233a51",
+        "purpose": "Panel and table-head borders (dark)",
+        "oklch": "oklch(34.1% 0.050 249)",
+        "tonalRamp": [
+          "#070c11",
+          "#1b2632",
+          "#324456",
+          "#4c647c",
+          "#6c859f",
+          "#93a7bc",
+          "#bdcbda",
+          "#e7f0f8"
+        ]
+      },
+      "line-dark": {
+        "role": "neutral",
+        "displayName": "Row Line (dark)",
+        "canonical": "#1a2d41",
+        "purpose": "Row separators, quick-view hover (dark)",
+        "oklch": "oklch(29.1% 0.044 251)",
+        "tonalRamp": [
+          "#070c11",
+          "#1d2630",
+          "#354354",
+          "#4f637a",
+          "#6f859c",
+          "#96a7ba",
+          "#becbd8",
+          "#e8eff7"
+        ]
+      },
+      "input-border-dark": {
+        "role": "neutral",
+        "displayName": "Control Border (dark)",
+        "canonical": "#2d4762",
+        "purpose": "Control hairlines (dark)",
+        "oklch": "oklch(38.9% 0.056 250)",
+        "tonalRamp": [
+          "#060c12",
+          "#1a2633",
+          "#314458",
+          "#496480",
+          "#6985a3",
+          "#92a8bf",
+          "#bbcbdc",
+          "#e6f0fa"
+        ]
+      },
+      "border-hover-dark": {
+        "role": "neutral",
+        "displayName": "Border Hover (dark)",
+        "canonical": "#41617f",
+        "purpose": "Scrollbar thumb, stronger hairline (dark)",
+        "oklch": "oklch(48.1% 0.061 248)",
+        "tonalRamp": [
+          "#050c13",
+          "#182734",
+          "#2e445a",
+          "#456482",
+          "#6586a5",
+          "#8ea8c1",
+          "#b9ccde",
+          "#e5f0fb"
+        ]
+      },
+      "faint-dark": {
+        "role": "neutral",
+        "displayName": "Faint Mark (dark)",
+        "canonical": "#6e8399",
+        "purpose": "Low-severity rings, neutral timeline dots; never text (dark)",
+        "oklch": "oklch(60.1% 0.042 250)",
+        "tonalRamp": [
+          "#070c10",
+          "#1d262f",
+          "#354452",
+          "#506378",
+          "#70859a",
+          "#97a7b9",
+          "#bfcbd7",
+          "#e8eff7"
+        ]
+      },
+      "primary-dark": {
+        "role": "primary",
+        "displayName": "Ocean Blue (dark)",
+        "canonical": "#4fb3f0",
+        "purpose": "Primary actions, Run, active rail tile, brand mark, tab underline (dark)",
+        "oklch": "oklch(73.3% 0.128 239)",
+        "tonalRamp": [
+          "#000d18",
+          "#01283e",
+          "#034769",
+          "#086897",
+          "#208bc5",
+          "#68aedb",
+          "#a1d0f1",
+          "#dff2ff"
+        ]
+      },
+      "primary-hover-dark": {
+        "role": "primary",
+        "displayName": "Deep Ocean (dark)",
+        "canonical": "#74c4f4",
+        "purpose": "Hover of blue fills (dark)",
+        "oklch": "oklch(78.7% 0.104 237)",
+        "tonalRamp": [
+          "#000d17",
+          "#02293c",
+          "#064766",
+          "#0d6994",
+          "#3b8bb8",
+          "#74add0",
+          "#a8cfe9",
+          "#def2ff"
+        ]
+      },
+      "primary-text-dark": {
+        "role": "primary",
+        "displayName": "On Ocean (dark)",
+        "canonical": "#04121f",
+        "purpose": "Text on blue fills (dark)",
+        "oklch": "oklch(17.7% 0.034 247)",
+        "tonalRamp": [
+          "#080c0f",
+          "#1e262e",
+          "#37444f",
+          "#526374",
+          "#728596",
+          "#98a7b5",
+          "#c0cbd5",
+          "#e9eff5"
+        ]
+      },
+      "primary-soft-dark": {
+        "role": "primary",
+        "displayName": "Shallow Water (dark)",
+        "canonical": "#173d5c",
+        "purpose": "Selected quick view, new chips, selection (dark)",
+        "oklch": "oklch(34.9% 0.069 246)",
+        "tonalRamp": [
+          "#050c13",
+          "#162736",
+          "#2a455c",
+          "#3f6586",
+          "#6087a9",
+          "#8ba9c5",
+          "#b7cce0",
+          "#e4f0fc"
+        ]
+      },
+      "accent-dark": {
+        "role": "primary",
+        "displayName": "Harbour Link (dark)",
+        "canonical": "#74c4f4",
+        "purpose": "Links, selected quick-view label, CEL keywords (dark)",
+        "oklch": "oklch(78.7% 0.104 237)",
+        "tonalRamp": [
+          "#000d17",
+          "#02293c",
+          "#064766",
+          "#0d6994",
+          "#3b8bb8",
+          "#74add0",
+          "#a8cfe9",
+          "#def2ff"
+        ]
+      },
+      "accent-soft-dark": {
+        "role": "primary",
+        "displayName": "Sea Mist (dark)",
+        "canonical": "#14304a",
+        "purpose": "Selected row, highlighted option, info ground (dark)",
+        "oklch": "oklch(30.1% 0.058 249)",
+        "tonalRamp": [
+          "#060c12",
+          "#192633",
+          "#2f4459",
+          "#476481",
+          "#6886a4",
+          "#90a8c0",
+          "#bacbdd",
+          "#e6f0fa"
+        ]
+      },
+      "focus-dark": {
+        "role": "primary",
+        "displayName": "Focus Blue (dark)",
+        "canonical": "#4fb3f0",
+        "purpose": "Focus outlines (dark)",
+        "oklch": "oklch(73.3% 0.128 239)",
+        "tonalRamp": [
+          "#000d18",
+          "#01283e",
+          "#034769",
+          "#086897",
+          "#208bc5",
+          "#68aedb",
+          "#a1d0f1",
+          "#dff2ff"
+        ]
+      },
+      "focus-ring-dark": {
+        "role": "primary",
+        "displayName": "Focus Ring (dark)",
+        "canonical": "#1c4b70",
+        "purpose": "3px ring around active code fields (dark)",
+        "oklch": "oklch(39.9% 0.081 246)",
+        "tonalRamp": [
+          "#040c15",
+          "#122738",
+          "#244560",
+          "#38658c",
+          "#5987af",
+          "#86aac9",
+          "#b3cde4",
+          "#e2f1fe"
+        ]
+      },
+      "info-dark": {
+        "role": "primary",
+        "displayName": "Info Ink (dark)",
+        "canonical": "#9bd3f7",
+        "purpose": "Acknowledged status, info banners (dark)",
+        "oklch": "oklch(84.1% 0.077 237)",
+        "tonalRamp": [
+          "#030d14",
+          "#102836",
+          "#20465d",
+          "#326787",
+          "#5489aa",
+          "#83abc5",
+          "#b1cee1",
+          "#e1f1fc"
+        ]
+      },
+      "info-line-dark": {
+        "role": "primary",
+        "displayName": "Info Line (dark)",
+        "canonical": "#1f4a6b",
+        "purpose": "Info banner border (dark)",
+        "oklch": "oklch(39.5% 0.074 244)",
+        "tonalRamp": [
+          "#040c14",
+          "#142737",
+          "#27455e",
+          "#3b6688",
+          "#5c87ab",
+          "#88a9c6",
+          "#b5cde1",
+          "#e3f1fd"
+        ]
+      },
+      "avatar-dark": {
+        "role": "primary",
+        "displayName": "Avatar Tint (dark)",
+        "canonical": "#1d3a55",
+        "purpose": "Account initials circle (dark)",
+        "oklch": "oklch(33.9% 0.059 248)",
+        "tonalRamp": [
+          "#060c12",
+          "#192634",
+          "#2f4459",
+          "#466481",
+          "#6786a4",
+          "#90a8c0",
+          "#bacbdd",
+          "#e6f0fa"
+        ]
+      },
+      "critical-dark": {
+        "role": "status",
+        "displayName": "Critical Text (dark)",
+        "canonical": "#ff958c",
+        "purpose": "Critical severity, Firing status, danger text (dark)",
+        "oklch": "oklch(77.9% 0.129 26)",
+        "tonalRamp": [
+          "#190504",
+          "#401513",
+          "#6d2926",
+          "#9d3e3a",
+          "#c3615a",
+          "#dc8d85",
+          "#f3b9b2",
+          "#ffe9e6"
+        ]
+      },
+      "critical-mark-dark": {
+        "role": "status",
+        "displayName": "Critical Mark (dark)",
+        "canonical": "#f0645a",
+        "purpose": "Critical square, red threshold (dark)",
+        "oklch": "oklch(67.8% 0.175 27)",
+        "tonalRamp": [
+          "#1c0202",
+          "#480a09",
+          "#791816",
+          "#ae2625",
+          "#d64e46",
+          "#ec8277",
+          "#fdb4ab",
+          "#ffe9e6"
+        ]
+      },
+      "high-dark": {
+        "role": "status",
+        "displayName": "High Text (dark)",
+        "canonical": "#f6a774",
+        "purpose": "High severity, CEL operators (dark)",
+        "oklch": "oklch(79.5% 0.115 53)",
+        "tonalRamp": [
+          "#160701",
+          "#3b1b04",
+          "#65330c",
+          "#924c16",
+          "#b66e3c",
+          "#d19671",
+          "#eabfa5",
+          "#ffeadd"
+        ]
+      },
+      "high-mark-dark": {
+        "role": "status",
+        "displayName": "High Mark (dark)",
+        "canonical": "#f08a4b",
+        "purpose": "High diamond (dark)",
+        "oklch": "oklch(73.2% 0.146 50)",
+        "tonalRamp": [
+          "#180600",
+          "#3f1800",
+          "#683006",
+          "#97480c",
+          "#c46421",
+          "#dd9063",
+          "#f3bb9c",
+          "#ffeade"
+        ]
+      },
+      "amber-dark": {
+        "role": "status",
+        "displayName": "Warning Text (dark)",
+        "canonical": "#ecc76a",
+        "purpose": "Warning and Medium severity (dark)",
+        "oklch": "oklch(84.3% 0.120 88)",
+        "tonalRamp": [
+          "#110a00",
+          "#302300",
+          "#523f06",
+          "#785d0d",
+          "#a07d16",
+          "#bda260",
+          "#dac79a",
+          "#f9eed4"
+        ]
+      },
+      "amber-mark-dark": {
+        "role": "status",
+        "displayName": "Warning Mark (dark)",
+        "canonical": "#e5b53d",
+        "purpose": "Warning ring, amber threshold, degraded dot (dark)",
+        "oklch": "oklch(79.6% 0.143 86)",
+        "tonalRamp": [
+          "#110a00",
+          "#302301",
+          "#543e03",
+          "#7a5c08",
+          "#a27c0f",
+          "#c3a04f",
+          "#dfc691",
+          "#fbedcf"
+        ]
+      },
+      "ok-dark": {
+        "role": "status",
+        "displayName": "OK Mark (dark)",
+        "canonical": "#4cc38a",
+        "purpose": "Live dot, Resolved ring, green threshold (dark)",
+        "oklch": "oklch(73.5% 0.136 159)",
+        "tonalRamp": [
+          "#000f06",
+          "#022d1a",
+          "#054f31",
+          "#0b734a",
+          "#149a65",
+          "#67b98e",
+          "#a1d8b9",
+          "#d8f7e5"
+        ]
+      },
+      "ok-ink-dark": {
+        "role": "status",
+        "displayName": "OK Ink (dark)",
+        "canonical": "#82dcae",
+        "purpose": "Live pill, Resolved, success text, CEL strings (dark)",
+        "oklch": "oklch(82.5% 0.109 160)",
+        "tonalRamp": [
+          "#000f07",
+          "#022d1b",
+          "#044f33",
+          "#0a734c",
+          "#3c966c",
+          "#75b594",
+          "#a9d5bd",
+          "#ddf6e7"
+        ]
+      },
+      "ok-soft-dark": {
+        "role": "status",
+        "displayName": "OK Ground (dark)",
+        "canonical": "#133a2b",
+        "purpose": "Live pill and OK chip ground (dark)",
+        "oklch": "oklch(31.6% 0.052 165)",
+        "tonalRamp": [
+          "#050d09",
+          "#182922",
+          "#2d493d",
+          "#456b5a",
+          "#658c7b",
+          "#8fad9f",
+          "#bacfc5",
+          "#e5f2ec"
+        ]
+      },
+      "ok-soft-2-dark": {
+        "role": "status",
+        "displayName": "OK Banner Ground (dark)",
+        "canonical": "#112f24",
+        "purpose": "Success banner ground (dark)",
+        "oklch": "oklch(27.8% 0.042 167)",
+        "tonalRamp": [
+          "#060d0a",
+          "#1b2923",
+          "#32483e",
+          "#4b695c",
+          "#6b8b7d",
+          "#93aca1",
+          "#bccec6",
+          "#e7f1ed"
+        ]
+      },
+      "ok-line-dark": {
+        "role": "status",
+        "displayName": "OK Line (dark)",
+        "canonical": "#23523d",
+        "purpose": "Success banner border (dark)",
+        "oklch": "oklch(39.9% 0.063 162)",
+        "tonalRamp": [
+          "#050e09",
+          "#152a20",
+          "#294a3a",
+          "#3e6c56",
+          "#608e77",
+          "#8baf9c",
+          "#b7d0c3",
+          "#e4f3eb"
+        ]
+      },
+      "warning-dark": {
+        "role": "status",
+        "displayName": "Warning Ink (dark)",
+        "canonical": "#f0cf7a",
+        "purpose": "Notices, degraded pill, unsaved chips (dark)",
+        "oklch": "oklch(86.5% 0.111 89)",
+        "tonalRamp": [
+          "#110a00",
+          "#2f2301",
+          "#523f03",
+          "#785d06",
+          "#9d7e26",
+          "#baa366",
+          "#d9c89e",
+          "#f7eed6"
+        ]
+      },
+      "warning-bg-dark": {
+        "role": "status",
+        "displayName": "Warning Banner Ground (dark)",
+        "canonical": "#2f2814",
+        "purpose": "Warning banners and notices (dark)",
+        "oklch": "oklch(27.9% 0.034 91)",
+        "tonalRamp": [
+          "#0d0b07",
+          "#28251b",
+          "#474232",
+          "#68614b",
+          "#8a826b",
+          "#aba593",
+          "#cdc9bc",
+          "#f1eee7"
+        ]
+      },
+      "warning-soft-dark": {
+        "role": "status",
+        "displayName": "Warning Ground (dark)",
+        "canonical": "#3a3015",
+        "purpose": "Degraded pill, warning chips (dark)",
+        "oklch": "oklch(31.3% 0.044 89)",
+        "tonalRamp": [
+          "#0d0b05",
+          "#2a2518",
+          "#49412d",
+          "#6b6045",
+          "#8d8265",
+          "#ada48e",
+          "#cfc9b8",
+          "#f2eee5"
+        ]
+      },
+      "warning-line-dark": {
+        "role": "status",
+        "displayName": "Warning Line (dark)",
+        "canonical": "#5a4a20",
+        "purpose": "Warning banner border (dark)",
+        "oklch": "oklch(41.6% 0.063 89)",
+        "tonalRamp": [
+          "#0e0b03",
+          "#2c2411",
+          "#4c4123",
+          "#705f36",
+          "#928157",
+          "#b1a483",
+          "#d2c8b1",
+          "#f4eee1"
+        ]
+      },
+      "warning-hover-dark": {
+        "role": "status",
+        "displayName": "Warning Hover (dark)",
+        "canonical": "#4a3d1a",
+        "purpose": "Refresh button hover in degraded pill (dark)",
+        "oklch": "oklch(36.5% 0.054 89)",
+        "tonalRamp": [
+          "#0e0b04",
+          "#2b2414",
+          "#4b4128",
+          "#6d603d",
+          "#8f815d",
+          "#afa488",
+          "#d1c9b4",
+          "#f3eee2"
+        ]
+      },
+      "error-dark": {
+        "role": "status",
+        "displayName": "Error Ink (dark)",
+        "canonical": "#ff9c92",
+        "purpose": "Error banners and inline errors (dark)",
+        "oklch": "oklch(79.2% 0.120 26)",
+        "tonalRamp": [
+          "#180504",
+          "#3f1714",
+          "#6a2b27",
+          "#99423c",
+          "#bf645c",
+          "#d88f87",
+          "#f0bab4",
+          "#fee9e6"
+        ]
+      },
+      "error-bg-dark": {
+        "role": "status",
+        "displayName": "Error Ground (dark)",
+        "canonical": "#3a1d22",
+        "purpose": "Error banners, danger hover (dark)",
+        "oklch": "oklch(27.2% 0.046 10)",
+        "tonalRamp": [
+          "#10090a",
+          "#302022",
+          "#533a3e",
+          "#78575b",
+          "#9b787c",
+          "#ba9da0",
+          "#d8c3c6",
+          "#f7ebec"
+        ]
+      },
+      "error-line-dark": {
+        "role": "status",
+        "displayName": "Error Line (dark)",
+        "canonical": "#6a3034",
+        "purpose": "Error borders, danger button border (dark)",
+        "oklch": "oklch(38.9% 0.083 17)",
+        "tonalRamp": [
+          "#140707",
+          "#381c1d",
+          "#5f3336",
+          "#8a4d50",
+          "#ae6e70",
+          "#ca9697",
+          "#e5bebf",
+          "#ffe8e8"
+        ]
+      },
+      "danger-dark": {
+        "role": "status",
+        "displayName": "Danger Fill (dark)",
+        "canonical": "#b4413b",
+        "purpose": "Solid destructive buttons (dark)",
+        "oklch": "oklch(53.5% 0.151 26)",
+        "tonalRamp": [
+          "#1a0303",
+          "#44110e",
+          "#73221f",
+          "#a53530",
+          "#cc5951",
+          "#e4887f",
+          "#f9b6ae",
+          "#ffe9e6"
+        ]
+      },
+      "danger-hover-dark": {
+        "role": "status",
+        "displayName": "Danger Hover (dark)",
+        "canonical": "#a8352f",
+        "purpose": "Hover of solid destructive buttons (dark)",
+        "oklch": "oklch(49.8% 0.152 27)",
+        "tonalRamp": [
+          "#1b0303",
+          "#44100e",
+          "#73221d",
+          "#a5342e",
+          "#cc584f",
+          "#e4887d",
+          "#f9b6ad",
+          "#ffe9e6"
+        ]
+      },
+      "danger-text-dark": {
+        "role": "status",
+        "displayName": "On Danger (dark)",
+        "canonical": "#ffffff",
+        "purpose": "Text on danger fills (dark)",
+        "oklch": "oklch(100.0% 0.000 90)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "incident-dark": {
+        "role": "tertiary",
+        "displayName": "Incident Violet (dark)",
+        "canonical": "#9d94ff",
+        "purpose": "Incident timeline dots (dark)",
+        "oklch": "oklch(72.0% 0.153 286)",
+        "tonalRamp": [
+          "#0a071d",
+          "#231d4a",
+          "#3e357c",
+          "#5c4fb1",
+          "#7c71d7",
+          "#9f9aea",
+          "#c4c2fc",
+          "#ecedff"
+        ]
+      },
+      "incident-ink-dark": {
+        "role": "tertiary",
+        "displayName": "Incident Ink (dark)",
+        "canonical": "#c0baff",
+        "purpose": "Incident chip text (dark)",
+        "oklch": "oklch(81.8% 0.096 288)",
+        "tonalRamp": [
+          "#0b0917",
+          "#24213c",
+          "#403b66",
+          "#5f5894",
+          "#8079b8",
+          "#a29ed1",
+          "#c7c5e9",
+          "#edecff"
+        ]
+      },
+      "incident-soft-dark": {
+        "role": "tertiary",
+        "displayName": "Incident Ground (dark)",
+        "canonical": "#25244d",
+        "purpose": "Incident chip ground (dark)",
+        "oklch": "oklch(28.5% 0.073 282)",
+        "tonalRamp": [
+          "#0a0a14",
+          "#222338",
+          "#3d3e5f",
+          "#5a5c89",
+          "#7b7dad",
+          "#9fa1c8",
+          "#c4c7e3",
+          "#ecedfd"
+        ]
+      },
+      "incident-soft-2-dark": {
+        "role": "tertiary",
+        "displayName": "Incident Wash (dark)",
+        "canonical": "#1b1d3d",
+        "purpose": "Incident panel wash (dark)",
+        "oklch": "oklch(24.8% 0.060 278)",
+        "tonalRamp": [
+          "#090a13",
+          "#212434",
+          "#3c405a",
+          "#595e83",
+          "#7a7fa6",
+          "#9ea3c2",
+          "#c4c8de",
+          "#ebeefb"
+        ]
+      },
+      "incident-line-dark": {
+        "role": "tertiary",
+        "displayName": "Incident Line (dark)",
+        "canonical": "#3b3a72",
+        "purpose": "Incident panel border (dark)",
+        "oklch": "oklch(37.9% 0.094 282)",
+        "tonalRamp": [
+          "#090917",
+          "#21223c",
+          "#3c3d67",
+          "#595a94",
+          "#797bb8",
+          "#9da0d1",
+          "#c3c6e9",
+          "#ebedff"
+        ]
+      },
+      "syntax-number-dark": {
+        "role": "tertiary",
+        "displayName": "CEL Number (dark)",
+        "canonical": "#c3a8ff",
+        "purpose": "Numbers in CEL (dark)",
+        "oklch": "oklch(78.7% 0.124 298)",
+        "tonalRamp": [
+          "#0d0719",
+          "#291d40",
+          "#48356d",
+          "#6a4f9d",
+          "#8b71c2",
+          "#ac98d9",
+          "#cec1ef",
+          "#f0ebfe"
+        ]
+      },
+      "bar-bg-dark": {
+        "role": "neutral",
+        "displayName": "Bulk Bar Navy (dark)",
+        "canonical": "#23476a",
+        "purpose": "Floating bulk bar ground (dark)",
+        "oklch": "oklch(38.9% 0.073 250)",
+        "tonalRamp": [
+          "#050c14",
+          "#162637",
+          "#2a445e",
+          "#406489",
+          "#6186ac",
+          "#8ba8c7",
+          "#b7cce2",
+          "#e4f0fd"
+        ]
+      },
+      "bar-ink-dark": {
+        "role": "neutral",
+        "displayName": "Bulk Bar Ink (dark)",
+        "canonical": "#f2f7fc",
+        "purpose": "Bulk bar text, light button fill (dark)",
+        "oklch": "oklch(97.4% 0.009 248)",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#232527",
+          "#3f4245",
+          "#5e6266",
+          "#7e8387",
+          "#a2a5a9",
+          "#c7c9cc",
+          "#edeff0"
+        ]
+      },
+      "bar-muted-dark": {
+        "role": "neutral",
+        "displayName": "Bulk Bar Muted (dark)",
+        "canonical": "#c3d5e6",
+        "purpose": "Bulk bar ghost buttons (dark)",
+        "oklch": "oklch(86.5% 0.031 247)",
+        "tonalRamp": [
+          "#080c0f",
+          "#1f262d",
+          "#38434e",
+          "#546372",
+          "#748494",
+          "#9aa7b3",
+          "#c1cad3",
+          "#eaeff4"
+        ]
+      },
+      "bar-line-dark": {
+        "role": "neutral",
+        "displayName": "Bulk Bar Line (dark)",
+        "canonical": "#4a7298",
+        "purpose": "Bulk bar button borders, separators (dark)",
+        "oklch": "oklch(53.9% 0.075 248)",
+        "tonalRamp": [
+          "#040c14",
+          "#152737",
+          "#28445f",
+          "#3e6589",
+          "#5e86ad",
+          "#89a9c8",
+          "#b6cce2",
+          "#e3f0fd"
+        ]
+      },
+      "bar-hover-dark": {
+        "role": "neutral",
+        "displayName": "Bulk Bar Hover (dark)",
+        "canonical": "#2d5880",
+        "purpose": "Bulk bar button hover (dark)",
+        "oklch": "oklch(44.9% 0.082 249)",
+        "tonalRamp": [
+          "#040c15",
+          "#132739",
+          "#264461",
+          "#3a658d",
+          "#5b86b1",
+          "#87a9cb",
+          "#b4cce5",
+          "#e2f0ff"
+        ]
+      },
+      "bar-light-hover-dark": {
+        "role": "neutral",
+        "displayName": "Bulk Bar Light Hover (dark)",
+        "canonical": "#d5e5f3",
+        "purpose": "Light bar button hover (dark)",
+        "oklch": "oklch(91.4% 0.026 244)",
+        "tonalRamp": [
+          "#090c0e",
+          "#20262b",
+          "#3a434c",
+          "#55636f",
+          "#768491",
+          "#9ba7b1",
+          "#c2cad2",
+          "#eaeff3"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Board count",
+        "purpose": "Large dashboard count values, readable on NOC wall displays."
+      },
+      "display-medium": {
+        "displayName": "Board count (medium)",
+        "purpose": "Medium dashboard count panels."
+      },
+      "headline": {
+        "displayName": "Page title",
+        "purpose": "Page titles; 21px at 639px and below, 20px on the sign-in card."
+      },
+      "title-dialog": {
+        "displayName": "Dialog title",
+        "purpose": "Confirmation and form dialog headings."
+      },
+      "title": {
+        "displayName": "Panel heading",
+        "purpose": "Panel and section headings."
+      },
+      "row-title": {
+        "displayName": "Row title",
+        "purpose": "Alert message in Feed rows (500 muted when resolved)."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default interface text."
+      },
+      "control": {
+        "displayName": "Control",
+        "purpose": "Buttons, inputs, quick views, tabs, table cells."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels; severity text runs at 12.5px 600."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Help text, chips, small captions."
+      },
+      "rail-label": {
+        "displayName": "Rail label",
+        "purpose": "Icon rail tile labels."
+      },
+      "code": {
+        "displayName": "CEL code",
+        "purpose": "CEL editors and code fields."
+      },
+      "mono-meta": {
+        "displayName": "Mono meta",
+        "purpose": "Source sub-lines, timeline timestamps, filter chips."
+      }
+    },
+    "shadows": [
+      {
+        "name": "flat",
+        "value": "none",
+        "purpose": "Resting panels, tables and cards (--shadow: none)."
+      },
+      {
+        "name": "segment-selected",
+        "value": "0 1px 2px rgb(var(--shadow-rgb) / 0.12)",
+        "purpose": "Selected segmented-control thumb."
+      },
+      {
+        "name": "quick-view-legacy-selected",
+        "value": "0 1px 2px var(--shade-1)",
+        "purpose": "Selected button in the older quick-view and segments controls."
+      },
+      {
+        "name": "panel-hover",
+        "value": "0 6px 18px rgb(var(--shadow-rgb) / 0.08)",
+        "purpose": "Dashboard count panel hover."
+      },
+      {
+        "name": "popover",
+        "value": "0 8px 24px var(--shade-3)",
+        "purpose": "CEL completion list and menus."
+      },
+      {
+        "name": "account-menu",
+        "value": "0 8px 32px var(--shade-3)",
+        "purpose": "Account menu with the theme switch."
+      },
+      {
+        "name": "bulk-bar",
+        "value": "0 12px 32px rgb(var(--shadow-rgb) / 0.28)",
+        "purpose": "Floating bulk bar."
+      },
+      {
+        "name": "bulk-picker",
+        "value": "0 12px 32px rgb(var(--shadow-rgb) / 0.18)",
+        "purpose": "Bulk bar assignee picker."
+      },
+      {
+        "name": "dialog",
+        "value": "0 16px 40px rgb(var(--shadow-rgb) / 0.12)",
+        "purpose": "Dialogs."
+      },
+      {
+        "name": "scrim",
+        "value": "rgb(var(--shadow-rgb) / 0.28)",
+        "purpose": "Dialog backdrop (background, not box-shadow)."
+      },
+      {
+        "name": "sign-in-card",
+        "value": "0 12px 40px rgb(var(--shadow-rgb) / 0.06)",
+        "purpose": "Sign-in and expired cards; Keycloak uses light-dark(rgb(11 37 69 / 0.06), #00000026)."
+      },
+      {
+        "name": "focus-ring-code",
+        "value": "0 0 0 3px var(--focus-ring)",
+        "purpose": "Active code field, paired with a focus-coloured border."
+      },
+      {
+        "name": "shadow-rgb",
+        "value": "11 37 69 (light) / 0 0 0 (dark)",
+        "purpose": "Navy shadow tint; dark uses black."
+      },
+      {
+        "name": "shade-1..4",
+        "value": "rgb(11 37 69 / 0.06, 0.07, 0.13, 0.15) light; rgb(0 0 0 / 0.25, 0.3, 0.4, 0.45) dark",
+        "purpose": "Prebuilt shadow colours."
+      }
+    ],
+    "motion": [
+      {
+        "name": "theme-thumb",
+        "value": "transform 160ms ease",
+        "purpose": "Theme switch thumb slide."
+      },
+      {
+        "name": "stale-fade",
+        "value": "opacity 0.15s",
+        "purpose": "Dimming a refreshing table to 0.62 (known exception)."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation: none; transition: none; scroll-behavior: auto",
+        "purpose": "Applied to everything under prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide-columns",
+        "value": "1150px",
+        "purpose": "max-width: side columns narrow."
+      },
+      {
+        "name": "tablet",
+        "value": "1023px",
+        "purpose": "max-width: page height auto, header wraps, grid tables scroll horizontally."
+      },
+      {
+        "name": "stack",
+        "value": "900px",
+        "purpose": "max-width: editors and detail panels stack; boards two-up."
+      },
+      {
+        "name": "phone",
+        "value": "639px",
+        "purpose": "max-width: 60px rail, 16px gutters, 21px title."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ocean blue fill for the one primary action of a view, including Save and Run.",
+      "html": "<button class=\"ds-btn ds-btn-p\">Save</button>",
+      "css": ".ds-btn { height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--input-border, #c9d8e6); background: var(--surface, #ffffff); color: var(--text, #0e1b2a); font: 500 13px/1 var(--font-geist, Geist), system-ui, sans-serif; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; } .ds-btn-p { background: var(--primary, #0a6fb0); border-color: var(--primary, #0a6fb0); color: var(--primary-text, #ffffff); } .ds-btn-p:hover { background: var(--primary-hover, #085c93); border-color: var(--primary-hover, #085c93); } .ds-btn:focus-visible { outline: 2px solid var(--focus, #0a6fb0); outline-offset: 2px; } .ds-btn:disabled { opacity: 0.45; cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Default white control with a hairline; most page actions.",
+      "html": "<button class=\"ds-btn2\">Save as preset…</button>",
+      "css": ".ds-btn2 { height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--input-border, #c9d8e6); background: var(--surface, #ffffff); color: var(--text, #0e1b2a); font: 500 13px/1 var(--font-geist, Geist), system-ui, sans-serif; cursor: pointer; } .ds-btn2:hover { background: var(--fill, #f0f5fa); } .ds-btn2:focus-visible { outline: 2px solid var(--focus, #0a6fb0); outline-offset: 2px; }"
+    },
+    {
+      "name": "CEL bar with Run",
+      "kind": "input",
+      "refersTo": "code-field",
+      "description": "Single-line CEL editor with the completion hint and the blue Run button carrying a Ctrl+Enter hint at 0.9 opacity.",
+      "html": "<div class=\"ds-cel\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M22 3H2l8 9.46V19l4 2v-8.54L22 3z\"/></svg><span class=\"ds-cel-q\">true</span><span class=\"ds-cel-help\">Ctrl+Space completes</span><button class=\"ds-cel-run\">Run <span class=\"ds-cel-kbd\">Ctrl+Enter</span></button></div>",
+      "css": ".ds-cel { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 4px 0 12px; border: 1px solid var(--input-border, #c9d8e6); border-radius: 8px; background: var(--surface, #ffffff); color: var(--muted, #4e6176); font-family: var(--font-geist, Geist), system-ui, sans-serif; } .ds-cel:focus-within { border-color: var(--focus, #0a6fb0); box-shadow: 0 0 0 3px var(--focus-ring, #cfe5f6); } .ds-cel-q { flex: 1; color: var(--text, #0e1b2a); font: 12.5px/21px var(--font-geist-mono, 'Geist Mono'), ui-monospace, monospace; } .ds-cel-help { font-size: 10px; color: var(--subtle, #56697e); } .ds-cel-run { height: 26px; padding: 0 11px; border-radius: 8px; border: 1px solid var(--primary, #0a6fb0); background: var(--primary, #0a6fb0); color: var(--primary-text, #ffffff); font: 500 12.5px/1 var(--font-geist, Geist), system-ui, sans-serif; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; } .ds-cel-run:hover { background: var(--primary-hover, #085c93); } .ds-cel-run:focus-visible { outline: 2px solid var(--focus, #0a6fb0); outline-offset: 2px; } .ds-cel-kbd { font: 600 10.5px/1 var(--font-geist-mono, 'Geist Mono'), ui-monospace, monospace; opacity: 0.9; }"
+    },
+    {
+      "name": "Quick views",
+      "kind": "chip",
+      "refersTo": "quick-view-selected",
+      "description": "Borderless filter pills; the selected one is a soft blue pill, never the solid fill.",
+      "html": "<div class=\"ds-qvs\"><button class=\"ds-qv ds-qv-on\" aria-pressed=\"true\">All</button><button class=\"ds-qv\"><i class=\"ds-m-crit\"></i>Critical</button><button class=\"ds-qv\"><i class=\"ds-m-high\"></i>High</button><button class=\"ds-qv\"><i class=\"ds-m-warn\"></i>Warning</button><button class=\"ds-qv\">Firing</button></div>",
+      "css": ".ds-qvs { display: flex; gap: 4px; font-family: var(--font-geist, Geist), system-ui, sans-serif; } .ds-qv { all: unset; cursor: pointer; height: 34px; padding: 0 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px; font: 500 13px/1 var(--font-geist, Geist), system-ui, sans-serif; color: var(--ink-soft, #3a4e63); } .ds-qv:hover { background: var(--line, #ebf1f7); } .ds-qv-on, .ds-qv-on:hover { background: var(--primary-soft, #ddeefa); color: var(--accent, #075e96); } .ds-qv:focus-visible { outline: 2px solid var(--focus, #0a6fb0); outline-offset: 2px; } .ds-m-crit { width: 10px; height: 10px; border-radius: 2px; background: var(--critical-mark, #d92d20); } .ds-m-high { width: 8px; height: 8px; background: var(--high-mark, #ec6a13); transform: rotate(45deg); } .ds-m-warn { width: 6px; height: 6px; border: 2px solid var(--amber-mark, #d99a06); border-radius: 50%; }"
+    },
+    {
+      "name": "Icon rail",
+      "kind": "nav",
+      "refersTo": "rail",
+      "description": "76px fixed rail: blue brand mark, labelled icon tiles, current page as a solid blue tile.",
+      "html": "<nav class=\"ds-rail\"><span class=\"ds-mark\">A</span><a class=\"ds-ri\" aria-current=\"page\" href=\"#\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z\"/><path d=\"M12 9v4M12 17h.01\"/></svg>Feed</a><a class=\"ds-ri\" href=\"#\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 2 2 7l10 5 10-5-10-5z\"/><path d=\"m2 17 10 5 10-5M2 12l10 5 10-5\"/></svg>Incidents</a></nav>",
+      "css": ".ds-rail { width: 76px; padding: 14px 0; display: flex; flex-direction: column; align-items: center; gap: 4px; background: var(--side, #eaf3fb); border-right: 1px solid var(--side-edge, #d3e3f2); font-family: var(--font-geist, Geist), system-ui, sans-serif; } .ds-mark { display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 12px; border-radius: 9px; background: var(--primary, #0a6fb0); color: var(--primary-text, #ffffff); font-weight: 700; font-size: 15px; } .ds-ri { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 60px; min-height: 54px; border-radius: 10px; color: var(--side-ink, #2b4865); font-size: 10.5px; font-weight: 500; text-decoration: none; } .ds-ri:hover { background: var(--side-hover, #dcebf8); color: var(--text, #0e1b2a); } .ds-ri[aria-current=page], .ds-ri[aria-current=page]:hover { background: var(--primary, #0a6fb0); color: var(--primary-text, #ffffff); } .ds-ri:focus-visible { outline: 2px solid var(--focus, #0a6fb0); outline-offset: 3px; }"
+    },
+    {
+      "name": "Panel with rows",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Flat white 12px panel with a header row and 48px grid rows, severity and status marks.",
+      "html": "<div class=\"ds-panel\"><div class=\"ds-row ds-head\"><span>Severity</span><span>Alert</span><span>Status</span></div><div class=\"ds-row\"><span class=\"ds-sev\"><i></i>Critical</span><span><b class=\"ds-msg\">Database latency</b><span class=\"ds-sub\">payments · postgres</span></span><span class=\"ds-st\"><i></i>Firing</span></div><div class=\"ds-row ds-sel\"><span class=\"ds-sev ds-sev-h\"><i></i>High</span><span><b class=\"ds-msg\">Queue depth</b><span class=\"ds-sub\">orders · kafka</span></span><span class=\"ds-st ds-st-a\"><i></i>Acknowledged</span></div></div>",
+      "css": ".ds-panel { background: var(--surface, #ffffff); border: 1px solid var(--border, #dce6f0); border-radius: 12px; overflow: hidden; font: 13px/1.4 var(--font-geist, Geist), system-ui, sans-serif; color: var(--text, #0e1b2a); } .ds-row { display: grid; grid-template-columns: 96px 1fr 128px; align-items: center; column-gap: 14px; min-height: 48px; padding: 0 18px; border-bottom: 1px solid var(--line, #ebf1f7); } .ds-row:last-child { border-bottom: 0; } .ds-row:hover { background: var(--row-hover, #f4f8fc); } .ds-head { min-height: 36px; font-size: 12px; font-weight: 500; color: var(--muted, #4e6176); border-bottom-color: var(--border, #dce6f0); } .ds-head:hover { background: transparent; } .ds-sel, .ds-sel:hover { background: var(--accent-soft, #eef6fd); } .ds-msg { display: block; font-size: 14px; font-weight: 600; } .ds-sub { display: block; font: 11.5px var(--font-geist-mono, 'Geist Mono'), ui-monospace, monospace; color: var(--subtle, #56697e); } .ds-sev { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; font-size: 12.5px; color: var(--critical, #b42318); } .ds-sev i { width: 10px; height: 10px; border-radius: 2px; background: var(--critical-mark, #d92d20); } .ds-sev-h { color: var(--high, #b4480c); } .ds-sev-h i { width: 8px; height: 8px; border-radius: 0; background: var(--high-mark, #ec6a13); transform: rotate(45deg); } .ds-st { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; color: var(--critical, #b42318); } .ds-st i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; } .ds-st-a { color: var(--info, #075e96); }"
+    },
+    {
+      "name": "Chips",
+      "kind": "chip",
+      "refersTo": "chip-incident",
+      "description": "22px semantic chips: incident, new, warning, OK, suppressed.",
+      "html": "<div class=\"ds-chips\"><a class=\"ds-chip ds-c-inc\" href=\"#\">INC-12</a><span class=\"ds-chip ds-c-new\">New</span><span class=\"ds-chip ds-c-warn\">Unsaved changes</span><span class=\"ds-chip ds-c-ok\">Active</span><span class=\"ds-chip ds-c-supp\">Suppressed</span></div>",
+      "css": ".ds-chips { display: flex; gap: 6px; font-family: var(--font-geist, Geist), system-ui, sans-serif; } .ds-chip { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; text-decoration: none; box-sizing: border-box; } a.ds-chip:hover { text-decoration: underline; } a.ds-chip:focus-visible { outline: 2px solid var(--focus, #0a6fb0); outline-offset: 2px; } .ds-c-inc { background: var(--incident-soft, #efedfc); color: var(--incident-ink, #4136a8); } .ds-c-new { background: var(--primary-soft, #ddeefa); color: var(--info, #075e96); } .ds-c-warn { background: var(--warning-soft, #fdf1cf); color: var(--warning, #7a5600); } .ds-c-ok { background: var(--ok-soft, #dff4ea); color: var(--ok-ink, #1d6e45); } .ds-c-supp { background: var(--fill, #f0f5fa); color: var(--ink-soft, #3a4e63); border: 1px dashed var(--faint, #8296ab); }"
+    },
+    {
+      "name": "Live pill",
+      "kind": "custom",
+      "refersTo": "live-pill",
+      "description": "Explicit freshness: green when live, amber with a refresh control when degraded.",
+      "html": "<div class=\"ds-lps\"><span class=\"ds-lp\"><i></i>Live</span><span class=\"ds-lp ds-lp-d\"><i></i>Live delivery degraded · reconciling<button aria-label=\"Retry\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M21 12a9 9 0 1 1-3-6.7L21 8\"/><path d=\"M21 3v5h-5\"/></svg></button></span></div>",
+      "css": ".ds-lps { display: flex; gap: 8px; font-family: var(--font-geist, Geist), system-ui, sans-serif; } .ds-lp { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 15px; background: var(--ok-soft, #dff4ea); color: var(--ok-ink, #1d6e45); font-size: 12.5px; } .ds-lp i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok, #2e9e62); } .ds-lp-d { background: var(--warning-soft, #fdf1cf); color: var(--warning, #7a5600); } .ds-lp-d i { background: var(--amber-mark, #d99a06); } .ds-lp button { all: unset; cursor: pointer; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 11px; } .ds-lp button:hover { background: var(--warning-hover, #f8e3a8); } .ds-lp button:focus-visible { outline: 2px solid var(--focus, #0a6fb0); }"
+    },
+    {
+      "name": "Bulk bar",
+      "kind": "custom",
+      "refersTo": "bulk-bar",
+      "description": "Floating navy selection bar; outlined actions plus one light primary.",
+      "html": "<div class=\"ds-bulk\"><strong>3 selected</strong><button class=\"ds-bb ds-bb-l\">Assign to me</button><button class=\"ds-bb\">Resolve</button><span class=\"ds-bsep\"></span><button class=\"ds-bb ds-bb-g\">Clear</button></div>",
+      "css": ".ds-bulk { display: inline-flex; align-items: center; gap: 6px; padding: 8px 8px 8px 16px; border-radius: 12px; background: var(--bar-bg, #0b2545); color: var(--bar-ink, #f2f7fc); box-shadow: 0 12px 32px rgb(11 37 69 / 0.28); font-family: var(--font-geist, Geist), system-ui, sans-serif; } .ds-bulk strong { font-size: 13px; font-weight: 600; margin-right: 8px; } .ds-bb { height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--bar-line, #34587c); background: transparent; color: var(--bar-ink, #f2f7fc); font: 500 13px/1 var(--font-geist, Geist), system-ui, sans-serif; cursor: pointer; } .ds-bb:hover { background: var(--bar-hover, #173a5e); } .ds-bb:focus-visible { outline: 2px solid var(--focus, #0a6fb0); outline-offset: 2px; } .ds-bb-l { background: var(--bar-ink, #f2f7fc); border-color: var(--bar-ink, #f2f7fc); color: var(--bar-bg, #0b2545); } .ds-bb-l:hover { background: var(--bar-light-hover, #d5e5f3); } .ds-bb-g { border-color: transparent; color: var(--bar-muted, #c3d5e6); } .ds-bsep { width: 1px; height: 20px; background: var(--bar-line, #34587c); margin: 0 4px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Calm Ocean Workspace",
+    "overview": "Appchi is an Operate surface: operators work it at desk monitors through a shift, and dashboards also run fullscreen on NOC wall displays read from across the room. The system as built is the incumbent Appchi workspace (structure of commit `f58c7d0`) recoloured with the user-chosen Ocean palette on 2026-10-26. Nothing moved: the same 76px icon rail, crumb-and-title page header, CEL bar, quick views, white table panels, Geist and Geist Mono, 8px controls and 12px panels. What changed is temperature. The shell reads as a cool blue tint instead of warm grey, and the blue marks exactly two things: where to act and where you are.\n\nDensity is moderate and even. Body text is 13.5px, rows are 48–52px, panels are flat white cards with a hairline border on a faintly blue canvas. Colour is semantic, not decorative: every colour in the feature styles resolves to one role in `src/app/theme.css`, defined once for light (the default) and once for dark. Status and severity keep their red, orange, amber and green meanings, tuned to sit inside the palette, and each severity pairs a readable text colour with a shape-coded mark.\n\nThe confirmed rejections come from the user: no black-and-white or grayscale palette, no black primary buttons, no generic SaaS admin look, no neon hacker console, no playful consumer styling, and nothing structural from the Ocean prototype (no 228px labelled sidebar, no Mulish or IBM Plex Mono, no halo on firing dots, none of its spacing or size changes).",
+    "keyCharacteristics": [
+      "Incumbent structure, Ocean colour: cool blue-tinted rail and canvas, white panels, navy ink.",
+      "One solid blue for primary actions, Run, the active rail tile, the brand mark and the selected tab underline; a soft blue pill for the selected quick view.",
+      "Semantic roles only, light and dark, each text role at 4.5:1 or better on its surfaces.",
+      "Flat bordered panels at rest; navy-tinted shadows only on things that float.",
+      "Geist for interface text, Geist Mono for CEL, timestamps, source lines and board counts."
+    ],
+    "rules": [
+      {
+        "name": "The One Blue Rule",
+        "body": "Solid Ocean blue means \"act here\" or \"you are here\": primary buttons, Run, the active rail tile, the brand mark, the selected tab underline and focus. A selected filter is the soft `primary-soft` pill, never the solid fill, and blue is never used as decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Roles Only Rule",
+        "body": "Every colour in feature styles is a `var(--role)` from `src/app/theme.css`, and each role is defined exactly twice, once for light and once for dark. No raw hex or rgba appears outside the token layer; shadows are built from `--shadow-rgb` and `--shade-*`.",
+        "section": "colors"
+      },
+      {
+        "name": "The 4.5 Floor Rule",
+        "body": "Every text role meets 4.5:1 on the surfaces it is used on, in both themes, placeholders included (`subtle` is 5.65:1 on white and 6.66:1 on dark panels). The Run button's Ctrl+Enter hint renders at 0.9 opacity and still measures 4.67:1 in light and 6.99:1 in dark.",
+        "section": "colors"
+      },
+      {
+        "name": "The Mono-for-Machine Rule",
+        "body": "Geist Mono is reserved for CEL, timestamps and source sub-lines, filter chips and board counts. Everything a person reads as interface copy is Geist. Counts and paging numbers use tabular figures.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-at-Rest Rule",
+        "body": "Resting surfaces never carry a shadow. A shadow means the object floats (popover, menu, bulk bar, dialog) or is the selected thumb of a control.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** take every colour from a `src/app/theme.css` role and define any new role once for light and once for dark.",
+      "**Do** keep text roles at 4.5:1 or better on their surfaces in both themes, placeholders included.",
+      "**Do** use solid Ocean blue (`primary`) only for the primary action, Run, the current rail tile, the brand mark, the selected tab underline and focus.",
+      "**Do** show a selected filter or quick view as the soft blue pill (`primary-soft` with `accent` text).",
+      "**Do** pair each severity's text colour with its shape-coded mark so meaning never rests on hue alone.",
+      "**Do** keep resting panels flat (12px radius, 1px `border`, no shadow) and reserve navy-tinted shadows for floating objects.",
+      "**Do** use Geist Mono for CEL, timestamps, source sub-lines and counts, with tabular figures for numbers."
+    ],
+    "donts": [
+      "**Don't** use black primary buttons or a black-and-white or grayscale palette; the user superseded them with Ocean.",
+      "**Don't** adopt the Ocean prototype's structure: no 228px labelled sidebar, no Mulish or IBM Plex Mono, no halo on firing dots, no Ocean spacing or size changes.",
+      "**Don't** write raw hex or rgba in feature styles.",
+      "**Don't** add coloured accent borders to cards other than threshold count panels.",
+      "**Don't** add eyebrow or kicker labels above page titles; the header is crumb row, title and subtitle.",
+      "**Don't** treat the \"A\" square as a finished logo."
+    ]
+  }
+}
