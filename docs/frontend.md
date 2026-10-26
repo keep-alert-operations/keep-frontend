@@ -168,7 +168,7 @@ explicit navigation warns about discarding them. Shared saves, errors and deleti
 confirmations are visible text, not toast-only feedback.
 
 The UI uses semantic tables/forms, labels, keyboard controls, a skip link, focus
-outlines, the supplied light palette as the default, a persisted user-selected dark palette, reduced-motion support and responsive layouts. The 2026-09-24 [UI design mapping](ui-design.md) records the supplied reference and the later dark-mode request; an explicit user selection controls the theme.
+outlines, the Ocean light palette as the default, a persisted user-selected Ocean dark palette, reduced-motion support and responsive layouts. The 2026-09-24 [UI design mapping](ui-design.md) records the supplied reference, the later dark-mode request and the 2026-10-26 Ocean palette; an explicit user selection controls the theme.
 Assistant-selected implementation targets are corporate desktop LCP 2,500 ms,
 INP 200 ms and CLS 0.1 at p75; initial route JS target 200 KiB gzip; Lighthouse
 accessibility 95/performance 90. These are unmeasured development targets, not

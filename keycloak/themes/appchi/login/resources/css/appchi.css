@@ -23,20 +23,25 @@ button:disabled {
 }
 
 #appchi-login {
-  --ap-canvas: light-dark(#f6f5f2, #111820);
-  --ap-surface: light-dark(#fffefc, #1c2631);
-  --ap-text: light-dark(#1b1a17, #e9edf4);
-  --ap-muted: light-dark(#5f5b53, #adb9c7);
-  --ap-line: light-dark(#e4e1da, #343e4b);
-  --ap-field: light-dark(#fffefc, #18222c);
-  --ap-field-line: light-dark(#d9d5cc, #48515d);
-  --ap-button: light-dark(#1b1a17, #e9edf4);
-  --ap-button-text: light-dark(#fbfaf7, #111820);
-  --ap-hover: light-dark(#efede8, #293440);
-  --ap-link: light-dark(#3346c9, #9ba9ff);
-  --ap-error: light-dark(#8f1a10, #ff968a);
-  --ap-error-bg: light-dark(#fdf1ef, #432a2a);
-  --ap-error-border: light-dark(#f1cfca, #754843);
+  /* The application's Ocean palette (src/app/theme.css), light and dark. */
+  --ap-canvas: light-dark(#f7fafd, #0b141e);
+  --ap-surface: light-dark(#ffffff, #122030);
+  --ap-text: light-dark(#0e1b2a, #e6eef6);
+  --ap-muted: light-dark(#4e6176, #a3b6c9);
+  --ap-placeholder: light-dark(#56697e, #93a7bb);
+  --ap-line: light-dark(#dce6f0, #233a51);
+  --ap-field: light-dark(#ffffff, #0f1c2a);
+  --ap-field-line: light-dark(#c9d8e6, #2d4762);
+  --ap-button: light-dark(#0a6fb0, #4fb3f0);
+  --ap-button-hover: light-dark(#085c93, #74c4f4);
+  --ap-button-text: light-dark(#ffffff, #04121f);
+  --ap-hover: light-dark(#f0f5fa, #1a2e44);
+  --ap-link: light-dark(#075e96, #74c4f4);
+  --ap-focus: light-dark(#0a6fb0, #4fb3f0);
+  --ap-selection: light-dark(#ddeefa, #173d5c);
+  --ap-error: light-dark(#a01d13, #ff9c92);
+  --ap-error-bg: light-dark(#fdeeec, #3a1d22);
+  --ap-error-border: light-dark(#f4c9c4, #6a3034);
   width: 100%;
   color: var(--ap-text);
   font:
@@ -46,6 +51,12 @@ button:disabled {
     "Segoe UI",
     sans-serif;
   text-align: left;
+  caret-color: var(--ap-button);
+  accent-color: var(--ap-button);
+}
+#appchi-login ::selection {
+  background: var(--ap-selection);
+  color: var(--ap-text);
 }
 #appchi-login * {
   box-sizing: border-box;
@@ -67,7 +78,7 @@ button:disabled {
   background: var(--ap-surface);
   border: 1px solid var(--ap-line);
   border-radius: 16px;
-  box-shadow: 0 12px 40px light-dark(#1b1a170f, #00000026);
+  box-shadow: 0 12px 40px light-dark(rgb(11 37 69 / 0.06), #00000026);
 }
 #appchi-login .ap-brand {
   display: flex;
@@ -137,8 +148,8 @@ button:disabled {
   font-size: 14px;
 }
 #appchi-login .ap-input::placeholder {
-  color: var(--ap-muted);
-  opacity: 0.85;
+  color: var(--ap-placeholder);
+  opacity: 1;
 }
 #appchi-login .ap-input[type="password"],
 #appchi-login .ap-input.ap-password {
@@ -181,7 +192,8 @@ button:disabled {
   font-weight: 500;
 }
 #appchi-login .ap-submit:hover {
-  opacity: 0.88;
+  border-color: var(--ap-button-hover);
+  background: var(--ap-button-hover);
 }
 #appchi-login .ap-submit:disabled {
   opacity: 0.7;
@@ -273,7 +285,7 @@ button:disabled {
 }
 
 #appchi-login :is(button, summary, a, input):focus-visible {
-  outline: 2px solid var(--ap-link);
+  outline: 2px solid var(--ap-focus);
   outline-offset: 3px;
 }
 #appchi-login .ap-help-link {

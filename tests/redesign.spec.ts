@@ -191,7 +191,7 @@ test("reference palette and rail remain stable under dark OS preference and narr
   ).toBeVisible();
   await expect(page.locator("body")).toHaveCSS(
     "background-color",
-    "rgb(246, 245, 242)",
+    "rgb(247, 250, 253)",
   );
   await expect(page.locator(".rail")).toHaveCSS("width", "76px");
   await expect(

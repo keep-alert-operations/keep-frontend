@@ -1300,7 +1300,7 @@ function AlertDetail(scope: Scope & { id: string }) {
                   height="18"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="var(--ref-4c23a6)"
+                  stroke="var(--incident-ink)"
                   strokeWidth="1.8"
                   aria-hidden="true"
                 >

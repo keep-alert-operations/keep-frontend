@@ -3,13 +3,13 @@
   max-height: calc(100dvh - 32px);
   margin: auto;
   overflow: auto;
-  color: var(--ref-1b1a17);
+  color: var(--text);
 }
 .dashboard-panel-dialog:not([open]) {
   display: none;
 }
 .dashboard-panel-dialog::backdrop {
-  background: rgba(27, 26, 23, 0.28);
+  background: rgb(var(--shadow-rgb) / 0.28);
 }
 .dashboard-panel-form {
   display: flex;
@@ -21,7 +21,7 @@
 }
 .dashboard-panel-dialog .help {
   font-size: 11.5px;
-  color: var(--ref-6d695f);
+  color: var(--subtle);
 }
 .dashboard-panel-pager {
   display: flex;
