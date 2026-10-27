@@ -1119,6 +1119,40 @@ textarea.inp {
   gap: 2px;
   flex-wrap: wrap;
 }
+/* Group by and Include suppressed stay together at the row's right edge. */
+.quick-view-end {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+/* On desktop the quick views give up width first, so the right cluster
+   never drops to its own line. */
+@media (min-width: 1024px) {
+  .quick-view-bar {
+    flex-wrap: nowrap;
+  }
+  .quick-view-group {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  /* When the quick views wrap, the cluster stays on their first line. */
+  .quick-view-end {
+    flex-shrink: 0;
+    align-self: flex-start;
+  }
+}
+@media (max-width: 639px) {
+  .quick-view-end,
+  .quick-view-end .quick-view-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .quick-view-end > .qv-div {
+    display: none;
+  }
+}
 .bulkbar-wrap {
   position: fixed;
   left: calc(50% + 38px);

@@ -209,27 +209,29 @@ export function QuickViews({
           </Fragment>
         ))}
       </div>
-      <div style={{ flexGrow: 1 }} />
-      {actions && (
-        <>
-          <div className="quick-view-actions">{actions}</div>
-          <span className="qv-div" aria-hidden="true" />
-        </>
-      )}
-      <label className="plain">
-        <input
-          type="checkbox"
-          checked={includeSuppressed}
-          disabled={disabled}
-          onChange={(event) => onIncludeSuppressed(event.target.checked)}
-        />
-        Include suppressed
-      </label>
-      {!includeSuppressed && hidden && (
-        <span className="chip chip-supp">
-          {BigInt(hidden).toLocaleString()} hidden
-        </span>
-      )}
+      {/* One right-aligned cluster, so Include suppressed stays beside the view controls. */}
+      <div className="quick-view-end">
+        {actions && (
+          <>
+            <div className="quick-view-actions">{actions}</div>
+            <span className="qv-div" aria-hidden="true" />
+          </>
+        )}
+        <label className="plain">
+          <input
+            type="checkbox"
+            checked={includeSuppressed}
+            disabled={disabled}
+            onChange={(event) => onIncludeSuppressed(event.target.checked)}
+          />
+          Include suppressed
+        </label>
+        {!includeSuppressed && hidden && (
+          <span className="chip chip-supp">
+            {BigInt(hidden).toLocaleString()} hidden
+          </span>
+        )}
+      </div>
     </div>
   );
 }
