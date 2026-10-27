@@ -768,6 +768,12 @@ function describeActivity(
       "after the incident was inactive.",
       "tl-inc",
     );
+  if (kind === "incident-alerts-resolved")
+    return out(
+      "Released from its incident",
+      "after all of the incident's linked alerts resolved.",
+      "tl-inc",
+    );
   if (kind === "source-inactivity")
     return out(
       "Resolved automatically",

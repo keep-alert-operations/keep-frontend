@@ -136,7 +136,7 @@ test("partial setup failure exposes original operator recovery without a second 
   ).toBeDisabled();
 });
 
-test("incident creation describes explicit resolution without deferred sweeps", async ({
+test("incident creation describes resolution without deferred sweeps", async ({
   page,
 }) => {
   await page.goto(`/tenants/${tenant}/incidents/new`);
@@ -144,7 +144,7 @@ test("incident creation describes explicit resolution without deferred sweeps", 
     .getByRole("list")
     .filter({ hasText: "Status and assignment are independent." });
   await expect(facts).toContainText(
-    "Incidents stay active until someone resolves them; nothing resolves or removes an incident automatically.",
+    "Incidents stay active until someone resolves them or all their linked alerts resolve; nothing removes an incident automatically.",
   );
   await expect(facts).not.toContainText(/days without activity|retained for/i);
 });
@@ -211,5 +211,47 @@ test("resolved incident omits the retention deadline but keeps recorded inactivi
   await expect(page.getByText("Cycle 2 resolved manually.")).toBeVisible();
   await expect(
     page.getByText("Cycle 1 resolved after 30 days without activity."),
+  ).toBeVisible();
+});
+
+test("incident resolved because all linked alerts resolved names that cause", async ({
+  page,
+}) => {
+  // Requirements: REV-46; incident operations 4.
+  await openIncident(
+    page,
+    {
+      status: "resolved",
+      cycle_id: "cycle-1",
+      resolved_at: "2026-10-27T09:00:00Z",
+    },
+    {
+      cycles: [
+        {
+          id: "cycle-1",
+          cycle_number: 1,
+          opened_at: "2026-10-20T10:00:00Z",
+          resolved_at: "2026-10-27T09:00:00Z",
+          cause: "alerts_resolved",
+        },
+      ],
+      activity: [
+        {
+          id: "a-1",
+          kind: "alerts-resolved",
+          recorded_at: "2026-10-27T09:00:00Z",
+        },
+      ],
+    },
+  );
+  await expect(
+    page.getByText("· when all linked alerts resolved"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Resolved automatically when all linked alerts resolved."),
+  ).toBeVisible();
+  await page.getByRole("tab", { name: /^Cycles/ }).click();
+  await expect(
+    page.getByText("Cycle 1 resolved when all linked alerts resolved."),
   ).toBeVisible();
 });

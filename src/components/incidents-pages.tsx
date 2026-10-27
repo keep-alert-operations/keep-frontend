@@ -240,8 +240,9 @@ function IncidentCreate({ scope }: { scope: Scope }) {
               <li>Status and assignment are independent.</li>
               <li>An alert can belong to only one active incident.</li>
               <li>
-                Incidents stay active until someone resolves them; nothing
-                resolves or removes an incident automatically.
+                Incidents stay active until someone resolves them or all their
+                linked alerts resolve; nothing removes an incident
+                automatically.
               </li>
             </ul>
           </aside>
@@ -595,7 +596,9 @@ function IncidentDetail({ scope, id }: { scope: Scope; id: string }) {
                     ? ` · after ${INACTIVITY_DAYS} days without activity`
                     : cause === "manual"
                       ? " · manually"
-                      : ""}
+                      : cause === "alerts_resolved"
+                        ? " · when all linked alerts resolved"
+                        : ""}
                 </span>
               ) : (
                 <span className="small muted">
@@ -808,7 +811,7 @@ function IncidentDetail({ scope, id }: { scope: Scope; id: string }) {
                       <div className="tl-t">
                         <b>Cycle {number}</b>{" "}
                         {row.resolved_at
-                          ? `resolved ${str(row.cause) === "inactivity" ? `after ${INACTIVITY_DAYS} days without activity` : str(row.cause) === "manual" ? "manually" : ""}`.trim() +
+                          ? `resolved ${str(row.cause) === "inactivity" ? `after ${INACTIVITY_DAYS} days without activity` : str(row.cause) === "manual" ? "manually" : str(row.cause) === "alerts_resolved" ? "when all linked alerts resolved" : ""}`.trim() +
                             "."
                           : row.id === incident.cycle_id
                             ? "is the current cycle."
@@ -1283,6 +1286,11 @@ function describe(
     case "inactivity":
       what = "Resolved automatically";
       detail = `after ${INACTIVITY_DAYS} days without activity.`;
+      dot = "tl-src";
+      break;
+    case "alerts-resolved":
+      what = "Resolved automatically";
+      detail = "when all linked alerts resolved.";
       dot = "tl-src";
       break;
     case "linked-alert-status":
