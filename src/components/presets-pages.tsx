@@ -783,7 +783,7 @@ function PresetResults({
     savedView && groupOverride === undefined
       ? { preset_id: preset.id, expected_revision: preset.revision }
       : {
-          cel: composeCel(cel, quick),
+          cel: composeCel(cel, quick, scope.session.principal.id),
           sort: effectiveSort,
           columns,
           group_by: groupBy,
@@ -834,7 +834,7 @@ function PresetResults({
           ...(cursor ? { cursor } : {}),
         }
       : {
-          cel: composeCel(cel, quick),
+          cel: composeCel(cel, quick, scope.session.principal.id),
           sort: effectiveSort,
           columns,
           q,
@@ -1085,9 +1085,10 @@ function PresetResults({
               <button
                 type="button"
                 className="btn btn-sm btn-g"
+                title="Back to the saved grouping"
                 onClick={() => setGroupOverride(undefined)}
               >
-                Reset to saved
+                Reset
               </button>
             )}
           </>

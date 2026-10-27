@@ -386,10 +386,10 @@ test("Saved preset groups by its saved field and changes it only for the view", 
   await expect(
     page.getByText(/Grouped by application · sorted by/),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Reset to saved" }).click();
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
   await expect(payments).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Reset to saved" }),
+    page.getByRole("button", { name: "Reset", exact: true }),
   ).toHaveCount(0);
 });
 

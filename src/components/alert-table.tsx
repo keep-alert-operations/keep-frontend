@@ -24,7 +24,7 @@ import {
 /**
  * Transient quick views (reference S02/S05); never saved into a preset.
  * REV-43 drops the former Active view; every severity and status view
- * carries a colored dot.
+ * carries a colored dot. REV-45 adds Assigned to me for the signed-in user.
  */
 export const QUICK_VIEWS = [
   { key: "all", label: "All", cel: "" },
@@ -38,12 +38,19 @@ export const QUICK_VIEWS = [
     cel: 'display_status == "acknowledged"',
   },
   { key: "resolved", label: "Resolved", cel: 'status == "resolved"' },
+  {
+    key: "mine",
+    label: "Assigned to me",
+    cel: (me: string) => `assignee_id == ${JSON.stringify(me)}`,
+  },
 ] as const;
 export type QuickViewKey = (typeof QUICK_VIEWS)[number]["key"];
 
-export function composeCel(base: string, key: QuickViewKey) {
+/** `me` is the signed-in principal ID, used by Assigned to me. */
+export function composeCel(base: string, key: QuickViewKey, me: string) {
   const view = QUICK_VIEWS.find((item) => item.key === key);
-  return view?.cel ? `(${base}) && (${view.cel})` : base;
+  const cel = typeof view?.cel === "function" ? view.cel(me) : view?.cel;
+  return cel ? `(${base}) && (${cel})` : base;
 }
 
 /**
@@ -80,7 +87,11 @@ export function useQuickViewCounts(
       try {
         const queries = QUICK_VIEWS.map((view) => ({
           id: view.key,
-          cel: composeCel(base!, view.key),
+          cel: composeCel(
+            base!,
+            view.key,
+            current.current.session.principal.id,
+          ),
           q,
           include_suppressed: includeSuppressed,
         }));
@@ -173,7 +184,7 @@ export function QuickViews({
       >
         {QUICK_VIEWS.map((view) => (
           <Fragment key={view.key}>
-            {view.key === "firing" && (
+            {(view.key === "firing" || view.key === "mine") && (
               <span className="qv-div" aria-hidden="true" />
             )}
             <button
@@ -182,9 +193,10 @@ export function QuickViews({
               aria-pressed={value === view.key}
               aria-label={view.label}
               disabled={disabled}
-              onClick={() => onChange(view.key)}
+              // Pressing the selected view again returns to All (REV-45).
+              onClick={() => onChange(value === view.key ? "all" : view.key)}
             >
-              {view.key !== "all" && (
+              {view.key !== "all" && view.key !== "mine" && (
                 <span className={`qv-dot qv-${view.key}`} aria-hidden="true" />
               )}
               {view.label}

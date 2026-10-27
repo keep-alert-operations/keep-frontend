@@ -124,7 +124,7 @@ export function AlertFeed(scope: Scope) {
   }, [scope.version, cursor]);
   const base = tenantPath(scope.tenant.id);
   const query = new URLSearchParams({
-    cel: composeCel(applied.cel, quickView),
+    cel: composeCel(applied.cel, quickView, scope.session.principal.id),
     q: applied.q,
     include_suppressed: String(applied.include_suppressed),
   });

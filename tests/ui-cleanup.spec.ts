@@ -106,6 +106,7 @@ test("quick views drop Active and mark each severity and status with a dot", asy
     /^Firing/,
     /^Acknowledged/,
     /^Resolved/,
+    /^Assigned to me/,
   ]);
   await expect(group.locator(".qv-dot")).toHaveCount(6);
   await expect(group).toHaveAttribute("title", "Quick views are not saved");

@@ -197,7 +197,8 @@ export function PresetEditor({
     if (savedRow) saved.current(savedRow);
   }, [savedRow]);
   const tenantId = scope.tenant.id,
-    csrf = scope.session.csrf_token;
+    csrf = scope.session.csrf_token,
+    me = scope.session.principal.id;
   const ready = selectedColumns.length > 0 && sort.length > 0;
   const preview = usePresetPreview(
     tenantId,
@@ -205,7 +206,7 @@ export function PresetEditor({
     scope.onDenied,
     ready && previewCel.trim()
       ? {
-          cel: composeCel(previewCel, quick),
+          cel: composeCel(previewCel, quick, me),
           sort,
           columns: selectedColumns,
           q: "",
@@ -235,7 +236,7 @@ export function PresetEditor({
       tenantId,
       csrf,
       {
-        cel: composeCel(savedCel, view),
+        cel: composeCel(savedCel, view, me),
         sort: savedSort,
         columns: savedColumns,
         include_suppressed: include,
@@ -248,7 +249,7 @@ export function PresetEditor({
       () => undefined,
     );
     return () => controller.abort();
-  }, [savedKey, tenantId, csrf]);
+  }, [savedKey, tenantId, csrf, me]);
   const counts = useQuickViewCounts(
     scope,
     ready && previewCel.trim() ? previewCel : null,
