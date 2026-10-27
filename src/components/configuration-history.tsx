@@ -17,6 +17,7 @@ import {
 } from "@/lib/preset-choices";
 import type { Scope } from "./workspace";
 import { CelCode, PresetEditor } from "./definition-editor";
+import { groupFieldLabel } from "./alert-groups";
 import { ErrorNotice } from "./ui";
 import { NavLink, Page } from "./page";
 
@@ -71,13 +72,17 @@ const FIELDS: Record<Kind, [string, string][]> = {
     ["cel", "Filter"],
     ["columns", "Columns"],
     ["sort", "Sort"],
+    ["group_by", "Grouping"],
   ],
   dashboards: [
     ["name", "Name"],
     ["panels", "Panels"],
   ],
 };
-const CHANGED: Record<string, string> = { cel: "filter" };
+const CHANGED: Record<string, string> = { cel: "filter", group_by: "grouping" };
+// Revisions saved before REV-44 have no group_by: they were not grouped.
+const fieldValue = (definition: Record<string, unknown>, field: string) =>
+  field === "group_by" ? (definition[field] ?? null) : definition[field];
 function activityVerb(kind: string) {
   return /delet/i.test(kind)
     ? "Deleted"
@@ -268,6 +273,7 @@ export function ConfigurationHistory({
   const title = name && name !== "—" ? `${name} history` : "History";
   const timezone = timezoneLabel().split(" ")[0];
   function renderValue(field: string, value: unknown) {
+    if (field === "group_by") return groupFieldLabel(value);
     if (value === undefined) return <span className="muted">Unavailable</span>;
     if (field === "cel")
       return (
@@ -556,8 +562,8 @@ export function ConfigurationHistory({
                 {FIELDS[section].map(([field, label]) => {
                   const differs =
                     left !== undefined &&
-                    JSON.stringify(left[field]) !==
-                      JSON.stringify(retained.definition[field]);
+                    JSON.stringify(fieldValue(left, field)) !==
+                      JSON.stringify(fieldValue(retained.definition, field));
                   return (
                     <div
                       role="row"
@@ -571,10 +577,15 @@ export function ConfigurationHistory({
                         )}
                       </span>
                       <span role="cell">
-                        {left ? renderValue(field, left[field]) : null}
+                        {left
+                          ? renderValue(field, fieldValue(left, field))
+                          : null}
                       </span>
                       <span role="cell">
-                        {renderValue(field, retained.definition[field])}
+                        {renderValue(
+                          field,
+                          fieldValue(retained.definition, field),
+                        )}
                       </span>
                     </div>
                   );

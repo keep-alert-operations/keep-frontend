@@ -68,7 +68,9 @@ export function Menu({
     document.addEventListener("mousedown", down);
     document.addEventListener("keydown", key);
     root.current
-      ?.querySelector<HTMLElement>(".menu-pop input, .menu-pop [role=menuitem]")
+      ?.querySelector<HTMLElement>(
+        ".menu-pop input, .menu-pop [role=menuitem], .menu-pop [role=menuitemradio]",
+      )
       ?.focus();
     return () => {
       document.removeEventListener("mousedown", down);

@@ -1,5 +1,5 @@
 "use client";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError, display, RecordData, request, tenantPath } from "@/lib/api";
 import { alertOperatorLabel } from "@/lib/alert-operator";
 import { useCommand } from "@/lib/hooks";
@@ -151,6 +151,7 @@ export function QuickViews({
   includeSuppressed,
   onIncludeSuppressed,
   disabled,
+  actions,
 }: {
   value: QuickViewKey;
   onChange: (value: QuickViewKey) => void;
@@ -159,6 +160,8 @@ export function QuickViews({
   includeSuppressed: boolean;
   onIncludeSuppressed: (value: boolean) => void;
   disabled?: boolean;
+  /** View controls, such as Group by, placed before Include suppressed. */
+  actions?: ReactNode;
 }) {
   return (
     <div className="quick-view-bar">
@@ -195,6 +198,12 @@ export function QuickViews({
         ))}
       </div>
       <div style={{ flexGrow: 1 }} />
+      {actions && (
+        <>
+          <div className="quick-view-actions">{actions}</div>
+          <span className="qv-div" aria-hidden="true" />
+        </>
+      )}
       <label className="plain">
         <input
           type="checkbox"
@@ -330,7 +339,8 @@ const dots = (
  * Explicit columns render in their configured order, including preset defaults.
  * Without columns, use the compact alert grid. `narrow` hides row actions.
  * Rows show severity and status as colored text and times relative to now;
- * the ⋯ menu holds assignment and resolution (REV-43).
+ * the ⋯ menu holds assignment and resolution (REV-43). In grouped results
+ * (REV-44) `hide` drops the grouped field's column and `label` names the group.
  */
 export function AlertTable({
   scope,
@@ -343,6 +353,9 @@ export function AlertTable({
   columns,
   sort = DEFAULT_SORT,
   onSort,
+  hide,
+  label = "Alerts",
+  selectAllLabel = "Select all on this page",
 }: {
   scope: Scope;
   rows: RecordData[];
@@ -354,8 +367,16 @@ export function AlertTable({
   columns?: string[];
   sort?: SortItem[];
   onSort?: (field: string) => void;
+  hide?: string;
+  label?: string;
+  selectAllLabel?: string;
 }) {
-  if (columns) columns = currentAlertColumns(columns);
+  if (columns) {
+    columns = currentAlertColumns(columns);
+    if (hide && columns.length > 1)
+      columns = columns.filter((field) => field !== hide);
+  }
+  const shown = (field: string) => columns !== undefined || field !== hide;
   const needsOpen = Boolean(columns && !columns.includes("message"));
   const showControls = needsOpen || (!narrow && scope.tenant.role !== "view");
   const grid = columns
@@ -365,6 +386,21 @@ export function AlertTable({
       : `g-full ${showControls ? "" : "g-full-no-actions"}`;
   const widths = columns?.map((field) => (field === "message" ? 280 : 146));
   const controlsWidth = needsOpen ? 196 : 48;
+  // The default grid's fixed tracks; a hidden grouped field drops its track.
+  const tracks = [
+    ["severity", 96],
+    ["message", 0],
+    ["display_status", 128],
+    ["timestamp", 132],
+    ...(narrow
+      ? []
+      : [
+          ["assignee_id", 150],
+          ["active_incident_id", 168],
+        ]),
+  ] as [string, number][];
+  const dropped =
+    !columns && hide ? tracks.find(([field]) => field === hide) : undefined;
   const gridStyle = widths
     ? {
         gridTemplateColumns: `18px ${widths.map((width) => `minmax(${width}px, 1fr)`).join(" ")}${showControls ? ` ${controlsWidth}px` : ""}`,
@@ -373,7 +409,17 @@ export function AlertTable({
           widths.reduce((total, width) => total + width + 14, 0) +
           (showControls ? controlsWidth + 14 : 0),
       }
-    : undefined;
+    : dropped
+      ? {
+          gridTemplateColumns: `18px ${tracks
+            .filter(([field]) => field !== hide)
+            .map(([, width]) => (width ? `${width}px` : "minmax(0, 1fr)"))
+            .join(" ")}${showControls ? " 48px" : ""}`,
+          minWidth: narrow
+            ? undefined
+            : (showControls ? 1052 : 1004) - dropped[1] - 14,
+        }
+      : undefined;
   const selectable = Boolean(selection && onSelectionChange);
   const actions = Boolean(onRowCommand) && scope.tenant.role !== "view";
   const allSelected =
@@ -386,13 +432,13 @@ export function AlertTable({
     onSelectionChange(next);
   }
   return (
-    <div role="table" aria-label="Alerts" className="table-body alert-results">
+    <div role="table" aria-label={label} className="table-body alert-results">
       <div role="row" className={`row head ${grid}`} style={gridStyle}>
         <span role="columnheader">
           {selectable ? (
             <input
               type="checkbox"
-              aria-label="Select all on this page"
+              aria-label={selectAllLabel}
               checked={allSelected}
               disabled={busy}
               onChange={(event) => {
@@ -420,19 +466,31 @@ export function AlertTable({
           ))
         ) : (
           <>
-            <ColumnHeading field="severity" sort={sort} onSort={onSort} />
+            {shown("severity") && (
+              <ColumnHeading field="severity" sort={sort} onSort={onSort} />
+            )}
             <span role="columnheader">Alert</span>
-            <ColumnHeading field="display_status" sort={sort} onSort={onSort} />
+            {shown("display_status") && (
+              <ColumnHeading
+                field="display_status"
+                sort={sort}
+                onSort={onSort}
+              />
+            )}
             <ColumnHeading field="timestamp" sort={sort} onSort={onSort} />
             {!narrow && (
               <>
-                <ColumnHeading
-                  field="assignee_id"
-                  label="Ownership"
-                  sort={sort}
-                  onSort={onSort}
-                />
-                <span role="columnheader">Incident</span>
+                {shown("assignee_id") && (
+                  <ColumnHeading
+                    field="assignee_id"
+                    label="Ownership"
+                    sort={sort}
+                    onSort={onSort}
+                  />
+                )}
+                {shown("active_incident_id") && (
+                  <span role="columnheader">Incident</span>
+                )}
               </>
             )}
           </>
@@ -499,9 +557,11 @@ export function AlertTable({
               ))
             ) : (
               <>
-                <span role="cell" className="cell">
-                  <Severity value={row.severity} plain />
-                </span>
+                {shown("severity") && (
+                  <span role="cell" className="cell">
+                    <Severity value={row.severity} plain />
+                  </span>
+                )}
                 <span role="cell" className="alert-cell">
                   <span className="alert-title">
                     <NavLink
@@ -517,39 +577,45 @@ export function AlertTable({
                     )}
                   </span>
                 </span>
-                <span role="cell" className="cell">
-                  <AlertStatus
-                    value={row.status}
-                    assigneeId={row.assignee_id}
-                    plain
-                  />
-                </span>
+                {shown("display_status") && (
+                  <span role="cell" className="cell">
+                    <AlertStatus
+                      value={row.status}
+                      assigneeId={row.assignee_id}
+                      plain
+                    />
+                  </span>
+                )}
                 <span role="cell" className="cell">
                   <RelativeTime value={row.timestamp} className="ago" />
                 </span>
                 {!narrow && (
                   <>
-                    <span role="cell" className="owner-cell">
-                      <span className="cell" style={{ fontSize: 13 }}>
-                        {assignee}
+                    {shown("assignee_id") && (
+                      <span role="cell" className="owner-cell">
+                        <span className="cell" style={{ fontSize: 13 }}>
+                          {assignee}
+                        </span>
                       </span>
-                    </span>
-                    <span role="cell" style={{ minWidth: 0 }}>
-                      {typeof row.active_incident_id === "string" && (
-                        <NavLink
-                          scope={scope}
-                          className="chip chip-inc"
-                          href={`/tenants/${scope.tenant.id}/incidents/${row.active_incident_id}`}
-                          title={display(
-                            row.active_incident_title ?? "Linked incident",
-                          )}
-                        >
-                          {display(
-                            row.active_incident_title ?? "Linked incident",
-                          )}
-                        </NavLink>
-                      )}
-                    </span>
+                    )}
+                    {shown("active_incident_id") && (
+                      <span role="cell" style={{ minWidth: 0 }}>
+                        {typeof row.active_incident_id === "string" && (
+                          <NavLink
+                            scope={scope}
+                            className="chip chip-inc"
+                            href={`/tenants/${scope.tenant.id}/incidents/${row.active_incident_id}`}
+                            title={display(
+                              row.active_incident_title ?? "Linked incident",
+                            )}
+                          >
+                            {display(
+                              row.active_incident_title ?? "Linked incident",
+                            )}
+                          </NavLink>
+                        )}
+                      </span>
+                    )}
                   </>
                 )}
               </>

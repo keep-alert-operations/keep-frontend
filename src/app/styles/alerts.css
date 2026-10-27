@@ -514,6 +514,194 @@
   }
 }
 
+/* ---------- Grouped results (REV-44) ---------- */
+.quick-view-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.gb-btn .gb-lbl {
+  color: var(--ink-soft);
+}
+.gb-btn .gb-val {
+  font-weight: 600;
+  color: var(--text);
+}
+.gb-btn svg {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.gb-btn[aria-expanded="true"] {
+  background: var(--fill);
+}
+.gb-title {
+  padding: 6px 10px 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--subtle);
+}
+.menu-item.gb-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.gb-ck {
+  width: 15px;
+  height: 15px;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--primary);
+}
+.gb-tag {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--subtle);
+}
+.gb-sep {
+  height: 1px;
+  margin: 3px 6px;
+  background: var(--line);
+}
+.gb-note {
+  margin: 0;
+  padding: 6px 10px 7px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--subtle);
+  white-space: normal;
+}
+/* One scroller for every group, so row menus and wide grids share it. */
+.alert-groups {
+  flex-grow: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.alert-group {
+  flex-shrink: 0;
+  min-width: min-content;
+}
+.alert-group .table-body {
+  overflow: visible;
+}
+.alert-group .table-body > .head {
+  position: static;
+}
+.alert-group .table-body > .row:last-child {
+  border-bottom: 0;
+}
+.ag-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-height: 48px;
+  padding: 6px 18px 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.alert-group.is-collapsed .ag-head {
+  border-bottom: 0;
+}
+.ag-toggle {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 10px 0 8px;
+  border-radius: 8px;
+}
+.ag-toggle:hover {
+  background: var(--fill);
+}
+.ag-toggle:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.ag-chev {
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: transform 160ms;
+}
+.ag-toggle[aria-expanded="true"] .ag-chev {
+  transform: rotate(90deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ag-chev {
+    transition: none;
+  }
+}
+/* Severity and status values keep their own colour classes. */
+.ag-head .ag-value {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ag-head .ag-empty {
+  font-weight: 500;
+  color: var(--muted);
+}
+.ag-count {
+  font-size: 12.5px;
+  color: var(--subtle);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ag-summary {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.ag-summary .sev,
+.ag-summary .st {
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.ag-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 18px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.ag-total {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 2px 4px 4px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.ag-total b {
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 1023px) {
+  .alert-groups {
+    min-height: 480px;
+  }
+  .ag-summary {
+    flex-basis: 100%;
+    margin-left: 0;
+    padding-left: 10px;
+  }
+}
+
 /* ---------- S03 · Alert detail ---------- */
 .ad-grid {
   flex-grow: 1;

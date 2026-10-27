@@ -590,6 +590,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/tenants/{tenant_id}/presets/preview/groups": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Preset Preview Groups
+     * @description Grouped saved or candidate preview (REV-44); group rows continue through preview.
+     */
+    post: operations["preset_preview_groups_api_tenants__tenant_id__presets_preview_groups_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/tenants/{tenant_id}/maintenance": {
     parameters: {
       query?: never;
@@ -1669,6 +1689,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/tenants/{tenant_id}/alerts/groups": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Feed Groups
+     * @description Grouped first view of the Feed (REV-44); group rows continue through the feed.
+     */
+    post: operations["feed_groups_api_tenants__tenant_id__alerts_groups_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/tenants/{tenant_id}/cel/profile": {
     parameters: {
       query?: never;
@@ -1908,6 +1948,99 @@ export interface components {
       active_incident_title?: string | null;
     } & {
       [key: string]: unknown;
+    };
+    /** AlertGroupNames */
+    AlertGroupNames: {
+      /**
+       * Key
+       * @description The group's value of the grouping field; null groups alerts without one.
+       */
+      key: string | null;
+      /**
+       * Label
+       * @description Directory name or incident title for assignee and incident groups; null otherwise or when unknown.
+       */
+      label?: string | null;
+      /**
+       * Total
+       * @description Exact alerts in the group as a decimal string; null when unavailable.
+       */
+      total: string | null;
+      /**
+       * Severity
+       * @description Exact alerts per severity in the group; null when unavailable.
+       */
+      severity?: {
+        [key: string]: string;
+      } | null;
+      /**
+       * Status
+       * @description Exact alerts per visible status, for severity groups only; null otherwise.
+       */
+      status?: {
+        [key: string]: string;
+      } | null;
+      /** Data */
+      data: components["schemas"]["AlertDisplayNames"][];
+      /**
+       * Next Cursor
+       * @description Continues this group's rows through the feed's group paging.
+       */
+      next_cursor?: string | null;
+    } & {
+      [key: string]: unknown;
+    };
+    /** AlertGroupPage */
+    AlertGroupPage: {
+      /** Data */
+      data: components["schemas"]["AlertGroupNames"][];
+      /** Next Group Cursor */
+      next_group_cursor?: string | null;
+    } & {
+      [key: string]: unknown;
+    };
+    /** AlertGroupsRequest */
+    AlertGroupsRequest: {
+      /**
+       * Cel
+       * @default true
+       */
+      cel: string;
+      /**
+       * Q
+       * @default
+       */
+      q: string;
+      /**
+       * Include Suppressed
+       * @default false
+       */
+      include_suppressed: boolean;
+      /**
+       * Sort
+       * @default timestamp
+       */
+      sort: string;
+      /**
+       * Direction
+       * @default desc
+       * @enum {string}
+       */
+      direction: "asc" | "desc";
+      /** Group By */
+      group_by: string;
+      /**
+       * Group Limit
+       * @default 10
+       */
+      group_limit: number;
+      /**
+       * Rows Per Group
+       * @default 5
+       */
+      rows_per_group: number;
+      /** Group Cursor */
+      group_cursor?: string | null;
     };
     /** AlertPage */
     AlertPage: {
@@ -2274,6 +2407,8 @@ export interface components {
       sort: components["schemas"]["Sort"][];
       /** Columns */
       columns: string[];
+      /** Group By */
+      group_by?: string | null;
       /** Command Id */
       command_id: string;
     };
@@ -2287,6 +2422,45 @@ export interface components {
       sort: components["schemas"]["Sort"][];
       /** Columns */
       columns: string[];
+      /** Group By */
+      group_by?: string | null;
+    };
+    /** PresetGroups */
+    PresetGroups: {
+      /** Preset Id */
+      preset_id?: string | null;
+      /** Expected Revision */
+      expected_revision?: string | null;
+      /** Cel */
+      cel?: string | null;
+      /** Sort */
+      sort?: components["schemas"]["Sort"][] | null;
+      /** Columns */
+      columns?: string[] | null;
+      /** Group By */
+      group_by?: string | null;
+      /**
+       * Q
+       * @default
+       */
+      q: string;
+      /**
+       * Include Suppressed
+       * @default false
+       */
+      include_suppressed: boolean;
+      /**
+       * Group Limit
+       * @default 10
+       */
+      group_limit: number;
+      /**
+       * Rows Per Group
+       * @default 5
+       */
+      rows_per_group: number;
+      /** Group Cursor */
+      group_cursor?: string | null;
     };
     /** PresetPreview */
     PresetPreview: {
@@ -2300,6 +2474,8 @@ export interface components {
       sort?: components["schemas"]["Sort"][] | null;
       /** Columns */
       columns?: string[] | null;
+      /** Group By */
+      group_by?: string | null;
       /**
        * Q
        * @default
@@ -2319,6 +2495,13 @@ export interface components {
       cursor?: string | null;
       /** Replace Cursor */
       replace_cursor?: string | null;
+      /** Group Key */
+      group_key?: string | null;
+      /**
+       * Group Empty
+       * @default false
+       */
+      group_empty: boolean;
     };
     /** PresetReplace */
     PresetReplace: {
@@ -2330,6 +2513,8 @@ export interface components {
       sort: components["schemas"]["Sort"][];
       /** Columns */
       columns: string[];
+      /** Group By */
+      group_by?: string | null;
       /** Command Id */
       command_id: string;
       /** Expected Revision */
@@ -4081,6 +4266,41 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["AlertPage"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  preset_preview_groups_api_tenants__tenant_id__presets_preview_groups_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        tenant_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PresetGroups"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AlertGroupPage"];
         };
       };
       /** @description Validation Error */
@@ -6781,6 +7001,9 @@ export interface operations {
         replace_cursor?: string | null;
         sort?: string;
         direction?: string;
+        group_by?: string | null;
+        group_key?: string | null;
+        group_empty?: boolean;
       };
       header?: never;
       path: {
@@ -6797,6 +7020,41 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["AlertPage"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  feed_groups_api_tenants__tenant_id__alerts_groups_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        tenant_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AlertGroupsRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AlertGroupPage"];
         };
       };
       /** @description Validation Error */

@@ -34,6 +34,17 @@ import {
   useQuickViewCounts,
   type QuickViewKey,
 } from "./alert-table";
+import {
+  AlertGroups,
+  GROUP_PAGE,
+  GROUP_ROWS,
+  GroupByControl,
+  groupFieldLabel,
+  tooManyGroups,
+  useAlertGroups,
+  type AlertGroup,
+  type GroupField,
+} from "./alert-groups";
 
 export function Alerts(props: Scope & { id?: string }) {
   return props.id ? (
@@ -105,24 +116,56 @@ export function AlertFeed(scope: Scope) {
     [limit, setLimit] = useState(50);
   const [selection, setSelection] = useState<Map<string, string>>(new Map());
   const [quickSort, setQuickSort] = useState<SortItem | null>(null);
+  // Transient like the rest of the ad-hoc feed; Save as preset carries it (REV-44).
+  const [groupBy, setGroupBy] = useState<GroupField | null>(null);
   const [snapshotVersion, setSnapshotVersion] = useState(scope.version);
   useEffect(() => {
     if (!cursor) setSnapshotVersion(scope.version);
   }, [scope.version, cursor]);
   const base = tenantPath(scope.tenant.id);
-  const params = new URLSearchParams({
+  const query = new URLSearchParams({
     cel: composeCel(applied.cel, quickView),
     q: applied.q,
     include_suppressed: String(applied.include_suppressed),
-    limit: String(limit),
   });
-  if (cursor) params.set("cursor", cursor);
   if (quickSort) {
-    params.set("sort", quickSort.field);
-    params.set("direction", quickSort.direction);
+    query.set("sort", quickSort.field);
+    query.set("direction", quickSort.direction);
   }
+  const params = new URLSearchParams(query);
+  params.set("limit", String(limit));
+  if (cursor) params.set("cursor", cursor);
+  const grouped = useAlertGroups({
+    scope,
+    field: groupBy,
+    path: groupBy ? `${base}/alerts/groups` : null,
+    body: groupBy
+      ? {
+          ...Object.fromEntries(query),
+          include_suppressed: applied.include_suppressed,
+          group_by: groupBy,
+          group_limit: GROUP_PAGE,
+          rows_per_group: GROUP_ROWS,
+        }
+      : null,
+    version: scope.version,
+    rows: (group: AlertGroup, next: string) => {
+      const page = new URLSearchParams(query);
+      page.set("group_by", groupBy!);
+      if (group.key === null) page.set("group_empty", "true");
+      else page.set("group_key", group.key);
+      page.set("limit", String(GROUP_ROWS));
+      page.set("cursor", next);
+      return request<RecordData[]>(`${base}/alerts?${page}`, {
+        csrf: scope.session.csrf_token,
+        signal: AbortSignal.timeout(15000),
+      });
+    },
+  });
+  const tooMany = groupBy !== null && tooManyGroups(grouped.first.error);
+  const showGroups = groupBy !== null && !tooMany;
   const feed = useSearchResource(
-    `${base}/alerts?${params}`,
+    showGroups ? null : `${base}/alerts?${params}`,
     scope.session.csrf_token,
     scope.onDenied,
     undefined,
@@ -133,22 +176,31 @@ export function AlertFeed(scope: Scope) {
     applied.cel,
     applied.include_suppressed,
     applied.q,
-    JSON.stringify([feed.data?.meta?.evaluated_at]),
+    JSON.stringify([
+      (showGroups ? grouped.meta : feed.data?.meta)?.evaluated_at,
+    ]),
   );
   const command = useCommand(scope.session.csrf_token, scope.onDenied);
   const rows = feed.data?.data ?? [];
   const locked = command.busy || command.uncertain;
+  const expandedGroups = grouped.groups.some(
+    (group) => !grouped.isCollapsed(group),
+  );
 
   function reset() {
     setCursor(null);
     setPageIndex(0);
     setSelection(new Map());
   }
+  function refresh() {
+    if (showGroups) grouped.first.reload();
+    else feed.reload();
+  }
   function run() {
     if (locked) return;
     setApplied({ cel, q, include_suppressed: suppressed });
     reset();
-    feed.reload();
+    refresh();
   }
   async function rowCommand(
     row: RecordData,
@@ -162,7 +214,7 @@ export function AlertFeed(scope: Scope) {
         value,
       })
     )
-      feed.reload();
+      refresh();
   }
   const first = pageIndex * limit + 1;
   const total = feed.data?.meta?.total;
@@ -185,7 +237,10 @@ export function AlertFeed(scope: Scope) {
             className="btn"
             onClick={() =>
               scope.navigate(
-                `/tenants/${scope.tenant.id}/presets/new?${new URLSearchParams({ cel })}`,
+                `/tenants/${scope.tenant.id}/presets/new?${new URLSearchParams({
+                  cel,
+                  ...(groupBy ? { group_by: groupBy } : {}),
+                })}`,
               )
             }
           >
@@ -227,6 +282,26 @@ export function AlertFeed(scope: Scope) {
         hidden={counts.hidden}
         includeSuppressed={suppressed}
         disabled={locked}
+        actions={
+          <>
+            {showGroups && grouped.groups.length > 0 && (
+              <button
+                type="button"
+                className="btn btn-sm btn-g"
+                onClick={() => grouped.collapseAll(expandedGroups)}
+              >
+                {expandedGroups ? "Collapse all" : "Expand all"}
+              </button>
+            )}
+            <GroupByControl
+              value={groupBy}
+              onChange={(value) => {
+                setGroupBy(value);
+                reset();
+              }}
+            />
+          </>
+        }
         onIncludeSuppressed={(checked) => {
           setSuppressed(checked);
           setApplied((previous) => ({
@@ -265,124 +340,197 @@ export function AlertFeed(scope: Scope) {
           </button>
         </div>
       )}
-      <ErrorNotice error={feed.error} />
-      {feed.data && Boolean(feed.error) && (
+      {grouped.stale && showGroups && (
+        <div className="banner bn-info" role="status">
+          <span>
+            <b>New results available.</b> Alerts changed since these groups were
+            loaded. They stay as they were so rows don&apos;t move while you
+            work.
+          </span>
+          <div className="grow" />
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={locked}
+            onClick={grouped.reset}
+          >
+            Back to first groups
+          </button>
+        </div>
+      )}
+      {tooMany && (
+        <div className="banner bn-info" role="status">
+          Too many values to group by {groupFieldLabel(groupBy).toLowerCase()}:
+          more than 1,000. Showing one table; narrow the query to group it.
+        </div>
+      )}
+      <ErrorNotice
+        error={showGroups ? (grouped.error ?? grouped.first.error) : feed.error}
+      />
+      {!showGroups && feed.data && Boolean(feed.error) && (
         <div className="banner bn-warn" role="status">
           Previous successful results are shown while the requested snapshot is
           unavailable.
         </div>
       )}
       <CommandFeedback command={command} />
-      <section
-        className="panel table-panel grow"
-        aria-label="Matching alerts"
-        aria-busy={feed.loading}
-        onClickCapture={(event) => {
-          const link = (event.target as Element).closest?.("a[href]");
-          const match = link
-            ?.getAttribute("href")
-            ?.match(/\/alerts\/([^/?#]+)$/);
-          if (match)
+      {showGroups && grouped.groups.length > 0 && (
+        <AlertGroups
+          scope={scope}
+          field={groupBy}
+          state={grouped}
+          sort={quickSort ? [quickSort] : DEFAULT_SORT}
+          onSort={(field) => {
+            setQuickSort((current) => nextQuickSort(current, field));
+            reset();
+          }}
+          selection={scope.tenant.role === "view" ? undefined : selection}
+          onSelectionChange={
+            scope.tenant.role === "view" || locked ? undefined : setSelection
+          }
+          onRowCommand={(row, kind, value) => void rowCommand(row, kind, value)}
+          busy={locked}
+          onRemember={(ids, current) =>
             rememberAlertList(scope.tenant.id, {
               label: "Feed",
               href: `/tenants/${scope.tenant.id}/alerts`,
-              ids: rows.map((row) => row.id),
-              current: decodeURIComponent(match[1]),
-            });
-        }}
-      >
-        {rows.length ? (
-          <AlertTable
-            scope={scope}
-            rows={rows}
-            selection={scope.tenant.role === "view" ? undefined : selection}
-            onSelectionChange={
-              scope.tenant.role === "view" || locked ? undefined : setSelection
-            }
-            onRowCommand={(row, kind, value) =>
-              void rowCommand(row, kind, value)
-            }
-            busy={locked}
-            sort={quickSort ? [quickSort] : DEFAULT_SORT}
-            onSort={(field) => {
-              setQuickSort((current) => nextQuickSort(current, field));
-              reset();
-            }}
-          />
-        ) : (
+              ids,
+              current,
+            })
+          }
+        />
+      )}
+      {showGroups && grouped.groups.length === 0 && (
+        <section
+          className="panel table-panel grow"
+          aria-label="Matching alerts"
+        >
           <div className="alerts-empty">
-            {feed.loading && !feed.data ? (
+            {grouped.first.error ? null : !grouped.settled ? (
               <p role="status">Loading alerts…</p>
-            ) : feed.error ? null : (
+            ) : (
               <>
                 <h2>No matching alerts</h2>
                 <p>Try a different query or include suppressed alerts.</p>
               </>
             )}
           </div>
-        )}
-        <div className="table-footer-bar">
-          <span>
-            <b>
-              {count(total) === "Unavailable"
-                ? "Count unavailable"
-                : `${count(total)} matching alerts`}
-            </b>
-            {rows.length > 0 && ` · rows ${first}–${first + rows.length - 1}`} ·
-            page {pageIndex + 1}
-          </span>
-          {feed.loading && feed.data && (
-            <span role="status" className="muted">
-              Updating…
-            </span>
-          )}
-          <button
-            type="button"
-            className="btn btn-sm btn-g"
-            disabled={!cursor || locked}
-            onClick={reset}
-          >
-            First page
-          </button>
-          <button
-            type="button"
-            className="btn btn-sm btn-g"
-            disabled={!feed.data?.next_cursor || feed.loading || locked}
-            onClick={() => {
-              setCursor(feed.data?.next_cursor ?? null);
-              setPageIndex((index) => index + 1);
-              setSelection(new Map());
-            }}
-          >
-            Next page
-          </button>
-          <div className="alerts-rows">
-            <label htmlFor="alert-rows-per-page">Rows per page</label>
-            <select
-              id="alert-rows-per-page"
-              className="inp"
-              value={limit}
-              disabled={locked}
-              onChange={(event) => {
-                setLimit(Number(event.target.value));
+        </section>
+      )}
+      {!showGroups && (
+        <section
+          className="panel table-panel grow"
+          aria-label="Matching alerts"
+          aria-busy={feed.loading}
+          onClickCapture={(event) => {
+            const link = (event.target as Element).closest?.("a[href]");
+            const match = link
+              ?.getAttribute("href")
+              ?.match(/\/alerts\/([^/?#]+)$/);
+            if (match)
+              rememberAlertList(scope.tenant.id, {
+                label: "Feed",
+                href: `/tenants/${scope.tenant.id}/alerts`,
+                ids: rows.map((row) => row.id),
+                current: decodeURIComponent(match[1]),
+              });
+          }}
+        >
+          {rows.length ? (
+            <AlertTable
+              scope={scope}
+              rows={rows}
+              selection={scope.tenant.role === "view" ? undefined : selection}
+              onSelectionChange={
+                scope.tenant.role === "view" || locked
+                  ? undefined
+                  : setSelection
+              }
+              onRowCommand={(row, kind, value) =>
+                void rowCommand(row, kind, value)
+              }
+              busy={locked}
+              sort={quickSort ? [quickSort] : DEFAULT_SORT}
+              onSort={(field) => {
+                setQuickSort((current) => nextQuickSort(current, field));
                 reset();
               }}
+            />
+          ) : (
+            <div className="alerts-empty">
+              {feed.loading && !feed.data ? (
+                <p role="status">Loading alerts…</p>
+              ) : feed.error ? null : (
+                <>
+                  <h2>No matching alerts</h2>
+                  <p>Try a different query or include suppressed alerts.</p>
+                </>
+              )}
+            </div>
+          )}
+          <div className="table-footer-bar">
+            <span>
+              <b>
+                {count(total) === "Unavailable"
+                  ? "Count unavailable"
+                  : `${count(total)} matching alerts`}
+              </b>
+              {rows.length > 0 && ` · rows ${first}–${first + rows.length - 1}`}{" "}
+              · page {pageIndex + 1}
+            </span>
+            {feed.loading && feed.data && (
+              <span role="status" className="muted">
+                Updating…
+              </span>
+            )}
+            <button
+              type="button"
+              className="btn btn-sm btn-g"
+              disabled={!cursor || locked}
+              onClick={reset}
             >
-              {[50, 100, 200].map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
+              First page
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-g"
+              disabled={!feed.data?.next_cursor || feed.loading || locked}
+              onClick={() => {
+                setCursor(feed.data?.next_cursor ?? null);
+                setPageIndex((index) => index + 1);
+                setSelection(new Map());
+              }}
+            >
+              Next page
+            </button>
+            <div className="alerts-rows">
+              <label htmlFor="alert-rows-per-page">Rows per page</label>
+              <select
+                id="alert-rows-per-page"
+                className="inp"
+                value={limit}
+                disabled={locked}
+                onChange={(event) => {
+                  setLimit(Number(event.target.value));
+                  reset();
+                }}
+              >
+                {[50, 100, 200].map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
       <BulkBar
         scope={scope}
         selection={selection}
         onDone={() => {
           setSelection(new Map());
-          feed.reload();
+          refresh();
         }}
         onClear={() => setSelection(new Map())}
       />

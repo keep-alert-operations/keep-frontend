@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ApiError, display, RecordData, tenantPath } from "@/lib/api";
+import { ApiError, display, RecordData, request, tenantPath } from "@/lib/api";
 import { useCommand, useResource } from "@/lib/hooks";
 import {
   DEFAULT_COLUMNS,
@@ -31,6 +31,18 @@ import {
   type QuickViewKey,
 } from "./alert-table";
 import { rememberAlertList } from "./alerts";
+import {
+  AlertGroups,
+  GROUP_PAGE,
+  GROUP_ROWS,
+  GroupByControl,
+  groupFieldLabel,
+  isGroupField,
+  tooManyGroups,
+  useAlertGroups,
+  type AlertGroup,
+  type GroupField,
+} from "./alert-groups";
 import { CelCode, Dialog, PresetEditor } from "./definition-editor";
 import { ConfigurationHistory } from "./configuration-history";
 
@@ -97,13 +109,22 @@ function NewPreset({ scope }: { scope: Scope }) {
   const searchParams = useSearchParams();
   // App Router can render the destination before window.location is updated.
   // Capture its query once so later URL changes cannot replace an edited draft.
-  const [initialCel] = useState(() => searchParams.get("cel"));
+  const [initial] = useState(() => {
+    const cel = searchParams.get("cel");
+    const groupBy = searchParams.get("group_by");
+    return cel || isGroupField(groupBy)
+      ? {
+          ...(cel ? { cel } : {}),
+          ...(isGroupField(groupBy) ? { group_by: groupBy } : {}),
+        }
+      : undefined;
+  });
   const leave = useLeave(scope);
   const list = `/tenants/${scope.tenant.id}/presets`;
   return (
     <PresetEditor
       scope={scope}
-      initialDraft={initialCel ? { cel: initialCel } : undefined}
+      initialDraft={initial}
       onSaved={(row) => leave(row?.id ? `${list}/${row.id}` : list)}
       onDiscard={() => leave(list)}
     />
@@ -741,6 +762,10 @@ function PresetResults({
       ? (preset.columns as unknown[]).map(String)
       : DEFAULT_COLUMNS;
   const cel = typeof preset.cel === "string" ? preset.cel : "true";
+  const savedGroupBy = isGroupField(preset.group_by) ? preset.group_by : null;
+  // A toolbar change of grouping is temporary, like the sort override (REV-44).
+  const [groupOverride, setGroupOverride] = useState<GroupField | null>();
+  const groupBy = groupOverride !== undefined ? groupOverride : savedGroupBy;
   const canEdit = scope.tenant.role !== "view";
   const command = useCommand(csrf, scope.onDenied);
   const removal = usePresetDelete(scope, () => scope.navigate(listHref));
@@ -748,8 +773,54 @@ function PresetResults({
     setCursor(null);
     setPageNumber(1);
     setSelection(new Map());
-  }, [quick, suppressed, q, preset.id, preset.revision]);
-  useEffect(() => setQuickSort(null), [preset.id, preset.revision]);
+  }, [quick, suppressed, q, preset.id, preset.revision, groupBy]);
+  useEffect(() => {
+    setQuickSort(null);
+    setGroupOverride(undefined);
+  }, [preset.id, preset.revision]);
+  const savedView = quick === "all" && !quickSort;
+  const groupRequest =
+    savedView && groupOverride === undefined
+      ? { preset_id: preset.id, expected_revision: preset.revision }
+      : {
+          cel: composeCel(cel, quick),
+          sort: effectiveSort,
+          columns,
+          group_by: groupBy,
+        };
+  const grouped = useAlertGroups({
+    scope,
+    field: groupBy,
+    path: groupBy ? `${tenantPath(tenantId)}/presets/preview/groups` : null,
+    body: groupBy
+      ? {
+          ...groupRequest,
+          q,
+          include_suppressed: suppressed,
+          group_limit: GROUP_PAGE,
+          rows_per_group: GROUP_ROWS,
+        }
+      : null,
+    version: `${scope.version}:${refresh}`,
+    rows: (group: AlertGroup, next: string) =>
+      request<RecordData[]>(`${tenantPath(tenantId)}/presets/preview`, {
+        method: "POST",
+        csrf,
+        body: {
+          ...groupRequest,
+          q,
+          include_suppressed: suppressed,
+          limit: GROUP_ROWS,
+          cursor: next,
+          ...(group.key === null
+            ? { group_empty: true }
+            : { group_key: group.key }),
+        },
+        signal: AbortSignal.timeout(15000),
+      }),
+  });
+  const tooMany = groupBy !== null && tooManyGroups(grouped.first.error);
+  const showGroups = groupBy !== null && !tooMany;
   // Saved "All" uses the saved preview (observed revision); quick views are
   // transient candidates built from the saved definition.
   const body =
@@ -776,13 +847,15 @@ function PresetResults({
     tenantId,
     csrf,
     scope.onDenied,
-    body,
+    showGroups ? null : body,
     `${viewVersion}:${refresh}`,
   );
-  const changed =
-    page.error instanceof ApiError &&
-    page.error.status === 409 &&
-    page.error.code === "preset_changed";
+  const changed = [page.error, grouped.first.error].some(
+    (error) =>
+      error instanceof ApiError &&
+      error.status === 409 &&
+      error.code === "preset_changed",
+  );
   const reloadedFor = useRef<string | null>(null);
   useEffect(() => {
     if (changed && reloadedFor.current !== preset.revision) {
@@ -800,8 +873,11 @@ function PresetResults({
     JSON.stringify([
       preset.id,
       preset.revision,
-      page.result?.meta?.evaluated_at,
+      (showGroups ? grouped.meta : page.result?.meta)?.evaluated_at,
     ]),
+  );
+  const expandedGroups = grouped.groups.some(
+    (group) => !grouped.isCollapsed(group),
   );
   async function rowCommand(
     row: RecordData,
@@ -817,8 +893,10 @@ function PresetResults({
           value,
         },
       )
-    )
+    ) {
       setRefresh((value) => value + 1);
+      if (showGroups) grouped.first.reload();
+    }
   }
   const rows = page.result?.data ?? [];
   const currentResult = page.resultKey === JSON.stringify(body);
@@ -962,11 +1040,11 @@ function PresetResults({
             aria-label="Edit filter expression"
             title={cel}
           >
-            <FilterSummary cel={cel} sort={sort} />
+            <FilterSummary cel={cel} sort={sort} groupBy={savedGroupBy} />
           </NavLink>
         ) : (
           <div className="ps-filter ps-filter-static" title={cel}>
-            <FilterSummary cel={cel} sort={sort} />
+            <FilterSummary cel={cel} sort={sort} groupBy={savedGroupBy} />
           </div>
         )}
         <SearchInput
@@ -985,54 +1063,99 @@ function PresetResults({
         hidden={counts.hidden}
         includeSuppressed={suppressed}
         onIncludeSuppressed={setSuppressed}
-      />
-      {page.error !== undefined && !changed && (
-        <ErrorNotice error={page.error} />
-      )}
-      <ErrorNotice error={command.error} />
-      <div className="panel table-panel grow">
-        {rows.length ? (
-          <div
-            className={`ps-table ${page.loading ? "is-stale" : ""}`}
-            aria-busy={page.loading}
-            onClickCapture={(event) => {
-              const link = (event.target as Element).closest?.("a[href]");
-              const match = link
-                ?.getAttribute("href")
-                ?.match(/\/alerts\/([^/?#]+)$/);
-              if (match)
-                rememberAlertList(tenantId, {
-                  label: display(preset.name),
-                  href: detailHref,
-                  ids: rows.map((row) => row.id),
-                  current: decodeURIComponent(match[1]),
-                });
-            }}
-          >
-            <AlertTable
-              scope={scope}
-              rows={rows}
-              columns={columns}
-              sort={effectiveSort}
-              onSort={(field) => {
-                setQuickSort((current) => nextQuickSort(current, field));
-                setCursor(null);
-                setPageNumber(1);
-                setSelection(new Map());
-              }}
-              selection={selection}
-              onSelectionChange={setSelection}
-              onRowCommand={(row, kind, value) =>
-                void rowCommand(row, kind, value)
+        actions={
+          <>
+            {showGroups && grouped.groups.length > 0 && (
+              <button
+                type="button"
+                className="btn btn-sm btn-g"
+                onClick={() => grouped.collapseAll(expandedGroups)}
+              >
+                {expandedGroups ? "Collapse all" : "Expand all"}
+              </button>
+            )}
+            <GroupByControl
+              value={groupBy}
+              saved={savedGroupBy}
+              onChange={(value) =>
+                setGroupOverride(value === savedGroupBy ? undefined : value)
               }
-              busy={command.busy}
             />
-          </div>
-        ) : (
+            {groupOverride !== undefined && (
+              <button
+                type="button"
+                className="btn btn-sm btn-g"
+                onClick={() => setGroupOverride(undefined)}
+              >
+                Reset to saved
+              </button>
+            )}
+          </>
+        }
+      />
+      {grouped.stale && showGroups && (
+        <div className="banner bn-info" role="status">
+          <span>
+            <b>New results available.</b> Alerts changed since these groups were
+            loaded. They stay as they were so rows don&apos;t move while you
+            work.
+          </span>
+          <div className="grow" />
+          <button type="button" className="btn btn-sm" onClick={grouped.reset}>
+            Back to first groups
+          </button>
+        </div>
+      )}
+      {tooMany && (
+        <div className="banner bn-info" role="status">
+          Too many values to group by {groupFieldLabel(groupBy).toLowerCase()}:
+          more than 1,000. Showing one table; narrow the query to group it.
+        </div>
+      )}
+      {showGroups
+        ? !changed && (
+            <ErrorNotice error={grouped.error ?? grouped.first.error} />
+          )
+        : page.error !== undefined &&
+          !changed && <ErrorNotice error={page.error} />}
+      <ErrorNotice error={command.error} />
+      {showGroups && grouped.groups.length > 0 && (
+        <AlertGroups
+          scope={scope}
+          field={groupBy}
+          state={grouped}
+          columns={columns}
+          sort={effectiveSort}
+          onSort={(field) => {
+            setQuickSort((current) => nextQuickSort(current, field));
+            setSelection(new Map());
+          }}
+          selection={selection}
+          onSelectionChange={setSelection}
+          onRowCommand={(row, kind, value) => void rowCommand(row, kind, value)}
+          busy={command.busy}
+          evaluated
+          footnote={
+            fromDashboard && (
+              <span>· opened current results; count may have changed</span>
+            )
+          }
+          onRemember={(ids, current) =>
+            rememberAlertList(tenantId, {
+              label: display(preset.name),
+              href: detailHref,
+              ids,
+              current,
+            })
+          }
+        />
+      )}
+      {showGroups && grouped.groups.length === 0 && (
+        <div className="panel table-panel grow">
           <div className="ps-empty">
-            {page.loading && !currentResult ? (
+            {grouped.first.error ? null : !grouped.settled ? (
               <p role="status">Loading matching alerts…</p>
-            ) : page.result && currentResult ? (
+            ) : (
               <>
                 <h2>No matching alerts</h2>
                 <p>
@@ -1043,68 +1166,128 @@ function PresetResults({
                       : "No current alerts match this preset."}
                 </p>
               </>
-            ) : null}
-          </div>
-        )}
-        <div className="table-footer-bar">
-          <span className="ps-foot-text">
-            <b>
-              {total !== undefined
-                ? `${total} matching alerts`
-                : "Matching alerts unavailable"}
-            </b>
-            {typeof meta?.evaluated_at === "string" && (
-              <>
-                {" "}
-                · evaluated <RelativeTime value={meta.evaluated_at} />
-              </>
             )}
-            {cursor ? ` · page ${pageNumber}` : ""}
-            {page.loading && page.result ? " · updating…" : ""}
-            {meta?.updating ? " · index catching up" : ""}
-            {fromDashboard
-              ? " · opened current results; count may have changed"
-              : ""}
-          </span>
-          <div style={{ flexGrow: 1 }} />
-          {(cursor || page.result?.next_cursor) && (
-            <>
-              <button
-                type="button"
-                className="btn btn-sm btn-g"
-                disabled={!cursor}
-                aria-label="First results page"
-                onClick={() => {
+          </div>
+        </div>
+      )}
+      {!showGroups && (
+        <div className="panel table-panel grow">
+          {rows.length ? (
+            <div
+              className={`ps-table ${page.loading ? "is-stale" : ""}`}
+              aria-busy={page.loading}
+              onClickCapture={(event) => {
+                const link = (event.target as Element).closest?.("a[href]");
+                const match = link
+                  ?.getAttribute("href")
+                  ?.match(/\/alerts\/([^/?#]+)$/);
+                if (match)
+                  rememberAlertList(tenantId, {
+                    label: display(preset.name),
+                    href: detailHref,
+                    ids: rows.map((row) => row.id),
+                    current: decodeURIComponent(match[1]),
+                  });
+              }}
+            >
+              <AlertTable
+                scope={scope}
+                rows={rows}
+                columns={columns}
+                sort={effectiveSort}
+                onSort={(field) => {
+                  setQuickSort((current) => nextQuickSort(current, field));
                   setCursor(null);
                   setPageNumber(1);
                   setSelection(new Map());
                 }}
-              >
-                First page
-              </button>
-              <button
-                type="button"
-                className="btn btn-sm"
-                disabled={page.loading || !page.result?.next_cursor}
-                aria-label="Next results page"
-                onClick={() => {
-                  setCursor(page.result?.next_cursor ?? null);
-                  setPageNumber((value) => value + 1);
-                  setSelection(new Map());
-                }}
-              >
-                Next page
-              </button>
-            </>
+                selection={selection}
+                onSelectionChange={setSelection}
+                onRowCommand={(row, kind, value) =>
+                  void rowCommand(row, kind, value)
+                }
+                busy={command.busy}
+              />
+            </div>
+          ) : (
+            <div className="ps-empty">
+              {page.loading && !currentResult ? (
+                <p role="status">Loading matching alerts…</p>
+              ) : page.result && currentResult ? (
+                <>
+                  <h2>No matching alerts</h2>
+                  <p>
+                    {q
+                      ? `Nothing in this preset matches “${q}”.`
+                      : quick !== "all"
+                        ? "Nothing in this quick view right now."
+                        : "No current alerts match this preset."}
+                  </p>
+                </>
+              ) : null}
+            </div>
           )}
+          <div className="table-footer-bar">
+            <span className="ps-foot-text">
+              <b>
+                {total !== undefined
+                  ? `${total} matching alerts`
+                  : "Matching alerts unavailable"}
+              </b>
+              {typeof meta?.evaluated_at === "string" && (
+                <>
+                  {" "}
+                  · evaluated <RelativeTime value={meta.evaluated_at} />
+                </>
+              )}
+              {cursor ? ` · page ${pageNumber}` : ""}
+              {page.loading && page.result ? " · updating…" : ""}
+              {meta?.updating ? " · index catching up" : ""}
+              {fromDashboard
+                ? " · opened current results; count may have changed"
+                : ""}
+            </span>
+            <div style={{ flexGrow: 1 }} />
+            {(cursor || page.result?.next_cursor) && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-g"
+                  disabled={!cursor}
+                  aria-label="First results page"
+                  onClick={() => {
+                    setCursor(null);
+                    setPageNumber(1);
+                    setSelection(new Map());
+                  }}
+                >
+                  First page
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={page.loading || !page.result?.next_cursor}
+                  aria-label="Next results page"
+                  onClick={() => {
+                    setCursor(page.result?.next_cursor ?? null);
+                    setPageNumber((value) => value + 1);
+                    setSelection(new Map());
+                  }}
+                >
+                  Next page
+                </button>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      )}
       <BulkBar
         scope={scope}
         selection={selection}
         onDone={() => {
           setSelection(new Map());
           setRefresh((value) => value + 1);
+          if (showGroups) grouped.first.reload();
         }}
         onClear={() => setSelection(new Map())}
       />
@@ -1119,7 +1302,15 @@ function PresetResults({
   );
 }
 
-function FilterSummary({ cel, sort }: { cel: string; sort: unknown }) {
+function FilterSummary({
+  cel,
+  sort,
+  groupBy,
+}: {
+  cel: string;
+  sort: unknown;
+  groupBy?: GroupField | null;
+}) {
   return (
     <>
       <svg
@@ -1138,7 +1329,10 @@ function FilterSummary({ cel, sort }: { cel: string; sort: unknown }) {
         <CelCode source={cel.replace(/\s+/g, " ")} />
       </span>
       <span className="ps-sorted">
-        Sorted by {sortSummary(sort).toLowerCase()}
+        {groupBy
+          ? `Grouped by ${groupFieldLabel(groupBy).toLowerCase()} · sorted by `
+          : "Sorted by "}
+        {sortSummary(sort).toLowerCase()}
       </span>
     </>
   );

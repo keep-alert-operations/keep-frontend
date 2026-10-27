@@ -34,6 +34,12 @@ import {
   useQuickViewCounts,
   type QuickViewKey,
 } from "./alert-table";
+import {
+  GROUP_FIELDS,
+  groupFieldLabel,
+  isGroupField,
+  type GroupField,
+} from "./alert-groups";
 export function CelCode({ source }: { source: string }) {
   return (
     <>
@@ -115,6 +121,7 @@ function presetDefinition(value?: Record<string, unknown>) {
         ? currentAlertColumns((value.columns as unknown[]).map(String))
         : DEFAULT_COLUMNS,
     sort: sortItems(value?.sort).length ? sortItems(value?.sort) : DEFAULT_SORT,
+    group_by: isGroupField(value?.group_by) ? value.group_by : null,
   };
 }
 
@@ -156,7 +163,8 @@ export function PresetEditor({
   const [name, setName] = useState(initial.name),
     [cel, setCel] = useState(initial.cel),
     [selectedColumns, setColumns] = useState<string[]>(initial.columns),
-    [sort, setSort] = useState<SortItem[]>(initial.sort);
+    [sort, setSort] = useState<SortItem[]>(initial.sort),
+    [groupBy, setGroupBy] = useState<GroupField | null>(initial.group_by);
   const [previewCel, setPreviewCel] = useState(initial.cel);
   const [quick, setQuick] = useState<QuickViewKey>("all"),
     [suppressed, setSuppressed] = useState(false);
@@ -170,7 +178,13 @@ export function PresetEditor({
   const [confirmation, confirm] = useConfirm();
   const nameRef = useRef<HTMLInputElement>(null);
   const formId = useId();
-  const draft = { name, cel, columns: selectedColumns, sort };
+  const draft = {
+    name,
+    cel,
+    columns: selectedColumns,
+    sort,
+    group_by: groupBy,
+  };
   const dirty = !savedRow && JSON.stringify(draft) !== JSON.stringify(baseline);
   useDirtyGuard(scope, dirty);
   useEffect(() => {
@@ -259,6 +273,7 @@ export function PresetEditor({
         cel,
         sort,
         columns: selectedColumns,
+        group_by: groupBy,
         ...(existing ? { expected_revision: existing.revision } : {}),
       },
       existing ? "PUT" : "POST",
@@ -268,7 +283,13 @@ export function PresetEditor({
   async function submitCopy() {
     const result = await copy.execute<RecordData>(
       `${tenantPath(tenantId)}/presets`,
-      { name: copyName, cel, sort, columns: selectedColumns },
+      {
+        name: copyName,
+        cel,
+        sort,
+        columns: selectedColumns,
+        group_by: groupBy,
+      },
     );
     if (result) {
       setCopying(false);
@@ -718,6 +739,36 @@ export function PresetEditor({
                   )}
                 </div>
               ))}
+            </div>
+            <div className="f">
+              <label className="lbl" htmlFor={`${formId}-group`}>
+                Group by
+              </label>
+              <select
+                id={`${formId}-group`}
+                className="inp"
+                aria-describedby={`${formId}-group-help`}
+                value={groupBy ?? ""}
+                onChange={(event) =>
+                  setGroupBy(
+                    isGroupField(event.target.value)
+                      ? event.target.value
+                      : null,
+                  )
+                }
+              >
+                <option value="">No grouping</option>
+                {GROUP_FIELDS.map(([field, label]) => (
+                  <option key={field} value={field}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <span id={`${formId}-group-help`} className="help">
+                {groupBy
+                  ? `Each ${groupFieldLabel(groupBy).toLowerCase()} gets its own table. Rows inside follow the sort above.`
+                  : "Results show as one table."}
+              </span>
             </div>
           </form>
         </aside>
