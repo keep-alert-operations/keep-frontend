@@ -383,8 +383,6 @@ const capabilityNames: Record<string, string> = {
   v2_ingress: "Alert intake (v2)",
   search: "Search index",
   human_auth: "Identity directory",
-  correlation: "Correlation",
-  maintenance: "Maintenance suppression",
   recovery: "Recovery",
   audit_retention: "Audit retention",
 };
