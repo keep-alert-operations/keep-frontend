@@ -369,6 +369,7 @@ export function AlertTable({
   selection,
   onSelectionChange,
   onRowCommand,
+  onLinkIncident,
   busy,
   narrow,
   columns,
@@ -383,6 +384,8 @@ export function AlertTable({
   selection?: Map<string, string>;
   onSelectionChange?: (next: Map<string, string>) => void;
   onRowCommand?: RowCommand;
+  /** Opens Link to incident for the row (REV-48). */
+  onLinkIncident?: (row: RecordData) => void;
   busy?: boolean;
   narrow?: boolean;
   columns?: string[];
@@ -793,6 +796,20 @@ export function AlertTable({
                         >
                           {resolved ? "Reopen" : "Resolve"}
                         </button>
+                        {onLinkIncident && (
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="menu-item"
+                            disabled={busy}
+                            onClick={() => {
+                              close();
+                              onLinkIncident(row);
+                            }}
+                          >
+                            Link to incident…
+                          </button>
+                        )}
                       </>
                     )}
                   </Menu>

@@ -432,6 +432,7 @@ export function AlertGroups({
   selection,
   onSelectionChange,
   onRowCommand,
+  onLinkIncident,
   busy,
   evaluated,
   onRemember,
@@ -450,6 +451,7 @@ export function AlertGroups({
     kind: "set_status" | "set_assignee",
     value: string | null,
   ) => void;
+  onLinkIncident?: (row: RecordData) => void;
   busy?: boolean;
   evaluated?: boolean;
   onRemember: (ids: string[], current: string) => void;
@@ -534,6 +536,7 @@ export function AlertGroups({
                   selection={selection}
                   onSelectionChange={onSelectionChange}
                   onRowCommand={onRowCommand}
+                  onLinkIncident={onLinkIncident}
                   busy={busy}
                 />
                 {(group.next_cursor || group.expanded) && (

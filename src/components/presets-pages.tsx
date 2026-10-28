@@ -44,6 +44,7 @@ import {
   type GroupField,
 } from "./alert-groups";
 import { CelCode, Dialog, PresetEditor } from "./definition-editor";
+import { LinkIncidentDialog } from "./link-incident";
 import { ConfigurationHistory } from "./configuration-history";
 
 /** Routes this area's list, detail, editor and history screens. */
@@ -746,6 +747,7 @@ function PresetResults({
     [selection, setSelection] = useState<Map<string, string>>(new Map()),
     [references, setReferences] = useState(false);
   const [quickSort, setQuickSort] = useState<SortItem | null>(null);
+  const [linking, setLinking] = useState<RecordData>();
   const [fromDashboard] = useState(() => searchParam("from") === "dashboard");
   useReturnFocus(true);
   const q = useDebounced(search.trim());
@@ -1134,6 +1136,7 @@ function PresetResults({
           selection={selection}
           onSelectionChange={setSelection}
           onRowCommand={(row, kind, value) => void rowCommand(row, kind, value)}
+          onLinkIncident={setLinking}
           busy={command.busy}
           evaluated
           footnote={
@@ -1207,6 +1210,7 @@ function PresetResults({
                 onRowCommand={(row, kind, value) =>
                   void rowCommand(row, kind, value)
                 }
+                onLinkIncident={setLinking}
                 busy={command.busy}
               />
             </div>
@@ -1297,6 +1301,17 @@ function PresetResults({
           scope={scope}
           preset={preset}
           onClose={() => setReferences(false)}
+        />
+      )}
+      {linking && (
+        <LinkIncidentDialog
+          scope={scope}
+          alert={linking}
+          onDone={() => {
+            setRefresh((value) => value + 1);
+            if (showGroups) grouped.first.reload();
+          }}
+          onClose={() => setLinking(undefined)}
         />
       )}
     </Page>
