@@ -138,7 +138,10 @@ function FunnelIcon() {
  * - `status`: caller text shown after the validity chip (e.g. "12 matching").
  * - `statusAction`: caller control on the right of the chip row.
  * - `hint`: replaces the keyboard hint next to the label.
- * - `fieldChips`: shows an "Insert field" row of published fields.
+ * - `referencePopover`: opens "Supported fields and functions" as a popover
+ *   from the label row instead of the line under the editor.
+ * - `onValidity`: reports whether the current source last validated (true,
+ *   false, or undefined when unchecked or edited since).
  */
 export function CelEditor({
   scope,
@@ -153,7 +156,8 @@ export function CelEditor({
   status,
   statusAction,
   hint,
-  fieldChips = false,
+  referencePopover = false,
+  onValidity,
   minimal = false,
 }: {
   scope: Scope;
@@ -168,7 +172,8 @@ export function CelEditor({
   status?: ReactNode;
   statusAction?: ReactNode;
   hint?: string;
-  fieldChips?: boolean;
+  referencePopover?: boolean;
+  onValidity?: (valid: boolean | undefined) => void;
   /**
    * Reference condition/window style: no Validate button or reference line;
    * the caller validates the whole definition. Status shows once available.
@@ -212,9 +217,10 @@ export function CelEditor({
     setValidation((previous) => (previous?.busy ? undefined : previous));
     return () => pending.current?.abort();
   }, [value, key]);
-  // The compact reference is a popover: close it on outside press.
+  // A popover reference closes on outside press.
+  const popover = compact || referencePopover;
   useEffect(() => {
-    if (!compact || !reference) return;
+    if (!popover || !reference) return;
     const close = (event: MouseEvent) => {
       if (
         !root.current?.querySelector(".cel-ref")?.contains(event.target as Node)
@@ -223,7 +229,7 @@ export function CelEditor({
     };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
-  }, [compact, reference]);
+  }, [popover, reference]);
   const candidate = profile.data?.data;
   const catalog =
     candidate &&
@@ -308,6 +314,12 @@ export function CelEditor({
     validation?.key === key && validation.source === value
       ? validation
       : undefined;
+  const activeValid = active?.result?.valid;
+  const reportValidity = useRef(onValidity);
+  reportValidity.current = onValidity;
+  useEffect(() => {
+    reportValidity.current?.(activeValid);
+  }, [activeValid]);
   const bytes = new TextEncoder().encode(value).length;
   const tooLarge = catalog ? bytes > catalog.limits.source_bytes : false;
   const lines = value.split("\n");
@@ -562,7 +574,7 @@ export function CelEditor({
       id={`${id}-reference`}
       className="cel-ref-body"
       onKeyDown={(event) => {
-        if (compact && event.key === "Escape") {
+        if (popover && event.key === "Escape") {
           setReference(false);
           area.current?.focus();
         }
@@ -732,6 +744,23 @@ export function CelEditor({
           {hint ??
             `Ctrl+Space completes · Ctrl+Enter ${onRun ? "previews" : "validates"}`}
         </span>
+        {referencePopover && !minimal && (
+          <div className="cel-ref cel-ref-head">
+            <button
+              type="button"
+              className="btn btn-g btn-sm"
+              aria-expanded={reference}
+              aria-controls={reference ? `${id}-reference` : undefined}
+              onClick={() => setReference((shown) => !shown)}
+            >
+              Supported fields and functions
+              <span aria-hidden="true">{reference ? " ▴" : " ▾"}</span>
+            </button>
+            {reference && (
+              <div className="cel-pop cel-pop-end">{referenceBody}</div>
+            )}
+          </div>
+        )}
       </div>
       {helpText}
       <div className="cel-wrap">
@@ -766,32 +795,7 @@ export function CelEditor({
         </div>
       )}
       {diagnostics}
-      {fieldChips && catalog && (
-        <div className="cel-fields">
-          <span className="help">Insert field</span>
-          {catalog.fields.map((field) => (
-            <button
-              key={field.name}
-              type="button"
-              className="fchip"
-              disabled={disabled}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() =>
-                insert({
-                  label: field.name,
-                  text: field.name,
-                  detail: field.type,
-                  kind: "Field",
-                })
-              }
-              aria-label={`Insert field ${field.name}`}
-            >
-              {field.name}
-            </button>
-          ))}
-        </div>
-      )}
-      {!minimal && (
+      {!minimal && !referencePopover && (
         <div className="cel-ref cel-ref-inline">
           <button
             type="button"

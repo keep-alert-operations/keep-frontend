@@ -344,6 +344,10 @@ for (const section of ["presets", "maintenance", "correlation-rules"]) {
       await expect(
         region.getByRole("button", { name: "Insert now", exact: true }),
       ).toHaveCount(1);
+      // The preset editor shows the reference as a popover; close it first.
+      await region
+        .getByRole("button", { name: "Supported fields and functions" })
+        .click();
       await region
         .getByRole("button", { name: "Validate CEL", exact: true })
         .click();

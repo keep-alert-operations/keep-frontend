@@ -125,6 +125,31 @@ function presetDefinition(value?: Record<string, unknown>) {
   };
 }
 
+const SETTINGS_TABS = [
+  ["filter", "Filter"],
+  ["columns", "Columns"],
+  ["sort", "Sort"],
+  ["group", "Group by"],
+] as const;
+type SettingsTab = (typeof SETTINGS_TABS)[number][0];
+const GROUP_CHOICES: readonly (readonly [GroupField | null, string])[] = [
+  [null, "No grouping"],
+  ...GROUP_FIELDS,
+];
+
+function GripIcon() {
+  return (
+    <svg className="pe-grip" viewBox="0 0 16 16" aria-hidden="true">
+      <circle cx="6" cy="4" r="1.1" />
+      <circle cx="10" cy="4" r="1.1" />
+      <circle cx="6" cy="8" r="1.1" />
+      <circle cx="10" cy="8" r="1.1" />
+      <circle cx="6" cy="12" r="1.1" />
+      <circle cx="10" cy="12" r="1.1" />
+    </svg>
+  );
+}
+
 /** Keep the editor's dirty flag in the workspace navigation guard. */
 function useDirtyGuard(scope: Scope, dirty: boolean) {
   useDirtyWarning(dirty);
@@ -168,12 +193,29 @@ export function PresetEditor({
   const [previewCel, setPreviewCel] = useState(initial.cel);
   const [quick, setQuick] = useState<QuickViewKey>("all"),
     [suppressed, setSuppressed] = useState(false);
-  const [adding, setAdding] = useState(false);
+  const [tab, setTab] = useState<SettingsTab>("filter"),
+    [celValid, setCelValid] = useState<boolean | undefined>();
+  const [dragging, setDragging] = useState<number | null>(null),
+    [dropTarget, setDropTarget] = useState<number | null>(null);
+  const filterPanel = useRef<HTMLDivElement>(null);
   const [copying, setCopying] = useState(false),
     [copyName, setCopyName] = useState("");
   const [savedRow, setSavedRow] = useState<RecordData | null>(null);
   const [nameError, setNameError] = useState("");
   const save = useCommand(scope.session.csrf_token, scope.onDenied);
+  // A save rejected for its definition is almost always the filter: show it
+  // and focus the editor once its panel is visible.
+  const [focusFilter, setFocusFilter] = useState(false);
+  useEffect(() => {
+    if (!(save.error instanceof ApiError) || save.error.status !== 422) return;
+    setTab("filter");
+    setFocusFilter(true);
+  }, [save.error]);
+  useEffect(() => {
+    if (!focusFilter || tab !== "filter") return;
+    setFocusFilter(false);
+    filterPanel.current?.querySelector("textarea")?.focus();
+  }, [focusFilter, tab]);
   const copy = useCommand(scope.session.csrf_token, scope.onDenied);
   const [confirmation, confirm] = useConfirm();
   const nameRef = useRef<HTMLInputElement>(null);
@@ -317,14 +359,16 @@ export function PresetEditor({
     scope.setDirty(false);
     onDiscard();
   }
-  const moveColumn = (index: number, delta: number) =>
+  const moveColumnTo = (from: number, to: number) =>
     setColumns((previous) => {
+      if (from === to || to < 0 || to >= previous.length) return previous;
       const next = [...previous];
-      const target = index + delta;
-      if (target < 0 || target >= next.length) return previous;
-      [next[index], next[target]] = [next[target], next[index]];
+      next.splice(to, 0, ...next.splice(from, 1));
       return next;
     });
+  const addable = SELECTABLE_COLUMNS.filter(
+    (column) => !selectedColumns.includes(column),
+  );
   const lines = Math.max(1, cel.split("\n").length);
   const draftChanged = cel !== previewCel;
   const total = preview.result?.meta?.total;
@@ -332,6 +376,22 @@ export function PresetEditor({
   const invalid =
     preview.error instanceof ApiError &&
     [400, 422].includes(preview.error.status);
+  const filterInvalid = (invalid && !draftChanged) || celValid === false;
+  // Tab summaries; a problem in a hidden tab shows as a red flag.
+  const tabBadge = (key: SettingsTab) =>
+    key === "filter" ? (
+      filterInvalid && <span className="pe-tab-flag">Invalid</span>
+    ) : key === "columns" ? (
+      selectedColumns.length ? (
+        <b>{selectedColumns.length}</b>
+      ) : (
+        <span className="pe-tab-flag">None</span>
+      )
+    ) : key === "sort" ? (
+      <b>{sort.length}</b>
+    ) : (
+      groupBy && <b>{groupFieldLabel(groupBy)}</b>
+    );
   const newer =
     existing &&
     current &&
@@ -423,14 +483,6 @@ export function PresetEditor({
           <CommandFeedback command={save} />
         </div>
       )}
-      <QuickViews
-        value={quick}
-        onChange={setQuick}
-        counts={counts.counts}
-        hidden={counts.hidden}
-        includeSuppressed={suppressed}
-        onIncludeSuppressed={setSuppressed}
-      />
       <div className="pe-split">
         <section className="panel pe-preview" aria-label="Draft preview">
           <div className="pe-strip" role="status">
@@ -452,6 +504,16 @@ export function PresetEditor({
                 Filter edited · Preview draft to update
               </span>
             )}
+          </div>
+          <div className="pe-views">
+            <QuickViews
+              value={quick}
+              onChange={setQuick}
+              counts={counts.counts}
+              hidden={counts.hidden}
+              includeSuppressed={suppressed}
+              onIncludeSuppressed={setSuppressed}
+            />
           </div>
           {preview.error !== undefined && !invalid && (
             <div className="pe-table-note">
@@ -484,295 +546,407 @@ export function PresetEditor({
             </div>
           )}
         </section>
-        <aside className="panel pe-def" aria-label="Edit preset">
-          <div className="panel-h">
-            <h2>Definition</h2>
-            <div style={{ flexGrow: 1 }} />
-            <span className="help">
-              Changes apply to everyone in {scope.tenant.name} once saved
-            </span>
-          </div>
+        <section
+          className="panel pe-def"
+          aria-labelledby={`${formId}-settings`}
+        >
           <form
             id={formId}
-            className="pe-def-body"
+            className="pe-def-form"
             onSubmit={(event) => {
               event.preventDefault();
               void submit();
             }}
           >
-            <div className="f">
-              <label className="lbl" htmlFor={`${formId}-name`}>
-                Name
-              </label>
-              <input
-                id={`${formId}-name`}
-                ref={nameRef}
-                className="inp"
-                value={name}
-                maxLength={128}
-                aria-invalid={nameError ? true : undefined}
-                aria-describedby={
-                  nameError ? `${formId}-name-error` : undefined
-                }
-                onChange={(event) => setName(event.target.value)}
-              />
-              {nameError && (
-                <span id={`${formId}-name-error`} className="help pe-error">
-                  {nameError}
-                </span>
-              )}
-            </div>
-            <CelEditor
-              scope={scope}
-              label="Filter (CEL)"
-              hint="Ctrl+Space completes · Ctrl+Enter previews"
-              rows={Math.max(6, lines)}
-              value={cel}
-              context="feed"
-              onChange={setCel}
-              onRun={runPreview}
-              fieldChips
-              status={
-                <span className="pe-check">
-                  {draftChanged ? (
-                    <span className="chip b-neutral">Not previewed</span>
-                  ) : preview.loading ? (
-                    <span className="chip b-neutral">Checking…</span>
-                  ) : invalid ? (
-                    <span className="chip b-red">Invalid</span>
-                  ) : preview.error ? (
-                    <span className="chip b-amber">Unchecked</span>
-                  ) : (
-                    <span className="chip chip-ok">Valid</span>
-                  )}
-                  <span className="pe-check-text">
-                    {draftChanged
-                      ? ""
-                      : invalid
-                        ? message(preview.error)
-                        : exact
-                          ? `${BigInt(total as string).toLocaleString()} matching in preview`
-                          : ""}
+            <div className="pe-def-head">
+              <h2 id={`${formId}-settings`}>Preset settings</h2>
+              <div className="f">
+                <label className="lbl" htmlFor={`${formId}-name`}>
+                  Name
+                </label>
+                <input
+                  id={`${formId}-name`}
+                  ref={nameRef}
+                  className="inp"
+                  value={name}
+                  maxLength={128}
+                  aria-invalid={nameError ? true : undefined}
+                  aria-describedby={
+                    nameError ? `${formId}-name-error` : undefined
+                  }
+                  onChange={(event) => setName(event.target.value)}
+                />
+                {nameError && (
+                  <span id={`${formId}-name-error`} className="help pe-error">
+                    {nameError}
                   </span>
-                </span>
-              }
-              statusAction={
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  disabled={!cel.trim()}
-                  onClick={runPreview}
-                >
-                  Preview draft
-                </button>
-              }
-            />
-            <div className="f">
-              <div className="pe-label-row">
-                <span className="lbl" id={`${formId}-columns`}>
-                  Columns
-                </span>
-                <div style={{ flexGrow: 1 }} />
-                <button
-                  type="button"
-                  className="btn btn-g btn-sm"
-                  aria-expanded={adding}
-                  disabled={selectedColumns.length >= SELECTABLE_COLUMNS.length}
-                  onClick={() => setAdding((value) => !value)}
-                >
-                  Add column
-                </button>
+                )}
               </div>
-              {adding && (
-                <div className="pe-add" role="group" aria-label="Add a column">
-                  {SELECTABLE_COLUMNS.filter(
-                    (column) => !selectedColumns.includes(column),
-                  ).map((column) => (
-                    <button
-                      key={column}
-                      type="button"
-                      className="fchip"
-                      onClick={() => {
-                        setColumns((previous) => [...previous, column]);
-                        setAdding(false);
-                      }}
-                    >
-                      + {fieldLabel(column)}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <ul className="pe-columns" aria-labelledby={`${formId}-columns`}>
-                {selectedColumns.map((column, index) => (
-                  <li key={column}>
-                    <span className="pe-n">{index + 1}</span>
-                    <span className="pe-col-label">{fieldLabel(column)}</span>
-                    <button
-                      type="button"
-                      className="pe-mini"
-                      aria-label={`Move ${fieldLabel(column)} up`}
-                      disabled={index === 0}
-                      onClick={() => moveColumn(index, -1)}
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="pe-mini"
-                      aria-label={`Move ${fieldLabel(column)} down`}
-                      disabled={index === selectedColumns.length - 1}
-                      onClick={() => moveColumn(index, 1)}
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      className="pe-mini"
-                      aria-label={`Remove ${fieldLabel(column)}`}
-                      onClick={() =>
-                        setColumns((previous) =>
-                          previous.filter((item) => item !== column),
-                        )
-                      }
-                    >
-                      ×
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              {!selectedColumns.length && (
-                <span className="help pe-error">
-                  Choose at least one column.
-                </span>
-              )}
             </div>
-            <div className="f">
-              <span className="lbl">Sort</span>
-              {sort.map((item, index) => (
-                <div className="pe-sort" key={index}>
-                  <span className="pe-n">{index + 1}</span>
-                  <select
-                    className="inp"
-                    aria-label={`Sort field ${index + 1}`}
-                    value={item.field}
-                    onChange={(event) =>
-                      setSort((previous) =>
-                        previous.map((entry, i) =>
-                          i === index
-                            ? { ...entry, field: event.target.value }
-                            : entry,
-                        ),
-                      )
-                    }
-                  >
-                    {!SORT_FIELDS.includes(item.field) && (
-                      <option value={item.field}>
-                        {fieldLabel(item.field)}
-                      </option>
-                    )}
-                    {SORT_FIELDS.filter(
-                      (field) =>
-                        field === item.field ||
-                        !sort.some((entry) => entry.field === field),
-                    ).map((field) => (
-                      <option key={field} value={field}>
-                        {fieldLabel(field)}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="inp pe-dir"
-                    aria-label={`Sort direction ${index + 1}`}
-                    value={item.direction}
-                    onChange={(event) =>
-                      setSort((previous) =>
-                        previous.map((entry, i) =>
-                          i === index
-                            ? { ...entry, direction: event.target.value }
-                            : entry,
-                        ),
-                      )
-                    }
-                  >
-                    <option value="desc">
-                      {directionLabel(item.field, "desc")}
-                    </option>
-                    <option value="asc">
-                      {directionLabel(item.field, "asc")}
-                    </option>
-                  </select>
-                  {index === 0 ? (
-                    <button
-                      type="button"
-                      className="btn btn-g btn-sm"
-                      disabled={sort.length >= 3}
-                      onClick={() =>
-                        setSort((previous) => [
-                          ...previous,
-                          {
-                            field:
-                              SORT_FIELDS.find(
-                                (field) =>
-                                  !previous.some(
-                                    (entry) => entry.field === field,
-                                  ),
-                              ) ?? "application",
-                            direction: "asc",
-                          },
-                        ])
-                      }
-                    >
-                      Add level
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn btn-g btn-sm"
-                      aria-label={`Remove sort level ${index + 1}`}
-                      onClick={() =>
-                        setSort((previous) =>
-                          previous.filter((_, i) => i !== index),
-                        )
-                      }
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
+            <div
+              className="tabbar pe-tabs"
+              role="tablist"
+              aria-label="Preset settings"
+              onKeyDown={(event) => {
+                const index = SETTINGS_TABS.findIndex(([key]) => key === tab);
+                const next =
+                  event.key === "ArrowRight"
+                    ? (index + 1) % SETTINGS_TABS.length
+                    : event.key === "ArrowLeft"
+                      ? (index + SETTINGS_TABS.length - 1) %
+                        SETTINGS_TABS.length
+                      : event.key === "Home"
+                        ? 0
+                        : event.key === "End"
+                          ? SETTINGS_TABS.length - 1
+                          : -1;
+                if (next < 0) return;
+                event.preventDefault();
+                const key = SETTINGS_TABS[next][0];
+                setTab(key);
+                document.getElementById(`${formId}-tab-${key}`)?.focus();
+              }}
+            >
+              {SETTINGS_TABS.map(([key, label]) => (
+                <button
+                  key={key}
+                  id={`${formId}-tab-${key}`}
+                  type="button"
+                  role="tab"
+                  className="tab"
+                  aria-selected={tab === key}
+                  aria-controls={`${formId}-panel-${key}`}
+                  tabIndex={tab === key ? 0 : -1}
+                  onClick={() => setTab(key)}
+                >
+                  {label}
+                  {tabBadge(key) && <> {tabBadge(key)}</>}
+                </button>
               ))}
             </div>
-            <div className="f">
-              <label className="lbl" htmlFor={`${formId}-group`}>
-                Group by
-              </label>
-              <select
-                id={`${formId}-group`}
-                className="inp"
-                aria-describedby={`${formId}-group-help`}
-                value={groupBy ?? ""}
-                onChange={(event) =>
-                  setGroupBy(
-                    isGroupField(event.target.value)
-                      ? event.target.value
-                      : null,
-                  )
-                }
+            <div className="pe-def-body">
+              <div
+                ref={filterPanel}
+                id={`${formId}-panel-filter`}
+                role="tabpanel"
+                aria-labelledby={`${formId}-tab-filter`}
+                className="pe-panel"
+                hidden={tab !== "filter"}
               >
-                <option value="">No grouping</option>
-                {GROUP_FIELDS.map(([field, label]) => (
-                  <option key={field} value={field}>
-                    {label}
-                  </option>
+                <CelEditor
+                  scope={scope}
+                  label="Filter (CEL)"
+                  hint="Ctrl+Space completes · Ctrl+Enter previews"
+                  rows={Math.max(8, lines)}
+                  value={cel}
+                  context="feed"
+                  onChange={setCel}
+                  onRun={runPreview}
+                  referencePopover
+                  onValidity={setCelValid}
+                  status={
+                    <span className="pe-check">
+                      {draftChanged ? (
+                        <span className="chip b-neutral">Not previewed</span>
+                      ) : preview.loading ? (
+                        <span className="chip b-neutral">Checking…</span>
+                      ) : invalid ? (
+                        <span className="chip b-red">Invalid</span>
+                      ) : preview.error ? (
+                        <span className="chip b-amber">Unchecked</span>
+                      ) : (
+                        <span className="chip chip-ok">Valid</span>
+                      )}
+                      <span className="pe-check-text">
+                        {draftChanged
+                          ? ""
+                          : invalid
+                            ? message(preview.error)
+                            : exact
+                              ? `${BigInt(total as string).toLocaleString()} matching in preview`
+                              : ""}
+                      </span>
+                    </span>
+                  }
+                  statusAction={
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      disabled={!cel.trim()}
+                      onClick={runPreview}
+                    >
+                      Preview draft
+                    </button>
+                  }
+                />
+              </div>
+              <div
+                id={`${formId}-panel-columns`}
+                role="tabpanel"
+                aria-labelledby={`${formId}-tab-columns`}
+                className="pe-panel"
+                hidden={tab !== "columns"}
+              >
+                <div className="pe-label-row">
+                  <span className="lbl" id={`${formId}-columns`}>
+                    Columns, in order
+                  </span>
+                  <span className="help">
+                    Drag or use the arrows to reorder
+                  </span>
+                </div>
+                <ol
+                  className="pe-columns"
+                  aria-labelledby={`${formId}-columns`}
+                >
+                  {selectedColumns.map((column, index) => (
+                    <li
+                      key={column}
+                      draggable
+                      className={
+                        dragging === index
+                          ? "pe-dragging"
+                          : dropTarget === index
+                            ? "pe-drop"
+                            : undefined
+                      }
+                      onDragStart={(event) => {
+                        event.dataTransfer.effectAllowed = "move";
+                        event.dataTransfer.setData("text/plain", column);
+                        setDragging(index);
+                      }}
+                      onDragOver={(event) => {
+                        if (dragging === null) return;
+                        event.preventDefault();
+                        setDropTarget(index);
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        if (dragging !== null) moveColumnTo(dragging, index);
+                        setDragging(null);
+                        setDropTarget(null);
+                      }}
+                      onDragEnd={() => {
+                        setDragging(null);
+                        setDropTarget(null);
+                      }}
+                    >
+                      <GripIcon />
+                      <span className="pe-n">{index + 1}</span>
+                      <span className="pe-col-label">{fieldLabel(column)}</span>
+                      <span className="pe-col-moves">
+                        <button
+                          type="button"
+                          className="pe-mini"
+                          aria-label={`Move ${fieldLabel(column)} up`}
+                          disabled={index === 0}
+                          onClick={() => moveColumnTo(index, index - 1)}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="pe-mini"
+                          aria-label={`Move ${fieldLabel(column)} down`}
+                          disabled={index === selectedColumns.length - 1}
+                          onClick={() => moveColumnTo(index, index + 1)}
+                        >
+                          ↓
+                        </button>
+                      </span>
+                      <button
+                        type="button"
+                        className="pe-mini"
+                        aria-label={`Remove ${fieldLabel(column)}`}
+                        onClick={() =>
+                          setColumns((previous) =>
+                            previous.filter((item) => item !== column),
+                          )
+                        }
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+                {!selectedColumns.length && (
+                  <span className="help pe-error">
+                    Choose at least one column.
+                  </span>
+                )}
+                <fieldset className="pe-add">
+                  <legend className="lbl">Add columns</legend>
+                  {addable.length ? (
+                    <div className="pe-add-list">
+                      {addable.map((column) => (
+                        <label key={column}>
+                          <input
+                            type="checkbox"
+                            checked={false}
+                            onChange={() =>
+                              setColumns((previous) => [...previous, column])
+                            }
+                          />
+                          {fieldLabel(column)}
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="help">Every column is shown.</span>
+                  )}
+                  <span className="help">
+                    A ticked column is added at the end.
+                  </span>
+                </fieldset>
+              </div>
+              <div
+                id={`${formId}-panel-sort`}
+                role="tabpanel"
+                aria-labelledby={`${formId}-tab-sort`}
+                className="pe-panel"
+                hidden={tab !== "sort"}
+              >
+                <span className="lbl">Sort rows by</span>
+                {sort.map((item, index) => (
+                  <div className="pe-sort" key={index}>
+                    <span className="pe-n">{index + 1}</span>
+                    <select
+                      className="inp"
+                      aria-label={`Sort field ${index + 1}`}
+                      value={item.field}
+                      onChange={(event) =>
+                        setSort((previous) =>
+                          previous.map((entry, i) =>
+                            i === index
+                              ? { ...entry, field: event.target.value }
+                              : entry,
+                          ),
+                        )
+                      }
+                    >
+                      {!SORT_FIELDS.includes(item.field) && (
+                        <option value={item.field}>
+                          {fieldLabel(item.field)}
+                        </option>
+                      )}
+                      {SORT_FIELDS.filter(
+                        (field) =>
+                          field === item.field ||
+                          !sort.some((entry) => entry.field === field),
+                      ).map((field) => (
+                        <option key={field} value={field}>
+                          {fieldLabel(field)}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="inp pe-dir"
+                      aria-label={`Sort direction ${index + 1}`}
+                      value={item.direction}
+                      onChange={(event) =>
+                        setSort((previous) =>
+                          previous.map((entry, i) =>
+                            i === index
+                              ? { ...entry, direction: event.target.value }
+                              : entry,
+                          ),
+                        )
+                      }
+                    >
+                      <option value="desc">
+                        {directionLabel(item.field, "desc")}
+                      </option>
+                      <option value="asc">
+                        {directionLabel(item.field, "asc")}
+                      </option>
+                    </select>
+                    {index === 0 ? (
+                      <button
+                        type="button"
+                        className="btn btn-g btn-sm"
+                        disabled={sort.length >= 3}
+                        onClick={() =>
+                          setSort((previous) => [
+                            ...previous,
+                            {
+                              field:
+                                SORT_FIELDS.find(
+                                  (field) =>
+                                    !previous.some(
+                                      (entry) => entry.field === field,
+                                    ),
+                                ) ?? "application",
+                              direction: "asc",
+                            },
+                          ])
+                        }
+                      >
+                        Add level
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-g btn-sm"
+                        aria-label={`Remove sort level ${index + 1}`}
+                        onClick={() =>
+                          setSort((previous) =>
+                            previous.filter((_, i) => i !== index),
+                          )
+                        }
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 ))}
-              </select>
-              <span id={`${formId}-group-help`} className="help">
-                {groupBy
-                  ? `Each ${groupFieldLabel(groupBy).toLowerCase()} gets its own table. Rows inside follow the sort above.`
-                  : "Results show as one table."}
-              </span>
+                <span className="help">
+                  Up to three levels. A later level orders only the rows the
+                  earlier ones tie.
+                </span>
+              </div>
+              <div
+                id={`${formId}-panel-group`}
+                role="tabpanel"
+                aria-labelledby={`${formId}-tab-group`}
+                className="pe-panel"
+                hidden={tab !== "group"}
+              >
+                <span className="lbl" id={`${formId}-group`}>
+                  Group by
+                </span>
+                <div
+                  className="pe-radios"
+                  role="radiogroup"
+                  aria-labelledby={`${formId}-group`}
+                  aria-describedby={`${formId}-group-help`}
+                >
+                  {GROUP_CHOICES.map(([field, label]) => (
+                    <label
+                      key={field ?? ""}
+                      className={groupBy === field ? "pe-radio-on" : undefined}
+                    >
+                      <input
+                        type="radio"
+                        name={`${formId}-group`}
+                        checked={groupBy === field}
+                        onChange={() => setGroupBy(field)}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+                <span id={`${formId}-group-help`} className="help">
+                  {groupBy
+                    ? `Each ${groupFieldLabel(groupBy).toLowerCase()} gets its own table. Rows inside follow the sort.`
+                    : "Results show as one table."}
+                </span>
+              </div>
             </div>
+            <p className="help pe-def-foot">
+              Changes apply to everyone in {scope.tenant.name} once saved
+            </p>
           </form>
-        </aside>
+        </section>
       </div>
       {copying && (
         <Dialog

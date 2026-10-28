@@ -99,6 +99,7 @@ for (const customize of [false, true]) {
     const { creates } = await setup(page);
     await page.goto(`/tenants/${tenant}/presets/new`);
     await page.getByLabel("Name", { exact: true }).fill("New column preset");
+    await page.getByRole("tab", { name: /^Columns/ }).click();
     if (customize) {
       await page
         .getByRole("button", { name: "Remove Component", exact: true })
@@ -108,7 +109,7 @@ for (const customize of [false, true]) {
         .click();
     }
     const labels = await page
-      .getByRole("list", { name: "Columns", exact: true })
+      .getByRole("list", { name: "Columns, in order", exact: true })
       .locator(".pe-col-label")
       .allTextContents();
     await page
@@ -278,6 +279,7 @@ test("draft column removal and reordering update the preview without saving", as
   await expect(
     table.getByRole("columnheader", { name: "Site ↑" }),
   ).toBeVisible();
+  await page.getByRole("tab", { name: /^Columns/ }).click();
   await page.getByRole("button", { name: "Move Site up", exact: true }).click();
   await page
     .getByRole("button", { name: "Remove Last received", exact: true })

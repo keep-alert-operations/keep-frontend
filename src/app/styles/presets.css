@@ -360,37 +360,89 @@ a.ps-filter:focus-visible {
   font-size: 13px;
 }
 .pe-def {
-  width: 520px;
+  width: 440px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
-.pe-def .panel-h .help {
-  text-align: right;
+.pe-def-form {
+  flex-grow: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pe-def-head {
+  padding: 13px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.pe-def-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.pe-def-head label.lbl {
+  display: block;
+}
+.pe-def-head .inp {
+  width: 100%;
+}
+.pe-tabs {
+  padding: 0 18px;
+  gap: 18px;
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pe-tab-flag {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  padding: 0 6px;
+  border-radius: 6px;
+  color: var(--critical);
+  background: var(--error-bg);
 }
 .pe-def-body {
   flex-grow: 1;
   min-height: 0;
   overflow: auto;
   padding: 16px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-.pe-def-body label.lbl {
-  display: block;
 }
 .pe-def-body .inp {
   width: 100%;
+}
+.pe-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pe-panel[hidden] {
+  display: none;
+}
+.pe-def-foot {
+  margin: 0;
+  padding: 11px 18px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+.pe-views {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
 }
 .pe-error {
   color: var(--critical);
 }
 .pe-label-row {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .pe-check {
   display: inline-flex;
@@ -402,32 +454,110 @@ a.ps-filter:focus-visible {
   font-size: 12px;
   color: var(--muted);
 }
-.pe-add {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 8px;
-  border: 1px dashed var(--input-border);
-  border-radius: 8px;
-}
 .pe-columns {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
 }
 .pe-columns li {
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 4px 0 8px;
-  border-radius: 6px;
-  background: var(--bg);
-  font-size: 12.5px;
+  gap: 8px;
+  height: 40px;
+  padding: 0 6px 0 8px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 500;
   min-width: 0;
+  cursor: grab;
+}
+.pe-columns li:first-child {
+  border-top: 0;
+}
+.pe-columns li.pe-dragging {
+  opacity: 0.5;
+}
+.pe-columns li.pe-drop {
+  box-shadow: inset 0 2px 0 var(--primary);
+}
+.pe-grip {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  fill: var(--faint);
+}
+.pe-col-moves {
+  display: inline-flex;
+  opacity: 0;
+}
+.pe-columns li:hover .pe-col-moves,
+.pe-columns li:focus-within .pe-col-moves {
+  opacity: 1;
+}
+@media (hover: none) {
+  .pe-col-moves {
+    opacity: 1;
+  }
+}
+.pe-add {
+  border: 0;
+  margin: 6px 0 0;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pe-add legend {
+  padding: 0;
+  margin-bottom: 4px;
+}
+.pe-add-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 12px;
+}
+.pe-add-list label,
+.pe-radios label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  font-weight: 400;
+  gap: 9px;
+  min-height: 32px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.pe-radios {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.pe-radios label {
+  min-height: 38px;
+  padding: 0 12px;
+  border-top: 1px solid var(--line);
+}
+.pe-radios label:first-child {
+  border-top: 0;
+}
+.pe-radios label.pe-radio-on {
+  background: var(--accent-soft);
+  color: var(--text);
+  font-weight: 500;
+}
+.pe-add-list input,
+.pe-radios input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
 }
 .pe-n {
   font-size: 11px;
@@ -488,59 +618,6 @@ a.ps-filter:focus-visible {
   justify-content: center;
 }
 
-/* The reference offers a curated set of "Insert field" chips; the full
- * catalog stays available under "Supported fields and functions". */
-.pe-def .cel-fields .fchip {
-  display: none;
-}
-.pe-def .cel-fields .fchip[aria-label="Insert field application"] {
-  display: inline-block;
-  order: 1;
-}
-.pe-def .cel-fields .fchip[aria-label="Insert field component"] {
-  display: inline-block;
-  order: 2;
-}
-.pe-def .cel-fields .fchip[aria-label="Insert field node_name"] {
-  display: inline-block;
-  order: 3;
-}
-.pe-def .cel-fields .fchip[aria-label="Insert field site"] {
-  display: inline-block;
-  order: 4;
-}
-.pe-def .cel-fields .fchip[aria-label="Insert field severity"] {
-  display: inline-block;
-  order: 5;
-}
-.pe-def .cel-fields .fchip[aria-label="Insert field status"] {
-  display: inline-block;
-  order: 6;
-}
-.pe-def .cel-fields .fchip[aria-label="Insert field suppressed"] {
-  display: inline-block;
-  order: 7;
-}
-.pe-def .cel-fields .fchip[aria-label="Insert field display_status"] {
-  display: inline-block;
-  order: 8;
-}
-.pe-def .cel-fields .fchip[aria-label="Insert field assignee_id"] {
-  display: inline-block;
-  order: 9;
-}
-.pe-def .cel-fields .fchip[aria-label="Insert field operator"] {
-  display: inline-block;
-  order: 10;
-}
-.pe-def .cel-fields .fchip[aria-label="Insert field impact"] {
-  display: inline-block;
-  order: 11;
-}
-.pe-def .cel-fields .fchip[aria-label="Insert field message"] {
-  display: inline-block;
-  order: 12;
-}
 .ps-cel,
 .pl-name .sub,
 .cmp-code,
@@ -719,6 +796,10 @@ a.ps-filter:focus-visible {
   }
   .pe-def {
     width: auto;
+    order: -1;
+  }
+  .pe-def-body {
+    overflow: visible;
   }
   .pe-preview,
   .de-layout {
@@ -747,8 +828,12 @@ a.ps-filter:focus-visible {
   }
 }
 @media (max-width: 639px) {
-  .pe-columns {
+  .pe-add-list {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .pe-tabs {
+    padding: 0 14px;
+    gap: 14px;
   }
   .cmp {
     grid-template-columns: minmax(0, 1fr);
