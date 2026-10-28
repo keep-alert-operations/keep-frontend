@@ -12,8 +12,8 @@ import {
 } from "react";
 import {
   layoutOrder,
-  PANEL_HEIGHTS,
-  PANEL_WIDTHS,
+  MIN_PANEL_HEIGHT,
+  MIN_PANEL_WIDTH,
   placePanel,
   type GridPanel,
 } from "@/lib/dashboard-layout";
@@ -40,11 +40,6 @@ type Gesture<T> = {
 };
 const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
-function nearest(value: number, allowed: readonly number[]) {
-  return allowed.reduce((best, item) =>
-    Math.abs(item - value) < Math.abs(best - value) ? item : best,
-  );
-}
 
 /** Follow the pointer in pixels; only the drop destination uses grid coordinates. */
 export function DashboardLayout<T extends GridPanel>({
@@ -288,14 +283,13 @@ export function DashboardLayout<T extends GridPanel>({
     const top = clamp(current.top + dy, 0, (100 - panel.h) * 60);
     const width = clamp(
       current.width + dx,
-      PANEL_WIDTHS[0] * current.column - 12,
-      PANEL_WIDTHS.filter((w) => panel.x + w <= 12).at(-1)! * current.column -
-        12,
+      MIN_PANEL_WIDTH * current.column - 12,
+      (12 - panel.x) * current.column - 12,
     );
     const height = clamp(
       current.height + dy,
-      PANEL_HEIGHTS[0] * 60 - 12,
-      PANEL_HEIGHTS.at(-1)! * 60 - 12,
+      MIN_PANEL_HEIGHT * 60 - 12,
+      (100 - panel.y) * 60 - 12,
     );
     const patch =
       current.action === "move"
@@ -304,11 +298,8 @@ export function DashboardLayout<T extends GridPanel>({
             y: Math.round(top / 60),
           }
         : {
-            w: nearest(
-              (width + 12) / current.column,
-              PANEL_WIDTHS.filter((w) => panel.x + w <= 12),
-            ),
-            h: nearest((height + 12) / 60, PANEL_HEIGHTS),
+            w: Math.round((width + 12) / current.column),
+            h: Math.round((height + 12) / 60),
           };
     const next = placePanel(current.panels, panel.id, patch);
     if (!next) {
@@ -350,7 +341,6 @@ export function DashboardLayout<T extends GridPanel>({
     const dx =
       event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
     const dy = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
-    const widths = PANEL_WIDTHS.filter((w) => panel.x + w <= 12);
     const patch =
       action === "move"
         ? {
@@ -358,22 +348,8 @@ export function DashboardLayout<T extends GridPanel>({
             y: clamp(panel.y + dy, 0, 100 - panel.h),
           }
         : {
-            w: widths[
-              clamp(
-                widths.indexOf(panel.w as (typeof widths)[number]) + dx,
-                0,
-                widths.length - 1,
-              )
-            ],
-            h: PANEL_HEIGHTS[
-              clamp(
-                PANEL_HEIGHTS.indexOf(
-                  panel.h as (typeof PANEL_HEIGHTS)[number],
-                ) + dy,
-                0,
-                PANEL_HEIGHTS.length - 1,
-              )
-            ],
+            w: clamp(panel.w + dx, MIN_PANEL_WIDTH, 12 - panel.x),
+            h: clamp(panel.h + dy, MIN_PANEL_HEIGHT, 100 - panel.y),
           };
     const next = placePanel(panels, panel.id, patch);
     if (next) {
@@ -436,9 +412,7 @@ export function DashboardLayout<T extends GridPanel>({
     <>
       <p className="sr-only" id={helpId}>
         Drag the grip to move a panel; drag its lower-right corner to resize.
-        Arrow keys also work on either handle. Width and Height controls are
-        available in each panel’s options under Edit panel. Save to keep the
-        layout.
+        Arrow keys also work on either handle. Save to keep the layout.
       </p>
       <div className="pg de-grid" ref={grid}>
         {preview &&

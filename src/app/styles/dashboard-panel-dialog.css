@@ -33,11 +33,6 @@
 .dashboard-panel-pager > .help {
   flex: 1 1 auto;
 }
-.dashboard-panel-size {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
 .dashboard-panel-thresholds {
   display: flex;
   flex-direction: column;

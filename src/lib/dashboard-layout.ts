@@ -6,8 +6,9 @@ export interface GridPanel {
   h: number;
 }
 
-export const PANEL_WIDTHS = [3, 4, 6, 12] as const;
-export const PANEL_HEIGHTS = [2, 3, 4] as const;
+/** Width grows one column at a time up to the full row; height has no maximum. */
+export const MIN_PANEL_WIDTH = 3;
+export const MIN_PANEL_HEIGHT = 2;
 
 export function layoutOrder(a: GridPanel, b: GridPanel) {
   return a.y - b.y || a.x - b.x || a.id.localeCompare(b.id);
@@ -46,9 +47,9 @@ export function placePanel<T extends GridPanel>(
   if (!original) return null;
   const edited = { ...original, ...patch };
   if (
-    !PANEL_WIDTHS.some((w) => w === edited.w) ||
-    !PANEL_HEIGHTS.some((h) => h === edited.h) ||
-    ![edited.x, edited.y].every(Number.isInteger) ||
+    ![edited.x, edited.y, edited.w, edited.h].every(Number.isInteger) ||
+    edited.w < MIN_PANEL_WIDTH ||
+    edited.h < MIN_PANEL_HEIGHT ||
     edited.x < 0 ||
     edited.y < 0 ||
     edited.x + edited.w > 12
