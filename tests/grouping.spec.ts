@@ -330,9 +330,12 @@ test("Save as preset carries the Feed grouping into the new preset", async ({
   await page.getByRole("button", { name: "Group by", exact: true }).click();
   await page.getByRole("menuitemradio", { name: "Severity" }).click();
   await page.getByRole("button", { name: "Save as preset…" }).click();
-  await expect(page.getByLabel("Group by", { exact: true })).toHaveValue(
-    "severity",
-  );
+  await page.getByRole("tab", { name: "Group by Severity" }).click();
+  await expect(
+    page
+      .getByRole("radiogroup", { name: "Group by" })
+      .getByRole("radio", { name: "Severity", exact: true }),
+  ).toBeChecked();
   await page.getByLabel("Name", { exact: true }).fill("Grouped preset");
   await page
     .getByRole("button", { name: "Create preset", exact: true })
@@ -397,7 +400,11 @@ test("Preset editor saves the grouping field", async ({ page }) => {
   const { calls } = await setup(page);
   await page.goto(`/tenants/${tenant}/presets/new`);
   await page.getByLabel("Name", { exact: true }).fill("Editor grouping");
-  await page.getByLabel("Group by", { exact: true }).selectOption("site");
+  await page.getByRole("tab", { name: "Group by", exact: true }).click();
+  await page
+    .getByRole("radiogroup", { name: "Group by" })
+    .getByRole("radio", { name: "Site", exact: true })
+    .check();
   await expect(
     page.getByText("Each site gets its own table.", { exact: false }),
   ).toBeVisible();

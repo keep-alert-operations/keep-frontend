@@ -149,14 +149,23 @@
   flex-direction: column;
   gap: 2px;
 }
-.cel-fields {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
+/* The label-row reference spans the editor's width, so it fits any panel. */
+.cel-head:has(> .cel-ref-head) {
+  position: relative;
 }
-.cel-fields > .help {
-  margin-right: 2px;
+.cel-ref-head {
+  margin-left: auto;
+}
+.cel-ref-head > .btn {
+  color: var(--accent);
+}
+.cel-pop.cel-pop-end {
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  width: auto;
+  max-height: 360px;
+  overflow: auto;
 }
 .cel-ref-inline {
   line-height: 1.45;
