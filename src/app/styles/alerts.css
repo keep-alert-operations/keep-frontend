@@ -417,6 +417,14 @@
 .alert-results .arow.r-sel > .alert-actions-cell {
   background: var(--accent-soft);
 }
+/* Drag-selecting rows must not highlight text or show the link cursor. */
+.alert-results.alert-dragging {
+  user-select: none;
+  cursor: default;
+}
+.alert-results.alert-dragging a {
+  cursor: default;
+}
 /* Keep an open row menu above the following rows and the sticky header. */
 .alert-results .arow:has(.menu-pop) {
   z-index: 4;
