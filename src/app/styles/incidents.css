@@ -572,6 +572,49 @@
 .inc-member-ids .f {
   margin-top: 8px;
 }
+/* Link to incident from an alert (REV-48). */
+.dlg.link-inc-dlg {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  box-sizing: border-box;
+}
+.link-inc-list {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  max-height: 300px;
+  overflow: auto;
+  flex-shrink: 0;
+}
+.link-inc-row {
+  display: grid;
+  grid-template-columns: 18px 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 13px;
+}
+.link-inc-row:last-of-type {
+  border-bottom: 0;
+}
+.link-inc-row:hover {
+  background: var(--row-hover);
+}
+.link-inc-row.r-sel {
+  background: var(--accent-soft);
+}
+.link-inc-row.link-inc-here {
+  cursor: default;
+}
+.link-inc-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
 
 /* ---------- new incident (styled like the S13 editor) ---------- */
 .page-body > .inc-edit-grid {

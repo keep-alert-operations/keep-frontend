@@ -15,6 +15,7 @@ import { DirectoryPicker } from "./directory-picker";
 import { CelEditor } from "./cel-editor";
 import { AlertNoteHistory, SourceEvent } from "./alert-evidence";
 import { CommandFeedback, ErrorNotice } from "./ui";
+import { LinkIncidentDialog } from "./link-incident";
 import {
   AlertStatus,
   NavLink,
@@ -115,6 +116,7 @@ export function AlertFeed(scope: Scope) {
     [pageIndex, setPageIndex] = useState(0),
     [limit, setLimit] = useState(50);
   const [selection, setSelection] = useState<Map<string, string>>(new Map());
+  const [linking, setLinking] = useState<RecordData>();
   const [quickSort, setQuickSort] = useState<SortItem | null>(null);
   // Transient like the rest of the ad-hoc feed; Save as preset carries it (REV-44).
   const [groupBy, setGroupBy] = useState<GroupField | null>(null);
@@ -389,6 +391,7 @@ export function AlertFeed(scope: Scope) {
             scope.tenant.role === "view" || locked ? undefined : setSelection
           }
           onRowCommand={(row, kind, value) => void rowCommand(row, kind, value)}
+          onLinkIncident={setLinking}
           busy={locked}
           onRemember={(ids, current) =>
             rememberAlertList(scope.tenant.id, {
@@ -449,6 +452,7 @@ export function AlertFeed(scope: Scope) {
               onRowCommand={(row, kind, value) =>
                 void rowCommand(row, kind, value)
               }
+              onLinkIncident={setLinking}
               busy={locked}
               sort={quickSort ? [quickSort] : DEFAULT_SORT}
               onSort={(field) => {
@@ -534,6 +538,14 @@ export function AlertFeed(scope: Scope) {
         }}
         onClear={() => setSelection(new Map())}
       />
+      {linking && (
+        <LinkIncidentDialog
+          scope={scope}
+          alert={linking}
+          onDone={refresh}
+          onClose={() => setLinking(undefined)}
+        />
+      )}
     </Page>
   );
 }
@@ -924,6 +936,7 @@ function AlertDetail(scope: Scope & { id: string }) {
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [historyDirection, setHistoryDirection] = useState("desc");
   const [assigning, setAssigning] = useState(false);
+  const [linking, setLinking] = useState(false);
   const assignBox = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!assigning) return;
@@ -1136,6 +1149,17 @@ function AlertDetail(scope: Scope & { id: string }) {
       }
     >
       {confirmDialog}
+      {linking && alert && (
+        <LinkIncidentDialog
+          scope={scope}
+          alert={alert}
+          onDone={() => {
+            detail.reload();
+            child.reload();
+          }}
+          onClose={() => setLinking(false)}
+        />
+      )}
       <ErrorNotice error={detail.error} />
       {detail.loading && !alert && <p role="status">Loading alert…</p>}
       {alert && (
@@ -1252,6 +1276,15 @@ function AlertDetail(scope: Scope & { id: string }) {
                           </div>
                         )}
                       </div>
+                      <button
+                        type="button"
+                        className="btn"
+                        aria-haspopup="dialog"
+                        disabled={command.busy}
+                        onClick={() => setLinking(true)}
+                      >
+                        Link to incident…
+                      </button>
                     </>
                   )}
                   <div className="grow" />
