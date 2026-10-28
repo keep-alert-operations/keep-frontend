@@ -1,5 +1,12 @@
 "use client";
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  Fragment,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { ApiError, display, RecordData, request, tenantPath } from "@/lib/api";
 import { alertOperatorLabel } from "@/lib/alert-operator";
 import { useCommand } from "@/lib/hooks";
@@ -385,6 +392,18 @@ export function AlertTable({
   label?: string;
   selectAllLabel?: string;
 }) {
+  const latest = useRef({ rows, onSelectionChange });
+  latest.current = { rows, onSelectionChange };
+  const drag = useRef<{
+    start: string;
+    base: Map<string, string>;
+    adding: boolean;
+    active: boolean;
+  } | null>(null);
+  const swallowClick = useRef(false);
+  const stopDrag = useRef<() => void>(() => {});
+  const [dragging, setDragging] = useState(false);
+  useEffect(() => () => stopDrag.current(), []);
   if (columns) {
     columns = currentAlertColumns(columns);
     if (hide && columns.length > 1)
@@ -445,8 +464,86 @@ export function AlertTable({
     else if (next.size < 100) next.set(row.id, row.revision);
     onSelectionChange(next);
   }
+  /**
+   * Press on a row and drag over others to select them until release: the
+   * rows between the pressed row and the one under the pointer follow the
+   * pressed row's state (select, or deselect when it was already selected).
+   */
+  function pressRow(event: ReactPointerEvent<HTMLDivElement>) {
+    if (
+      !selectable ||
+      busy ||
+      event.pointerType !== "mouse" ||
+      event.button !== 0
+    )
+      return;
+    const target = event.target as Element;
+    if (target.closest("input, button, [role=menuitem], [role=columnheader]"))
+      return;
+    const id = target.closest<HTMLElement>("[data-alert-id]")?.dataset.alertId;
+    if (!id) return;
+    drag.current = {
+      start: id,
+      base: new Map(selection),
+      adding: !selection!.has(id),
+      active: false,
+    };
+    const end = () => {
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+      stopDrag.current = () => {};
+      const wasActive = drag.current?.active;
+      drag.current = null;
+      setDragging(false);
+      // The click that follows a drag must not open the alert under the pointer.
+      if (wasActive) setTimeout(() => (swallowClick.current = false), 0);
+    };
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+    stopDrag.current = end;
+  }
+  function dragOver(event: ReactPointerEvent<HTMLDivElement>) {
+    const state = drag.current;
+    if (!state) return;
+    if ((event.buttons & 1) === 0) return stopDrag.current();
+    const id = (event.target as Element).closest<HTMLElement>("[data-alert-id]")
+      ?.dataset.alertId;
+    if (!id || (id === state.start && !state.active)) return;
+    const { rows: current, onSelectionChange: change } = latest.current;
+    const from = current.findIndex((item) => item.id === state.start);
+    const to = current.findIndex((item) => item.id === id);
+    if (from < 0 || to < 0 || !change) return;
+    if (!state.active) {
+      state.active = true;
+      swallowClick.current = true;
+      setDragging(true);
+    }
+    window.getSelection()?.removeAllRanges();
+    const next = new Map(state.base);
+    const step = to >= from ? 1 : -1;
+    for (let index = from; index !== to + step; index += step) {
+      const item = current[index];
+      if (!state.adding) next.delete(item.id);
+      else if (next.size < 100) next.set(item.id, item.revision);
+    }
+    change(next);
+  }
   return (
-    <div role="table" aria-label={label} className="table-body alert-results">
+    <div
+      role="table"
+      aria-label={label}
+      className={`table-body alert-results ${dragging ? "alert-dragging" : ""}`}
+      onPointerDown={pressRow}
+      onPointerMove={dragOver}
+      onDragStart={(event) => {
+        if (drag.current) event.preventDefault();
+      }}
+      onClickCapture={(event) => {
+        if (!swallowClick.current) return;
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+    >
       <div role="row" className={`row head ${grid}`} style={gridStyle}>
         <span role="columnheader">
           {selectable ? (
@@ -529,6 +626,7 @@ export function AlertTable({
           <div
             role="row"
             key={row.id}
+            data-alert-id={row.id}
             className={`row arow alert-link-row ${grid} ${resolved ? "r-res" : ""} ${selected ? "r-sel" : ""}`}
             style={gridStyle}
           >
