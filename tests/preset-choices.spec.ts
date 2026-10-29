@@ -107,27 +107,32 @@ test("dashboard preset choices page and search without losing selected reference
   page,
 }) => {
   const state = await setup(page);
-  const picker = page.getByRole("combobox", {
+  const dialog = page.getByRole("dialog");
+  const picker = dialog.getByRole("combobox", {
     name: "Saved preset",
     exact: true,
   });
-  await picker.selectOption(first);
-  await page.getByRole("button", { name: "Next page" }).click();
-  await expect(picker.locator(`option[value="${later}"]`)).toHaveText(
-    "Later preset",
-  );
-  await expect(picker).toHaveValue(first);
-  await picker.selectOption(later);
-  await page.getByRole("button", { name: "First page" }).click();
-  await expect(picker).toHaveValue(later);
-  await expect(picker.locator(`option[value="${later}"]`)).toHaveText(
-    "Later preset",
-  );
-  await page.getByLabel("Search presets", { exact: true }).fill("Later");
+  // One input both searches and selects; there is no separate search box.
+  await expect(dialog.getByRole("searchbox")).toHaveCount(0);
+  await picker.click();
+  await dialog.getByRole("option", { name: "First preset" }).click();
+  await expect(picker).toHaveValue("First preset");
+  await expect(dialog.getByRole("listbox")).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Next page" }).click();
+  await expect(
+    dialog.getByRole("option", { name: "Later preset" }),
+  ).toBeVisible();
+  await expect(picker).toHaveValue("First preset");
+  await dialog.getByRole("option", { name: "Later preset" }).click();
+  await dialog.getByRole("button", { name: "First page" }).click();
+  await expect(picker).toHaveValue("Later preset");
+  await picker.fill("Later");
   await expect
     .poll(() => state.searches.some((search) => search.includes("name=Later")))
     .toBe(true);
-  await expect(picker).toHaveValue(later);
+  await expect(dialog.getByRole("option")).toHaveText(["Later preset"]);
+  await picker.press("Enter");
+  await expect(picker).toHaveValue("Later preset");
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Create panel", exact: true })
@@ -157,7 +162,8 @@ test("changed preset collection preserves the dashboard draft and can restart", 
     .fill("Preserved panel draft");
   await page
     .getByRole("combobox", { name: "Saved preset", exact: true })
-    .selectOption(first);
+    .click();
+  await page.getByRole("option", { name: "First preset" }).click();
   state.expired = true;
   await page.getByRole("button", { name: "Next page" }).click();
   await expect(
@@ -172,5 +178,34 @@ test("changed preset collection preserves the dashboard draft and can restart", 
   ).toHaveCount(0);
   await expect(
     page.getByRole("combobox", { name: "Saved preset", exact: true }),
-  ).toHaveValue(first);
+  ).toHaveValue("First preset");
+});
+
+test("dashboard preset field keeps the dialog open while closing its list", async ({
+  page,
+}) => {
+  await setup(page);
+  const dialog = page.getByRole("dialog");
+  const picker = dialog.getByRole("combobox", {
+    name: "Saved preset",
+    exact: true,
+  });
+  await picker.press("ArrowDown");
+  await expect(picker).toHaveAttribute("aria-expanded", "true");
+  await picker.press("Enter");
+  await expect(picker).toHaveValue("First preset");
+  await picker.fill("Lat");
+  await expect(dialog.getByRole("listbox")).toBeVisible();
+  // Escape closes only the list and restores the selected name.
+  await picker.press("Escape");
+  await expect(dialog.getByRole("listbox")).toHaveCount(0);
+  await expect(dialog).toBeVisible();
+  await expect(picker).toHaveValue("First preset");
+  // Leaving the field without choosing keeps the selection.
+  await picker.fill("Lat");
+  await dialog.getByLabel("Custom title (optional)").focus();
+  await expect(picker).toHaveValue("First preset");
+  await expect(
+    dialog.getByRole("button", { name: "Create panel", exact: true }),
+  ).toBeEnabled();
 });

@@ -276,7 +276,8 @@ test("unchanged panel edits, Cancel, and creating then deleting a draft panel ke
   });
   await create
     .getByRole("combobox", { name: "Saved preset", exact: true })
-    .selectOption(preset);
+    .click();
+  await create.getByRole("option", { name: "All alerts" }).click();
   await create.getByLabel("Custom title (optional)").fill("Transient");
   await create
     .getByRole("button", { name: "Create panel", exact: true })
@@ -632,7 +633,8 @@ test("changing a panel preset never displays another preset's saved count", asyn
   const dialog = await editPanel(page, "First");
   await dialog
     .getByRole("combobox", { name: "Saved preset", exact: true })
-    .selectOption(other);
+    .click();
+  await dialog.getByRole("option", { name: "Other preset" }).click();
   await dialog
     .getByRole("button", { name: "Apply changes", exact: true })
     .click();
@@ -949,7 +951,8 @@ test("title, threshold, create and delete preserve columns in a compacted layout
   });
   await create
     .getByRole("combobox", { name: "Saved preset", exact: true })
-    .selectOption(preset);
+    .click();
+  await create.getByRole("option", { name: "All alerts" }).click();
   await create.getByLabel("Custom title (optional)").fill("Added");
   await create
     .getByRole("button", { name: "Create panel", exact: true })

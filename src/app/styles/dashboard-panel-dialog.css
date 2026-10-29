@@ -23,12 +23,35 @@
   font-size: 11.5px;
   color: var(--subtle);
 }
+.dashboard-panel-presets {
+  max-height: 240px;
+  overflow: auto;
+  list-style: none;
+  padding: 5px;
+  margin: 0;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px var(--shade-3);
+}
+.dashboard-panel-presets [role="option"] {
+  cursor: pointer;
+  padding: 7px 10px;
+  border-radius: 5px;
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+.dashboard-panel-presets [role="option"][aria-selected="true"] {
+  background: var(--accent-soft);
+}
+.dashboard-panel-presets [role="option"][data-current] {
+  font-weight: 600;
+}
 .dashboard-panel-pager {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  margin-top: -6px;
 }
 .dashboard-panel-pager > .help {
   flex: 1 1 auto;
