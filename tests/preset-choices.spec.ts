@@ -118,13 +118,17 @@ test("dashboard preset choices page and search without losing selected reference
   await dialog.getByRole("option", { name: "First preset" }).click();
   await expect(picker).toHaveValue("First preset");
   await expect(dialog.getByRole("listbox")).toHaveCount(0);
+  // Paging lives in the open list and keeps it open.
+  await dialog.getByRole("button", { name: "Show presets" }).click();
   await dialog.getByRole("button", { name: "Next page" }).click();
   await expect(
     dialog.getByRole("option", { name: "Later preset" }),
   ).toBeVisible();
   await expect(picker).toHaveValue("First preset");
   await dialog.getByRole("option", { name: "Later preset" }).click();
+  await picker.click();
   await dialog.getByRole("button", { name: "First page" }).click();
+  await expect(dialog.getByRole("listbox")).toBeVisible();
   await expect(picker).toHaveValue("Later preset");
   await picker.fill("Later");
   await expect
@@ -165,6 +169,9 @@ test("changed preset collection preserves the dashboard draft and can restart", 
     .click();
   await page.getByRole("option", { name: "First preset" }).click();
   state.expired = true;
+  await page
+    .getByRole("combobox", { name: "Saved preset", exact: true })
+    .click();
   await page.getByRole("button", { name: "Next page" }).click();
   await expect(
     page.getByText("Configuration changed; restart the list."),
@@ -190,8 +197,12 @@ test("dashboard preset field keeps the dialog open while closing its list", asyn
     name: "Saved preset",
     exact: true,
   });
+  const closed = await dialog.boundingBox();
   await picker.press("ArrowDown");
   await expect(picker).toHaveAttribute("aria-expanded", "true");
+  await expect(dialog.getByRole("listbox")).toBeVisible();
+  // The list overlays the dialog instead of growing it.
+  expect(await dialog.boundingBox()).toEqual(closed);
   await picker.press("Enter");
   await expect(picker).toHaveValue("First preset");
   await picker.fill("Lat");

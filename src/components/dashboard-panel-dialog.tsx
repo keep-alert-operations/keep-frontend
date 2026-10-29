@@ -1,9 +1,18 @@
 "use client";
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+} from "react";
 import { display, tenantPath } from "@/lib/api";
 import { usePresetChoices } from "@/lib/preset-choices";
 import { useDirtyWarning } from "@/lib/hooks";
 import type { Panel } from "./dashboard-counts";
+import { Icon } from "./icons";
 import type { Scope } from "./workspace";
 import { ErrorNotice } from "./ui";
 import "../app/styles/dashboard-panel-dialog.css";
@@ -59,6 +68,8 @@ export function DashboardPanelDialog({
       : "";
   const listed = open && presets.rows.length > 0;
   const highlighted = Math.min(active, presets.rows.length - 1);
+  const field = useRef<HTMLInputElement>(null);
+  const [place, setPlace] = useState<CSSProperties>();
   const thresholds = draft.thresholds ?? [];
   const dirty =
     JSON.stringify({
@@ -84,6 +95,29 @@ export function DashboardPanelDialog({
     };
   }, []);
 
+  // The list is fixed below the field so it overlays the dialog instead of
+  // growing or scrolling it; follow the field while the dialog scrolls.
+  useLayoutEffect(() => {
+    if (!open) return;
+    function position() {
+      const box = field.current?.getBoundingClientRect();
+      if (box)
+        setPlace({
+          top: box.bottom + 4,
+          left: box.left,
+          width: box.width,
+          maxHeight: Math.max(160, window.innerHeight - box.bottom - 16),
+        });
+    }
+    position();
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    return () => {
+      window.removeEventListener("resize", position);
+      window.removeEventListener("scroll", position, true);
+    };
+  }, [open]);
+
   useEffect(() => {
     if (listed)
       document
@@ -95,6 +129,15 @@ export function DashboardPanelDialog({
     setDraft((current) => ({ ...current, ...patch }));
     setError("");
   }
+
+  const failure = Boolean(presets.error) && (
+    <>
+      <ErrorNotice error={presets.error} />
+      <button type="button" className="btn btn-sm" onClick={presets.restart}>
+        Retry loading presets
+      </button>
+    </>
+  );
 
   function choose(preset: { id: string }) {
     update({ preset_id: preset.id });
@@ -205,122 +248,145 @@ export function DashboardPanelDialog({
           <label className="lbl" htmlFor={`${id}-preset`}>
             Saved preset
           </label>
-          <input
-            id={`${id}-preset`}
-            name="preset"
-            className="inp"
-            role="combobox"
-            required
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="Search shared presets"
-            value={search ?? selectedName}
-            aria-autocomplete="list"
-            aria-expanded={listed}
-            aria-controls={listed ? `${id}-presets` : undefined}
-            aria-activedescendant={
-              listed ? `${id}-preset-${highlighted}` : undefined
-            }
-            onFocus={(event) => event.currentTarget.select()}
-            onClick={() => setOpen(true)}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              presets.search(event.target.value);
-              setOpen(true);
-              setActive(0);
-            }}
-            onKeyDown={(event) => {
-              if (["ArrowDown", "ArrowUp"].includes(event.key)) {
-                event.preventDefault();
-                if (!listed) {
-                  setOpen(true);
-                  return;
+          <div className="dashboard-panel-combo">
+            <input
+              ref={field}
+              id={`${id}-preset`}
+              name="preset"
+              className="inp"
+              role="combobox"
+              required
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="Search shared presets"
+              value={search ?? selectedName}
+              aria-autocomplete="list"
+              aria-expanded={open}
+              aria-controls={open ? `${id}-popup` : undefined}
+              aria-activedescendant={
+                listed ? `${id}-preset-${highlighted}` : undefined
+              }
+              onFocus={(event) => event.currentTarget.select()}
+              onClick={() => setOpen(true)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                presets.search(event.target.value);
+                setOpen(true);
+                setActive(0);
+              }}
+              onKeyDown={(event) => {
+                if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+                  event.preventDefault();
+                  if (!listed) {
+                    setOpen(true);
+                    return;
+                  }
+                  setActive(
+                    (highlighted +
+                      (event.key === "ArrowDown"
+                        ? 1
+                        : presets.rows.length - 1)) %
+                      presets.rows.length,
+                  );
+                } else if (listed && event.key === "Enter") {
+                  event.preventDefault();
+                  choose(presets.rows[highlighted]);
+                } else if (open && event.key === "Escape") {
+                  // Close the list without closing the dialog.
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setOpen(false);
+                  setSearch(null);
                 }
-                setActive(
-                  (highlighted +
-                    (event.key === "ArrowDown" ? 1 : presets.rows.length - 1)) %
-                    presets.rows.length,
-                );
-              } else if (listed && event.key === "Enter") {
-                event.preventDefault();
-                choose(presets.rows[highlighted]);
-              } else if (open && event.key === "Escape") {
-                // Close the list without closing the dialog.
-                event.preventDefault();
-                event.stopPropagation();
-                setOpen(false);
-                setSearch(null);
-              } else if (event.key === "Tab") setOpen(false);
-            }}
-          />
-          {listed && (
-            <ul
-              id={`${id}-presets`}
-              role="listbox"
-              aria-label="Shared presets"
-              className="dashboard-panel-presets"
-            >
-              {presets.rows.map((preset, index) => (
-                <li
-                  key={preset.id}
-                  id={`${id}-preset-${index}`}
-                  role="option"
-                  aria-selected={index === highlighted}
-                  data-current={preset.id === draft.preset_id || undefined}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onMouseMove={() => setActive(index)}
-                  onClick={() => choose(preset)}
-                >
-                  {display(preset.name)}
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="dashboard-panel-pager">
-            <span className="help" role="status">
-              {presets.loading
-                ? "Loading presets…"
-                : `${presets.rows.length} available presets loaded`}
-            </span>
-            {presets.cursor && (
-              <button
-                type="button"
-                className="btn btn-sm"
-                disabled={presets.loading}
-                onClick={() => {
-                  presets.restart();
-                  setOpen(true);
-                  setActive(0);
-                }}
-              >
-                First page
-              </button>
-            )}
-            {presets.nextCursor && (
-              <button
-                type="button"
-                className="btn btn-sm"
-                disabled={presets.loading}
-                onClick={() => {
-                  presets.next();
-                  setOpen(true);
-                  setActive(0);
-                }}
-              >
-                Next page
-              </button>
-            )}
-          </div>
-          <ErrorNotice error={presets.error} />
-          {Boolean(presets.error) && (
+              }}
+            />
             <button
               type="button"
-              className="btn btn-sm"
-              onClick={presets.restart}
+              className="dashboard-panel-toggle"
+              tabIndex={-1}
+              aria-label={open ? "Hide presets" : "Show presets"}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                field.current?.focus();
+                setOpen((current) => !current);
+              }}
             >
-              Retry loading presets
+              <Icon name="chevron-down" size={16} />
             </button>
+          </div>
+          {open && (
+            <div
+              id={`${id}-popup`}
+              className="dashboard-panel-popup"
+              style={place}
+            >
+              {listed ? (
+                <ul
+                  id={`${id}-presets`}
+                  role="listbox"
+                  aria-label="Shared presets"
+                  className="dashboard-panel-presets"
+                >
+                  {presets.rows.map((preset, index) => (
+                    <li
+                      key={preset.id}
+                      id={`${id}-preset-${index}`}
+                      role="option"
+                      aria-selected={index === highlighted}
+                      data-current={preset.id === draft.preset_id || undefined}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onMouseMove={() => setActive(index)}
+                      onClick={() => choose(preset)}
+                    >
+                      {display(preset.name)}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                !presets.loading &&
+                !presets.error && (
+                  <p className="help dashboard-panel-empty">
+                    No presets match.
+                  </p>
+                )
+              )}
+              {failure}
+              <div className="dashboard-panel-pager">
+                <span className="help" role="status">
+                  {presets.loading
+                    ? "Loading presets…"
+                    : `${presets.rows.length} available presets loaded`}
+                </span>
+                {presets.cursor && (
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    disabled={presets.loading}
+                    onClick={() => {
+                      presets.restart();
+                      setActive(0);
+                    }}
+                  >
+                    First page
+                  </button>
+                )}
+                {presets.nextCursor && (
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    disabled={presets.loading}
+                    onClick={() => {
+                      presets.next();
+                      setActive(0);
+                    }}
+                  >
+                    Next page
+                  </button>
+                )}
+              </div>
+            </div>
           )}
+          {!open && failure}
         </div>
         <label className="f">
           <span className="lbl">Custom title (optional)</span>
