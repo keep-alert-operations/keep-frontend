@@ -71,6 +71,8 @@ Tenant content still resets on tenant/access changes, and foreground session
 revalidation and expiry handling continue. The public expired-sign-in page remains
 outside this layout.
 
+On 2026-10-28 the user approved dismissing an alert for a time window (REV-49, [alert dismiss mock](https://claude.ai/artifact/Nvp1SJzsc29Y1HYSnfcK99)). A firing row's ⋯ menu and the alert page offer Dismiss…, which opens a dialog with For a duration (15 minutes to 1 week presets, plus an always-visible Custom field of minutes, hours or days) or Until a date (date and time in the viewer's zone, with Tomorrow 09:00 and Monday 09:00), an optional reason added as a note and a summary of when the alert returns. A dismissed alert is suppressed: Include suppressed covers it, rows keep their status and show "Suppressed · until 12:30", and their menu offers Change dismissal… and Undismiss. The alert page shows a band with the end time, who dismissed it, Change… and Undismiss, and its history names Dismissed, Dismissal changed, Dismissal ended early and Suppression ended. Feeds and the alert page refresh by themselves when a dismissal ends (`next_change_at`).
+
 ## Review and verification
 
 The user’s 2026-10-08 correction puts editing on the regular dashboard screen.

@@ -18,6 +18,12 @@ import {
   type SortItem,
 } from "@/lib/preset-choices";
 import type { Scope } from "./workspace";
+import {
+  DismissalValue,
+  DismissDialog,
+  dismissedUntil,
+  SuppressedChip,
+} from "./dismiss-dialog";
 import { DirectoryPicker } from "./directory-picker";
 import { ErrorNotice, Menu } from "./ui";
 import {
@@ -243,11 +249,12 @@ export function QuickViews({
   );
 }
 
-type RowCommand = (
+export type RowCommand = (
   row: RecordData,
-  kind: "set_status" | "set_assignee",
-  value: string | null,
-) => void;
+  kind: AlertCommandKind,
+  value: string | DismissalValue | null,
+) => Promise<boolean> | void;
+export type AlertCommandKind = "set_status" | "set_assignee" | "set_dismissal";
 
 function AlertField({
   field,
@@ -370,6 +377,7 @@ export function AlertTable({
   onSelectionChange,
   onRowCommand,
   onLinkIncident,
+  command,
   busy,
   narrow,
   columns,
@@ -386,6 +394,8 @@ export function AlertTable({
   onRowCommand?: RowCommand;
   /** Opens Link to incident for the row (REV-48). */
   onLinkIncident?: (row: RecordData) => void;
+  /** The caller's command state, shown inside the dismiss dialog. */
+  command?: { error?: unknown; uncertain: boolean; busy: boolean };
   busy?: boolean;
   narrow?: boolean;
   columns?: string[];
@@ -406,6 +416,7 @@ export function AlertTable({
   const swallowClick = useRef(false);
   const stopDrag = useRef<() => void>(() => {});
   const [dragging, setDragging] = useState(false);
+  const [dismissing, setDismissing] = useState<RecordData | null>(null);
   useEffect(() => () => stopDrag.current(), []);
   if (columns) {
     columns = currentAlertColumns(columns);
@@ -661,9 +672,7 @@ export function AlertTable({
                       >
                         {message}
                       </NavLink>
-                      {row.suppressed === true && (
-                        <span className="chip chip-supp">Suppressed</span>
-                      )}
+                      <SuppressedChip alert={row} />
                     </span>
                   ) : (
                     <AlertField field={field} row={row} scope={scope} />
@@ -687,9 +696,7 @@ export function AlertTable({
                     >
                       {message}
                     </NavLink>
-                    {row.suppressed === true && (
-                      <span className="chip chip-supp">Suppressed</span>
-                    )}
+                    <SuppressedChip alert={row} />
                   </span>
                 </span>
                 {shown("display_status") && (
@@ -750,9 +757,7 @@ export function AlertTable({
                     >
                       Open alert
                     </NavLink>
-                    {row.suppressed === true && (
-                      <span className="chip chip-supp">Suppressed</span>
-                    )}
+                    <SuppressedChip alert={row} />
                   </>
                 )}
                 {actions && !narrow && (
@@ -810,6 +815,49 @@ export function AlertTable({
                             Link to incident…
                           </button>
                         )}
+                        {dismissedUntil(row) ? (
+                          <>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="menu-item"
+                              disabled={busy}
+                              onClick={() => {
+                                close();
+                                setDismissing(row);
+                              }}
+                            >
+                              Change dismissal…
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="menu-item"
+                              disabled={busy}
+                              onClick={() => {
+                                close();
+                                void onRowCommand!(row, "set_dismissal", null);
+                              }}
+                            >
+                              Undismiss
+                            </button>
+                          </>
+                        ) : (
+                          !resolved && (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="menu-item"
+                              disabled={busy}
+                              onClick={() => {
+                                close();
+                                setDismissing(row);
+                              }}
+                            >
+                              Dismiss…
+                            </button>
+                          )
+                        )}
                       </>
                     )}
                   </Menu>
@@ -819,6 +867,16 @@ export function AlertTable({
           </div>
         );
       })}
+      {dismissing && onRowCommand && (
+        <DismissDialog
+          alert={dismissing}
+          command={command ?? { busy: Boolean(busy), uncertain: false }}
+          onClose={() => setDismissing(null)}
+          onSubmit={async (value) =>
+            (await onRowCommand(dismissing, "set_dismissal", value)) === true
+          }
+        />
+      )}
     </div>
   );
 }

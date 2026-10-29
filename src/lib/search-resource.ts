@@ -50,7 +50,9 @@ export function useSearchResource(
     let stopped = false,
       busy = false,
       pending = false,
-      relative = false;
+      relative = false,
+      // When a dismissal among the matching rows ends (REV-49), as epoch ms.
+      nextChange: number | undefined;
     async function run() {
       if (stopped || document.visibilityState !== "visible") return;
       if (busy) {
@@ -94,6 +96,11 @@ export function useSearchResource(
         if (!continuing) dispose(owned.current);
         owned.current = snapshot;
         relative = result.meta?.relative === true;
+        const change = result.meta?.next_change_at;
+        nextChange =
+          typeof change === "string"
+            ? Date.parse(change) || undefined
+            : undefined;
         setState({ key, dataKey: key, data: result, loading: false });
       } catch (error) {
         if (stopped) return;
@@ -117,7 +124,11 @@ export function useSearchResource(
     }
     trigger.current = () => void run();
     const clock = setInterval(() => {
-      if (relative && !continuing) void run();
+      if (continuing) return;
+      // A returning alert has no live event, so re-query once its dismissal ends.
+      const changed = nextChange !== undefined && Date.now() >= nextChange;
+      if (changed) nextChange = undefined;
+      if (relative || changed) void run();
     }, 1000);
     function visibility() {
       if (document.visibilityState === "visible") void run();
