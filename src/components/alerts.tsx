@@ -1,4 +1,5 @@
 "use client";
+import { Icon } from "./icons";
 import type { AlertCommandKind } from "./alert-table";
 import {
   ClockIcon,
@@ -1275,7 +1276,8 @@ function AlertDetail(scope: Scope & { id: string }) {
                         disabled={command.busy}
                         onClick={() => setDismissing(true)}
                       >
-                        Change…
+                        <Icon name="edit" size={14} />
+                        Change
                       </button>
                       <button
                         type="button"
@@ -1283,6 +1285,7 @@ function AlertDetail(scope: Scope & { id: string }) {
                         disabled={command.busy}
                         onClick={() => void execute("set_dismissal", null)}
                       >
+                        <Icon name="undo" size={14} />
                         Undismiss
                       </button>
                     </div>
@@ -1298,6 +1301,7 @@ function AlertDetail(scope: Scope & { id: string }) {
                       aria-haspopup="dialog"
                       onClick={() => setViewingJson(true)}
                     >
+                      <Icon name="view" size={14} />
                       View alert
                     </button>
                   )}
@@ -1314,6 +1318,12 @@ function AlertDetail(scope: Scope & { id: string }) {
                           )
                         }
                       >
+                        <Icon
+                          name={
+                            alert.status === "resolved" ? "reopen" : "resolve"
+                          }
+                          size={14}
+                        />
                         {alert.status === "resolved"
                           ? "Reopen alert"
                           : "Resolve alert"}
@@ -1326,8 +1336,8 @@ function AlertDetail(scope: Scope & { id: string }) {
                           disabled={command.busy}
                           onClick={() => setDismissing(true)}
                         >
-                          <ClockIcon size={14} />
-                          Dismiss…
+                          <Icon name="clock" size={14} />
+                          Dismiss
                         </button>
                       )}
                       <div className="ad-assign" ref={assignBox}>
@@ -1339,7 +1349,8 @@ function AlertDetail(scope: Scope & { id: string }) {
                           disabled={command.busy}
                           onClick={() => setAssigning((shown) => !shown)}
                         >
-                          Assign…
+                          <Icon name="assign" size={14} />
+                          Assign
                         </button>
                         {assigning && (
                           <div
@@ -1401,7 +1412,8 @@ function AlertDetail(scope: Scope & { id: string }) {
                         disabled={command.busy}
                         onClick={() => setLinking(true)}
                       >
-                        Link to incident…
+                        <Icon name="link" size={14} />
+                        Link to incident
                       </button>
                     </>
                   )}
@@ -1413,7 +1425,8 @@ function AlertDetail(scope: Scope & { id: string }) {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      Open runbook ↗
+                      <Icon name="external" size={14} />
+                      Open runbook
                     </a>
                   )}
                 </div>

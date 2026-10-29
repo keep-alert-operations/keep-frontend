@@ -138,7 +138,11 @@ export function DismissDialog({
 
   let end: number | undefined, error: string | undefined;
   let value: DismissalValue | undefined;
-  if (mode === "duration") {
+  // An empty Custom field is not an error yet; it only waits for a number.
+  const awaiting = mode === "duration" && preset === "custom" && !amount.trim();
+  if (awaiting) {
+    // Nothing to validate or submit until a number is entered.
+  } else if (mode === "duration") {
     const seconds =
       preset === "custom"
         ? /^[1-9][0-9]*$/.test(amount.trim())
@@ -246,8 +250,16 @@ export function DismissDialog({
             </label>
           ))}
         </fieldset>
-        {mode === "duration" ? (
-          <fieldset className="dismiss-group">
+        {/* Both modes share one grid cell, so switching never resizes the dialog. */}
+        <div className="dismiss-modes">
+          <fieldset
+            className={
+              mode === "duration"
+                ? "dismiss-group"
+                : "dismiss-group dismiss-hidden"
+            }
+            inert={mode !== "duration"}
+          >
             <legend className="lbl">Dismiss for</legend>
             <div className="dismiss-pills">
               {PRESETS.map(([seconds, label]) => (
@@ -312,8 +324,14 @@ export function DismissDialog({
               </select>
             </div>
           </fieldset>
-        ) : (
-          <fieldset className="dismiss-group">
+          <fieldset
+            className={
+              mode === "until"
+                ? "dismiss-group"
+                : "dismiss-group dismiss-hidden"
+            }
+            inert={mode !== "until"}
+          >
             <legend className="lbl">Dismiss until</legend>
             <div className="dismiss-when">
               <label className="sr-only" htmlFor={`${id}-date`}>
@@ -324,7 +342,7 @@ export function DismissDialog({
                 className="inp"
                 type="date"
                 value={date}
-                aria-invalid={Boolean(error)}
+                aria-invalid={mode === "until" && Boolean(error)}
                 onChange={(event) => setDate(event.target.value)}
               />
               <label className="sr-only" htmlFor={`${id}-time`}>
@@ -335,7 +353,7 @@ export function DismissDialog({
                 className="inp"
                 type="time"
                 value={time}
-                aria-invalid={Boolean(error)}
+                aria-invalid={mode === "until" && Boolean(error)}
                 onChange={(event) => setTime(event.target.value)}
               />
             </div>
@@ -362,7 +380,7 @@ export function DismissDialog({
             </div>
             <span className="help">Times are in your time zone, {zone()}.</span>
           </fieldset>
-        )}
+        </div>
         <label className="f">
           <span className="lbl">
             Reason{" "}
@@ -378,14 +396,15 @@ export function DismissDialog({
             onChange={(event) => setReason(event.target.value)}
           />
         </label>
-        {end !== undefined ? (
-          <div className="dismiss-summary" role="status">
+        {/* A hidden full-length summary holds the space for every message. */}
+        <div className="dismiss-status">
+          <div className="dismiss-summary dismiss-hidden" aria-hidden="true">
             <ClockIcon />
             <div>
               <span>
-                Suppressed until <b>{formatUntilFull(new Date(end))}</b> (
-                {relative(end - now)}), so it is hidden from the feed. It then
-                returns as <b>{returnsAs}</b>.
+                Suppressed until <b>Wed, Oct 28, 12:00 PM</b> (in 23 hours 59
+                min), so it is hidden from the feed. It then returns as{" "}
+                <b>Acknowledged</b>.
               </span>
               <span className="dismiss-note">
                 If the alert resolves and fires again, the dismissal ends early.
@@ -393,13 +412,39 @@ export function DismissDialog({
               </span>
             </div>
           </div>
-        ) : (
-          <div className="dismiss-summary err" role="alert">
-            <ClockIcon />
-            <span>{error}</span>
-          </div>
-        )}
-        <CommandFeedback command={command} />
+          {command.error || command.uncertain ? (
+            <div className="dismiss-feedback">
+              <CommandFeedback command={{ ...command, busy: false }} />
+            </div>
+          ) : end !== undefined ? (
+            <div className="dismiss-summary" role="status">
+              <ClockIcon />
+              <div>
+                <span>
+                  Suppressed until <b>{formatUntilFull(new Date(end))}</b> (
+                  {relative(end - now)}), so it is hidden from the feed. It then
+                  returns as <b>{returnsAs}</b>.
+                </span>
+                <span className="dismiss-note">
+                  If the alert resolves and fires again, the dismissal ends
+                  early. Assignment, incident links and notes stay as they are.
+                </span>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="dismiss-summary err" role="alert">
+              <ClockIcon />
+              <span>{error}</span>
+            </div>
+          ) : (
+            <div className="dismiss-summary idle" role="status">
+              <ClockIcon />
+              <span>
+                Enter how many minutes, hours or days to dismiss it for.
+              </span>
+            </div>
+          )}
+        </div>
         <div className="dlg-actions">
           <button type="button" className="btn" onClick={onClose}>
             Cancel

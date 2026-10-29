@@ -127,8 +127,8 @@ test("the row ⋯ menu resolves without navigating and returns focus on Escape",
   await expect(menu.getByRole("menuitem")).toHaveText([
     "Assign to me",
     "Resolve",
-    "Link to incident…",
-    "Dismiss…",
+    "Link to incident",
+    "Dismiss",
   ]);
   await expect(menu.getByRole("menuitem").first()).toBeFocused();
   await page.keyboard.press("Escape");

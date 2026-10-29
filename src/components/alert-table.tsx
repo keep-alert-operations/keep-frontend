@@ -812,7 +812,7 @@ export function AlertTable({
                               onLinkIncident(row);
                             }}
                           >
-                            Link to incident…
+                            Link to incident
                           </button>
                         )}
                         {dismissedUntil(row) ? (
@@ -827,7 +827,7 @@ export function AlertTable({
                                 setDismissing(row);
                               }}
                             >
-                              Change dismissal…
+                              Change dismissal
                             </button>
                             <button
                               type="button"
@@ -854,7 +854,7 @@ export function AlertTable({
                                 setDismissing(row);
                               }}
                             >
-                              Dismiss…
+                              Dismiss
                             </button>
                           )
                         )}

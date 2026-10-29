@@ -347,9 +347,9 @@ test("alert detail uses list context, readable history and confirmed note deleti
     page.getByRole("link", { name: "Payments DB degradation" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Open runbook ↗" }),
+    page.getByRole("link", { name: "Open runbook" }),
   ).toHaveAttribute("href", "https://runbooks.example/latency");
-  await page.getByRole("button", { name: "Assign…", exact: true }).click();
+  await page.getByRole("button", { name: "Assign", exact: true }).click();
   await page.getByRole("button", { name: "Assign to me", exact: true }).click();
   await expect.poll(() => command?.kind).toBe("set_assignee");
   expect(command?.expected_revision).toBe(row.revision);

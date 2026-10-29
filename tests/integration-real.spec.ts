@@ -351,7 +351,7 @@ test("real HTTPS browser acknowledges an admitted alert and commits its note to 
           response.url().endsWith(`/alerts/${seeded.alert}/commands`) &&
           response.request().method() === "POST",
       );
-      await page.getByRole("button", { name: "Assign…", exact: true }).click();
+      await page.getByRole("button", { name: "Assign", exact: true }).click();
       await page
         .getByRole("button", { name: "Assign to me", exact: true })
         .click();
@@ -419,7 +419,7 @@ test("real HTTPS browser dismisses an alert for a time window and it returns on 
       await page.goto(
         `${origin}/tenants/${seeded.tenant}/alerts/${seeded.alert}`,
       );
-      await page.getByRole("button", { name: "Dismiss…", exact: true }).click();
+      await page.getByRole("button", { name: "Dismiss", exact: true }).click();
       const dialog = page.getByRole("dialog", { name: "Dismiss alert" });
       await expect(dialog).toBeVisible();
       await expect(dialog.getByRole("radio", { name: "1 hour" })).toBeChecked();
@@ -471,7 +471,7 @@ test("real HTTPS browser dismisses an alert for a time window and it returns on 
         "Suppressed",
       );
       await expect(
-        page.getByRole("button", { name: "Dismiss…", exact: true }),
+        page.getByRole("button", { name: "Dismiss", exact: true }),
       ).toHaveCount(0);
       await page.screenshot({
         path: test.info().outputPath("dismiss-band.png"),
@@ -484,7 +484,7 @@ test("real HTTPS browser dismisses an alert for a time window and it returns on 
       ).toBeVisible();
 
       // Change to a one-minute window, then let it end by time alone.
-      await band.getByRole("button", { name: "Change…" }).click();
+      await band.getByRole("button", { name: "Change", exact: true }).click();
       const change = page.getByRole("dialog", { name: "Change dismissal" });
       await expect(
         change.getByRole("radio", { name: "Until a date" }),
@@ -498,11 +498,11 @@ test("real HTTPS browser dismisses an alert for a time window and it returns on 
       await expect(band).toBeHidden({ timeout: 100000 });
       await expect(page.locator(".ad-marks .chip-supp")).toHaveCount(0);
       await expect(
-        page.getByRole("button", { name: "Dismiss…", exact: true }),
+        page.getByRole("button", { name: "Dismiss", exact: true }),
       ).toBeVisible();
 
       // Undismiss ends a running dismissal at once.
-      await page.getByRole("button", { name: "Dismiss…", exact: true }).click();
+      await page.getByRole("button", { name: "Dismiss", exact: true }).click();
       const again = commands((body) => body.kind === "set_dismissal");
       await page
         .getByRole("dialog", { name: "Dismiss alert" })
@@ -520,7 +520,7 @@ test("real HTTPS browser dismisses an alert for a time window and it returns on 
       await expect(page.locator(".tl")).toContainText("Dismissal changed.");
       await expect(page.locator(".tl")).toContainText("Dismissed.");
       await page.setViewportSize({ width: 390, height: 844 });
-      await page.getByRole("button", { name: "Dismiss…", exact: true }).click();
+      await page.getByRole("button", { name: "Dismiss", exact: true }).click();
       await page.screenshot({
         path: test.info().outputPath("dismiss-narrow.png"),
       });
