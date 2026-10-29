@@ -464,7 +464,9 @@ test("real HTTPS browser dismisses an alert for a time window and it returns on 
       const band = page.locator(".ad-dismissal");
       await expect(band).toContainText("Suppressed until");
       await expect(band).toContainText("in 4 hours");
-      await expect(band).toContainText("Dismissed by Synthetic browser user (you)");
+      await expect(band).toContainText(
+        "Dismissed by Synthetic browser user (you)",
+      );
       await expect(page.locator(".ad-marks .chip-supp")).toHaveText(
         "Suppressed",
       );
