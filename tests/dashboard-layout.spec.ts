@@ -764,7 +764,7 @@ test("drag previews collisions without saving and persists the whole layout on e
   ).toBeVisible();
 });
 
-test("corner resize snaps to permitted sizes and displaces panels without overlap", async ({
+test("corner resize snaps to whole grid units and displaces panels without overlap", async ({
   page,
 }, testInfo) => {
   const state = await setup(page);
@@ -883,6 +883,40 @@ test("keyboard move and resize retain focus, announce changes and preserve confl
   expect(state.saves[0].expected_revision).toBe("7");
 });
 
+/** Requirements: REV-50; dashboard operations 4. Sizes are set on the grid only. */
+test("panel width grows one column at a time to the full row and height has no cap", async ({
+  page,
+}) => {
+  const state = await setup(page);
+  const dialog = await editPanel(page, "First");
+  await expect(
+    dialog.getByRole("combobox", { name: /Width|Height/ }),
+  ).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  const resize = page.getByRole("button", {
+    name: "Resize First",
+    exact: true,
+  });
+  await resize.focus();
+  for (let w = 4; w <= 12; w++) {
+    await resize.press("ArrowRight");
+    await expect
+      .poll(() => position(tile(page, "First")))
+      .toEqual({ column: `1 / span ${w}`, row: "1 / span 2" });
+  }
+  await resize.press("ArrowRight");
+  await expect
+    .poll(() => position(tile(page, "First")))
+    .toEqual({ column: "1 / span 12", row: "1 / span 2" });
+  for (let i = 0; i < 7; i++) await resize.press("ArrowDown");
+  await expect
+    .poll(() => position(tile(page, "First")))
+    .toEqual({ column: "1 / span 12", row: "1 / span 9" });
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect.poll(() => state.saves.length).toBe(1);
+  expect(state.definition.panels[0]).toMatchObject({ w: 12, h: 9 });
+});
+
 async function editPanel(page: Page, title: string) {
   await page
     .getByRole("button", { name: `Options for ${title}`, exact: true })
@@ -947,31 +981,29 @@ for (const width of [800, 390]) {
       page.getByRole("button", { name: "Move First", exact: true }),
     ).toBeHidden();
     const dialog = await editPanel(page, "First");
-    await dialog
-      .getByRole("combobox", { name: "Height", exact: true })
-      .selectOption("3");
+    await dialog.getByLabel("Custom title (optional)").fill("Edited");
     await dialog
       .getByRole("button", { name: "Apply changes", exact: true })
       .click();
     await expect(
-      page.getByRole("button", { name: "Options for First", exact: true }),
+      page.getByRole("button", { name: "Options for Edited", exact: true }),
     ).toBeFocused();
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect.poll(() => state.saves.length).toBe(1);
     expect(
-      state.definition.panels.find((item) => item.title === "First"),
-    ).toMatchObject({ x: 6, y: 0, w: 3, h: 3 });
+      state.definition.panels.find((item) => item.title === "Edited"),
+    ).toMatchObject({ x: 6, y: 0, w: 3, h: 2 });
     await expect(page).toHaveURL(new RegExp(`/dashboards/${id}$`));
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
-    const valueLabel = tile(page, "First").getByText("Exact logical alerts", {
+    const valueLabel = tile(page, "Edited").getByText("Exact logical alerts", {
       exact: true,
     });
     const labelBox = (await valueLabel.boundingBox())!;
-    const panelBox = (await tile(page, "First").boundingBox())!;
+    const panelBox = (await tile(page, "Edited").boundingBox())!;
     expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(
       panelBox.y + panelBox.height,
     );
@@ -1112,6 +1144,9 @@ test("collision chains compact every column and reject actual overflow atomicall
     ),
   ).toBeNull();
   expect(placePanel(panels, panels[0].id, { x: 10 })).toBeNull();
+  expect(placePanel(panels, panels[0].id, { w: 5, h: 9 })).not.toBeNull();
+  for (const patch of [{ w: 2 }, { w: 13 }, { h: 1 }, { w: 3.5 }])
+    expect(placePanel(panels, panels[0].id, patch)).toBeNull();
   expect(panels[1].y).toBe(0);
   expect(
     firstPanelGap(

@@ -255,7 +255,7 @@ export function DashboardWorkspace({
       const placed = firstPanelGap(draft.panels, panel);
       if (!placed) {
         setPanelError(
-          "There is no room for this panel. Choose a smaller size.",
+          "There is no room for this panel. Make other panels smaller to free space.",
         );
         return;
       }

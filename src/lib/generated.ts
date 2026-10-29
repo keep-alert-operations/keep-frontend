@@ -2428,16 +2428,10 @@ export interface components {
       x: number;
       /** Y */
       y: number;
-      /**
-       * W
-       * @enum {integer}
-       */
-      w: 3 | 4 | 6 | 12;
-      /**
-       * H
-       * @enum {integer}
-       */
-      h: 2 | 3 | 4;
+      /** W */
+      w: number;
+      /** H */
+      h: number;
       /** Thresholds */
       thresholds?: components["schemas"]["Threshold"][];
     };

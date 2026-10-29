@@ -255,36 +255,6 @@ export function DashboardPanelDialog({
             Leave blank to use the preset name. Up to 120 characters.
           </span>
         </label>
-        <div className="dashboard-panel-size">
-          <label className="f">
-            <span className="lbl">Width</span>
-            <select
-              className="inp"
-              value={draft.w}
-              onChange={(event) => update({ w: Number(event.target.value) })}
-            >
-              {[3, 4, 6, 12].map((width) => (
-                <option key={width} value={width}>
-                  {width} columns
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="f">
-            <span className="lbl">Height</span>
-            <select
-              className="inp"
-              value={draft.h}
-              onChange={(event) => update({ h: Number(event.target.value) })}
-            >
-              {[2, 3, 4].map((height) => (
-                <option key={height} value={height}>
-                  {height} units
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
         <fieldset className="dashboard-panel-thresholds">
           <legend className="lbl">Count thresholds</legend>
           <p className="help">
