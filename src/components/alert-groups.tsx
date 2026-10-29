@@ -1,4 +1,5 @@
 "use client";
+import type { RowCommand } from "./alert-table";
 import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { ApiError, display, request, type RecordData } from "@/lib/api";
 import { useSearchResource } from "@/lib/search-resource";
@@ -433,6 +434,7 @@ export function AlertGroups({
   onSelectionChange,
   onRowCommand,
   onLinkIncident,
+  command,
   busy,
   evaluated,
   onRemember,
@@ -446,11 +448,8 @@ export function AlertGroups({
   onSort?: (field: string) => void;
   selection?: Map<string, string>;
   onSelectionChange?: (next: Map<string, string>) => void;
-  onRowCommand?: (
-    row: RecordData,
-    kind: "set_status" | "set_assignee",
-    value: string | null,
-  ) => void;
+  onRowCommand?: RowCommand;
+  command?: { error?: unknown; uncertain: boolean; busy: boolean };
   onLinkIncident?: (row: RecordData) => void;
   busy?: boolean;
   evaluated?: boolean;
@@ -537,6 +536,7 @@ export function AlertGroups({
                   onSelectionChange={onSelectionChange}
                   onRowCommand={onRowCommand}
                   onLinkIncident={onLinkIncident}
+                  command={command}
                   busy={busy}
                 />
                 {(group.next_cursor || group.expanded) && (

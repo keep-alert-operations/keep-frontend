@@ -1890,9 +1890,9 @@ export interface components {
        * Kind
        * @enum {string}
        */
-      kind: "set_status" | "set_assignee";
+      kind: "set_status" | "set_assignee" | "set_dismissal";
       /** Value */
-      value: string | null;
+      value: string | components["schemas"]["DismissalValue"] | null;
     };
     /** AlertDetailNames */
     AlertDetailNames: {
@@ -1917,10 +1917,37 @@ export interface components {
        */
       active_incident_title?: string | null;
       /**
+       * Dismissed Until
+       * @description End of the alert's timed dismissal (REV-49); `suppressed` already reflects it at the response's clock.
+       */
+      dismissed_until?: string | null;
+      /**
        * Active Incident Id
        * @description Retained same-tenant active owning incident (PG ownership); null otherwise.
        */
       active_incident_id?: string | null;
+      /** @description The alert's timed dismissal (REV-49); null when none is stored. */
+      dismissal?: components["schemas"]["AlertDismissal"] | null;
+    } & {
+      [key: string]: unknown;
+    };
+    /** AlertDismissal */
+    AlertDismissal: {
+      /**
+       * Until
+       * @description UTC end of the dismissal; it stops suppressing the alert then.
+       */
+      until: string;
+      /** Dismissed At */
+      dismissed_at: string;
+      /** Dismissed By */
+      dismissed_by?: string | null;
+      /**
+       * State
+       * @description Expired once the end has passed but before a write recorded that it ended.
+       * @enum {string}
+       */
+      state: "active" | "expired";
     } & {
       [key: string]: unknown;
     };
@@ -1946,6 +1973,11 @@ export interface components {
        * @description Title of the retained same-tenant active incident; null otherwise.
        */
       active_incident_title?: string | null;
+      /**
+       * Dismissed Until
+       * @description End of the alert's timed dismissal (REV-49); `suppressed` already reflects it at the response's clock.
+       */
+      dismissed_until?: string | null;
     } & {
       [key: string]: unknown;
     };
@@ -2160,6 +2192,18 @@ export interface components {
       line: number | null;
       /** Column */
       column: number | null;
+    };
+    /**
+     * DismissalValue
+     * @description A timed dismissal (REV-49): exactly one of an end instant or a duration.
+     */
+    DismissalValue: {
+      /** Until */
+      until?: string | null;
+      /** Duration Seconds */
+      duration_seconds?: number | null;
+      /** Reason */
+      reason?: string | null;
     };
     /** Function */
     Function: {

@@ -1,4 +1,6 @@
 "use client";
+import type { AlertCommandKind } from "./alert-table";
+import type { DismissalValue } from "./dismiss-dialog";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ApiError, display, RecordData, request, tenantPath } from "@/lib/api";
@@ -883,10 +885,10 @@ function PresetResults({
   );
   async function rowCommand(
     row: RecordData,
-    kind: "set_status" | "set_assignee",
-    value: string | null,
+    kind: AlertCommandKind,
+    value: string | DismissalValue | null,
   ) {
-    if (
+    const done = Boolean(
       await command.execute(
         `${tenantPath(tenantId)}/alerts/${row.id}/commands`,
         {
@@ -894,11 +896,13 @@ function PresetResults({
           kind,
           value,
         },
-      )
-    ) {
+      ),
+    );
+    if (done) {
       setRefresh((value) => value + 1);
       if (showGroups) grouped.first.reload();
     }
+    return done;
   }
   const rows = page.result?.data ?? [];
   const currentResult = page.resultKey === JSON.stringify(body);
@@ -1135,7 +1139,8 @@ function PresetResults({
           }}
           selection={selection}
           onSelectionChange={setSelection}
-          onRowCommand={(row, kind, value) => void rowCommand(row, kind, value)}
+          onRowCommand={rowCommand}
+          command={command}
           onLinkIncident={setLinking}
           busy={command.busy}
           evaluated
@@ -1207,9 +1212,8 @@ function PresetResults({
                 }}
                 selection={selection}
                 onSelectionChange={setSelection}
-                onRowCommand={(row, kind, value) =>
-                  void rowCommand(row, kind, value)
-                }
+                onRowCommand={rowCommand}
+                command={command}
                 onLinkIncident={setLinking}
                 busy={command.busy}
               />

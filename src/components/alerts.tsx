@@ -1,4 +1,13 @@
 "use client";
+import type { AlertCommandKind } from "./alert-table";
+import {
+  ClockIcon,
+  DismissDialog,
+  dismissedUntil,
+  formatUntilFull,
+  relative,
+  type DismissalValue,
+} from "./dismiss-dialog";
 import { useEffect, useRef, useState } from "react";
 import type { components } from "@/lib/generated";
 import { alertOperatorLabel } from "@/lib/alert-operator";
@@ -206,17 +215,18 @@ export function AlertFeed(scope: Scope) {
   }
   async function rowCommand(
     row: RecordData,
-    kind: "set_status" | "set_assignee",
-    value: string | null,
+    kind: AlertCommandKind,
+    value: string | DismissalValue | null,
   ) {
-    if (
+    const done = Boolean(
       await command.execute(`${base}/alerts/${row.id}/commands`, {
         expected_revision: row.revision,
         kind,
         value,
-      })
-    )
-      refresh();
+      }),
+    );
+    if (done) refresh();
+    return done;
   }
   const first = pageIndex * limit + 1;
   const total = feed.data?.meta?.total;
@@ -390,7 +400,8 @@ export function AlertFeed(scope: Scope) {
           onSelectionChange={
             scope.tenant.role === "view" || locked ? undefined : setSelection
           }
-          onRowCommand={(row, kind, value) => void rowCommand(row, kind, value)}
+          onRowCommand={rowCommand}
+          command={command}
           onLinkIncident={setLinking}
           busy={locked}
           onRemember={(ids, current) =>
@@ -449,9 +460,8 @@ export function AlertFeed(scope: Scope) {
                   ? undefined
                   : setSelection
               }
-              onRowCommand={(row, kind, value) =>
-                void rowCommand(row, kind, value)
-              }
+              onRowCommand={rowCommand}
+              command={command}
               onLinkIncident={setLinking}
               busy={locked}
               sort={quickSort ? [quickSort] : DEFAULT_SORT}
@@ -631,6 +641,10 @@ function describeActivity(
     : [];
   const change = (field: string) =>
     changes.find((item) => item.field === field);
+  const endedAt =
+    typeof before?.dismissed_until === "string" && !after?.dismissed_until
+      ? new Date(before.dismissed_until)
+      : undefined;
   const description =
     typeof row.description === "string" ? row.description : "";
   const sourceActor = alertOperatorLabel(alert);
@@ -691,6 +705,12 @@ function describeActivity(
         "",
         "tl-src",
       );
+    if (endedAt)
+      return out(
+        "Suppression ended.",
+        `The dismissal ended at ${formatUntilFull(endedAt)}; the alert is back in the feed.`,
+        "tl-src",
+      );
     const first = changes[0];
     return out(
       "Source update.",
@@ -745,6 +765,23 @@ function describeActivity(
           "tl-user",
         )
       : out("Unassigned.", "", "tl-user");
+  }
+  if (kind === "set-dismissal") {
+    const until =
+      typeof after?.dismissed_until === "string"
+        ? new Date(after.dismissed_until)
+        : undefined;
+    if (!until)
+      return out(
+        "Dismissal ended early.",
+        "The alert is no longer suppressed.",
+        "tl-user",
+      );
+    return out(
+      before?.dismissed_until ? "Dismissal changed." : "Dismissed.",
+      `Suppressed until ${formatUntilFull(until)}.`,
+      "tl-user",
+    );
   }
   if (kind === "note-create" || kind === "note-added")
     return out("Note added.", "", "tl-user");
@@ -988,11 +1025,29 @@ function AlertDetail(scope: Scope & { id: string }) {
   }, [dirty, scope.setDirty]);
   const alert = detail.data?.data;
   const edit = scope.tenant.role !== "view";
+  const [dismissing, setDismissing] = useState(false);
+  const [, setTick] = useState(0);
+  const dismissal = alert ? dismissedUntil(alert) : null;
+  const dismissalEnd = alert
+    ? Date.parse(String((alert.dismissal as RecordData | null)?.until ?? ""))
+    : NaN;
+  useEffect(() => {
+    // The alert returns by time alone, with no live event (REV-49).
+    if (!Number.isFinite(dismissalEnd)) return;
+    const timer = setInterval(() => {
+      setTick((value) => value + 1);
+      if (Date.now() >= dismissalEnd) {
+        clearInterval(timer);
+        detail.reload();
+      }
+    }, 15_000);
+    return () => clearInterval(timer);
+  }, [dismissalEnd]);
   async function execute(
     kind: components["schemas"]["AlertCommand"]["kind"],
     value: components["schemas"]["AlertCommand"]["value"],
   ) {
-    if (!alert) return;
+    if (!alert) return false;
     const result = await command.execute<RecordData>(`${path}/commands`, {
       expected_revision: alert.revision,
       kind,
@@ -1003,6 +1058,7 @@ function AlertDetail(scope: Scope & { id: string }) {
       child.reload();
       notes.reload();
     }
+    return Boolean(result);
   }
   async function addNote() {
     if (!alert) return;
@@ -1160,6 +1216,14 @@ function AlertDetail(scope: Scope & { id: string }) {
           onClose={() => setLinking(false)}
         />
       )}
+      {dismissing && alert && (
+        <DismissDialog
+          alert={alert}
+          command={command}
+          onClose={() => setDismissing(false)}
+          onSubmit={(value) => execute("set_dismissal", value)}
+        />
+      )}
       <ErrorNotice error={detail.error} />
       {detail.loading && !alert && <p role="status">Loading alert…</p>}
       {alert && (
@@ -1183,6 +1247,48 @@ function AlertDetail(scope: Scope & { id: string }) {
                   <span className="chip chip-supp">Suppressed</span>
                 )}
               </div>
+              {dismissal && (
+                <div className="ad-dismissal" role="status">
+                  <ClockIcon />
+                  <div className="ad-dismissal-text">
+                    <span>
+                      Suppressed until <b>{formatUntilFull(dismissal)}</b> ·{" "}
+                      {relative(dismissal.getTime() - Date.now())}, then back in
+                      the feed.
+                    </span>
+                    <span className="ad-dismissal-by">
+                      Dismissed by{" "}
+                      {personLabel(
+                        scope,
+                        (alert.dismissal as RecordData).dismissed_by as string,
+                        (alert.dismissal as RecordData)
+                          .dismissed_by_display_name as string | null,
+                      )}
+                    </span>
+                  </div>
+                  {edit && (
+                    <div className="ad-dismissal-actions">
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        aria-haspopup="dialog"
+                        disabled={command.busy}
+                        onClick={() => setDismissing(true)}
+                      >
+                        Change…
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        disabled={command.busy}
+                        onClick={() => void execute("set_dismissal", null)}
+                      >
+                        Undismiss
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
               {(edit || runbook || alert) && (
                 <div className="ad-actions">
                   {alert && (
@@ -1212,6 +1318,18 @@ function AlertDetail(scope: Scope & { id: string }) {
                           ? "Reopen alert"
                           : "Resolve alert"}
                       </button>
+                      {alert.status === "firing" && !dismissal && (
+                        <button
+                          type="button"
+                          className="btn"
+                          aria-haspopup="dialog"
+                          disabled={command.busy}
+                          onClick={() => setDismissing(true)}
+                        >
+                          <ClockIcon size={14} />
+                          Dismiss…
+                        </button>
+                      )}
                       <div className="ad-assign" ref={assignBox}>
                         <button
                           type="button"

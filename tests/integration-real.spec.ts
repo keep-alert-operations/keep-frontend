@@ -182,15 +182,26 @@ async function healthy(
     .toBe(200);
 }
 
-test("real HTTPS browser acknowledges an admitted alert and commits its note to PostgreSQL", async ({
-  browser,
-  playwright,
-}) => {
-  test.skip(
-    !adminUrl,
-    "Opt in with APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL pointing to an isolated local PostgreSQL administrator database",
-  );
-  test.setTimeout(180000);
+type Stack = {
+  seeded: { tenant: string; alert: string; handle: string };
+  page: import("@playwright/test").Page;
+  origin: string;
+  environment: NodeJS.ProcessEnv;
+};
+
+/** Start a disposable database, API and UI, run `body`, then remove them all. */
+async function withStack(
+  browser: import("@playwright/test").Browser,
+  playwright: {
+    request: {
+      newContext: (options: {
+        ignoreHTTPSErrors: boolean;
+      }) => Promise<APIRequestContext>;
+    };
+  },
+  extra: Record<string, string>,
+  body: (stack: Stack) => Promise<void>,
+) {
   const databaseName = `appchi_browser_test_${randomBytes(8).toString("hex")}`;
   const dsn = new URL(adminUrl!);
   dsn.pathname = `/${databaseName}`;
@@ -217,6 +228,7 @@ test("real HTTPS browser acknowledges an admitted alert and commits its note to 
     APPCHI_ENVIRONMENT: "development",
     NEXT_TELEMETRY_DISABLED: "1",
     APPCHI_BACKEND_URL: `http://127.0.0.1:${backendPort}`,
+    ...extra,
   };
   let backendProcess: ReturnType<typeof launch> | undefined,
     frontendProcess: ReturnType<typeof launch> | undefined;
@@ -285,55 +297,7 @@ test("real HTTPS browser acknowledges an admitted alert and commits its note to 
       },
     ]);
     const page = await context.newPage();
-    await page.goto(
-      `${origin}/tenants/${seeded.tenant}/alerts/${seeded.alert}`,
-    );
-    await expect(
-      page.getByRole("heading", {
-        name: "Real database browser smoke",
-        exact: true,
-      }),
-    ).toBeVisible();
-    const acknowledged = page.waitForResponse(
-      (response) =>
-        response.url().endsWith(`/alerts/${seeded.alert}/commands`) &&
-        response.request().method() === "POST",
-    );
-    await page.getByRole("button", { name: "Assign…", exact: true }).click();
-    await page
-      .getByRole("button", { name: "Assign to me", exact: true })
-      .click();
-    expect((await acknowledged).status()).toBe(200);
-    await expect(page.locator(".ad-marks .st-acknowledged")).toBeVisible();
-    await page
-      .getByRole("textbox", { name: "Add a note", exact: true })
-      .fill("Real browser investigation note");
-    const note = page.waitForResponse(
-      (response) =>
-        response.url().endsWith(`/alerts/${seeded.alert}/notes`) &&
-        response.request().method() === "POST",
-    );
-    await page.getByRole("button", { name: "Add note", exact: true }).click();
-    expect((await note).status()).toBe(201);
-    await expect(
-      page
-        .locator(".ad-note-text")
-        .filter({ hasText: "Real browser investigation note" }),
-    ).toBeVisible();
-    const persisted = JSON.parse(
-      execFileSync(python, ["-c", fixture, "verify"], {
-        cwd: repository,
-        env: { ...environment, APPCHI_BROWSER_ALERT_ID: seeded.alert },
-        windowsHide: true,
-        encoding: "utf8",
-        timeout: 15000,
-      }),
-    );
-    expect(persisted).toEqual({
-      assigned: true,
-      revision: "3",
-      note_count: 1,
-    });
+    await body({ seeded, page, origin, environment });
   } finally {
     await context.close();
     await health.dispose();
@@ -345,7 +309,7 @@ test("real HTTPS browser acknowledges an admitted alert and commits its note to 
         env: environment,
         windowsHide: true,
         encoding: "utf8",
-        timeout: 15000,
+        timeout: 60000,
       });
     } finally {
       // Verify the exact generated temporary root before any recursive removal.
@@ -357,4 +321,209 @@ test("real HTTPS browser acknowledges an admitted alert and commits its note to 
       rmSync(temporary, { recursive: true, force: true });
     }
   }
+}
+
+test("real HTTPS browser acknowledges an admitted alert and commits its note to PostgreSQL", async ({
+  browser,
+  playwright,
+}) => {
+  test.skip(
+    !adminUrl,
+    "Opt in with APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL pointing to an isolated local PostgreSQL administrator database",
+  );
+  test.setTimeout(180000);
+  await withStack(
+    browser,
+    playwright,
+    {},
+    async ({ seeded, page, origin, environment }) => {
+      await page.goto(
+        `${origin}/tenants/${seeded.tenant}/alerts/${seeded.alert}`,
+      );
+      await expect(
+        page.getByRole("heading", {
+          name: "Real database browser smoke",
+          exact: true,
+        }),
+      ).toBeVisible();
+      const acknowledged = page.waitForResponse(
+        (response) =>
+          response.url().endsWith(`/alerts/${seeded.alert}/commands`) &&
+          response.request().method() === "POST",
+      );
+      await page.getByRole("button", { name: "Assign…", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Assign to me", exact: true })
+        .click();
+      expect((await acknowledged).status()).toBe(200);
+      await expect(page.locator(".ad-marks .st-acknowledged")).toBeVisible();
+      await page
+        .getByRole("textbox", { name: "Add a note", exact: true })
+        .fill("Real browser investigation note");
+      const note = page.waitForResponse(
+        (response) =>
+          response.url().endsWith(`/alerts/${seeded.alert}/notes`) &&
+          response.request().method() === "POST",
+      );
+      await page.getByRole("button", { name: "Add note", exact: true }).click();
+      expect((await note).status()).toBe(201);
+      await expect(
+        page
+          .locator(".ad-note-text")
+          .filter({ hasText: "Real browser investigation note" }),
+      ).toBeVisible();
+      const persisted = JSON.parse(
+        execFileSync(python, ["-c", fixture, "verify"], {
+          cwd: repository,
+          env: { ...environment, APPCHI_BROWSER_ALERT_ID: seeded.alert },
+          windowsHide: true,
+          encoding: "utf8",
+          timeout: 15000,
+        }),
+      );
+      expect(persisted).toEqual({
+        assigned: true,
+        revision: "3",
+        note_count: 1,
+      });
+    },
+  );
+});
+
+/**
+ * Requirements: REV-49; alert operations 29. Dismiss, change and undismiss on
+ * the alert page against the real API and PostgreSQL, then let a one-minute
+ * dismissal end by time alone.
+ */
+test("real HTTPS browser dismisses an alert for a time window and it returns on time", async ({
+  browser,
+  playwright,
+}) => {
+  test.skip(
+    !adminUrl,
+    "Opt in with APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL pointing to an isolated local PostgreSQL administrator database",
+  );
+  test.setTimeout(600000);
+  await withStack(
+    browser,
+    playwright,
+    { APPCHI_ALERT_DISMISSAL_ENABLED: "true" },
+    async ({ seeded, page, origin }) => {
+      const commands = (body: (value: Record<string, unknown>) => boolean) =>
+        page.waitForResponse(
+          (response) =>
+            response.url().endsWith(`/alerts/${seeded.alert}/commands`) &&
+            response.request().method() === "POST" &&
+            body(response.request().postDataJSON()),
+        );
+      await page.goto(
+        `${origin}/tenants/${seeded.tenant}/alerts/${seeded.alert}`,
+      );
+      await page.getByRole("button", { name: "Dismiss…", exact: true }).click();
+      const dialog = page.getByRole("dialog", { name: "Dismiss alert" });
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole("radio", { name: "1 hour" })).toBeChecked();
+      // The custom field is always shown; typing selects it.
+      await dialog.getByRole("spinbutton", { name: "Custom" }).fill("90");
+      await expect(
+        dialog.getByRole("radio", { name: "1 hour" }),
+      ).not.toBeChecked();
+      await expect(dialog.getByRole("status")).toContainText(
+        "in 1 hour 30 min",
+      );
+      await dialog.locator("label", { hasText: "Until a date" }).click();
+      await dialog.getByLabel("Date", { exact: true }).fill("2020-01-01");
+      await expect(dialog.getByRole("alert")).toContainText(
+        "Choose a time after now",
+      );
+      await expect(
+        dialog.getByRole("button", { name: "Dismiss", exact: true }),
+      ).toBeDisabled();
+      await page.screenshot({
+        path: test.info().outputPath("dismiss-error.png"),
+      });
+      await dialog.locator("label", { hasText: "For a duration" }).click();
+      await dialog.locator("label", { hasText: "4 hours" }).click();
+      await dialog
+        .getByRole("textbox", { name: /Reason/ })
+        .fill("Known backlog; DBA is expanding the volume");
+      await page.screenshot({
+        path: test.info().outputPath("dismiss-dialog.png"),
+      });
+      const dismissed = commands((body) => body.kind === "set_dismissal");
+      await dialog
+        .getByRole("button", { name: "Dismiss", exact: true })
+        .click();
+      const response = await dismissed;
+      expect(response.status()).toBe(200);
+      expect(response.request().postDataJSON().value).toEqual({
+        duration_seconds: 14400,
+        reason: "Known backlog; DBA is expanding the volume",
+      });
+      await expect(dialog).toBeHidden();
+      const band = page.locator(".ad-dismissal");
+      await expect(band).toContainText("Suppressed until");
+      await expect(band).toContainText("in 4 hours");
+      await expect(band).toContainText(
+        "Dismissed by Synthetic browser user (you)",
+      );
+      await expect(page.locator(".ad-marks .chip-supp")).toHaveText(
+        "Suppressed",
+      );
+      await expect(
+        page.getByRole("button", { name: "Dismiss…", exact: true }),
+      ).toHaveCount(0);
+      await page.screenshot({
+        path: test.info().outputPath("dismiss-band.png"),
+        fullPage: true,
+      });
+      await page.reload();
+      await expect(band).toContainText("in 4 hours");
+      await expect(
+        page.locator(".ad-note-text").filter({ hasText: "Known backlog" }),
+      ).toBeVisible();
+
+      // Change to a one-minute window, then let it end by time alone.
+      await band.getByRole("button", { name: "Change…" }).click();
+      const change = page.getByRole("dialog", { name: "Change dismissal" });
+      await expect(
+        change.getByRole("radio", { name: "Until a date" }),
+      ).toBeChecked();
+      await change.locator("label", { hasText: "For a duration" }).click();
+      await change.getByRole("spinbutton", { name: "Custom" }).fill("1");
+      const changed = commands((body) => body.kind === "set_dismissal");
+      await change.getByRole("button", { name: "Update dismissal" }).click();
+      expect((await changed).status()).toBe(200);
+      await expect(band).toContainText("in 1 minute");
+      await expect(band).toBeHidden({ timeout: 100000 });
+      await expect(page.locator(".ad-marks .chip-supp")).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: "Dismiss…", exact: true }),
+      ).toBeVisible();
+
+      // Undismiss ends a running dismissal at once.
+      await page.getByRole("button", { name: "Dismiss…", exact: true }).click();
+      const again = commands((body) => body.kind === "set_dismissal");
+      await page
+        .getByRole("dialog", { name: "Dismiss alert" })
+        .getByRole("button", { name: "Dismiss", exact: true })
+        .click();
+      expect((await again).status()).toBe(200);
+      const undo = commands(
+        (body) => body.kind === "set_dismissal" && body.value === null,
+      );
+      await band.getByRole("button", { name: "Undismiss" }).click();
+      expect((await undo).status()).toBe(200);
+      await expect(band).toBeHidden();
+      await page.getByRole("tab", { name: /History/ }).click();
+      await expect(page.locator(".tl")).toContainText("Dismissal ended early.");
+      await expect(page.locator(".tl")).toContainText("Dismissal changed.");
+      await expect(page.locator(".tl")).toContainText("Dismissed.");
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.getByRole("button", { name: "Dismiss…", exact: true }).click();
+      await page.screenshot({
+        path: test.info().outputPath("dismiss-narrow.png"),
+      });
+    },
+  );
 });
