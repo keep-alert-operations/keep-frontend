@@ -40,7 +40,11 @@ const rows = [
   },
 ];
 
-async function setup(page: Page, nextChange: string | null = null) {
+async function setup(
+  page: Page,
+  nextChange: string | null = null,
+  { holdLive = false } = {},
+) {
   const commands: Record<string, unknown>[] = [];
   const feeds: string[] = [];
   await page.clock.install({ time: now });
@@ -65,6 +69,10 @@ async function setup(page: Page, nextChange: string | null = null) {
   );
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
+    // A held stream never connects or reconnects, so its reloads cannot land
+    // inside a timing window under test.
+    if (path.endsWith("/events") && holdLive)
+      return new Promise<void>(() => {});
     if (path.endsWith("/events"))
       return route.fulfill({
         contentType: "text/event-stream",
@@ -103,7 +111,7 @@ function menuFor(page: Page, message: string) {
   };
 }
 
-test("the ⋯ menu offers Dismiss… on firing rows and Change dismissal… on dismissed rows", async ({
+test("the ⋯ menu offers Dismiss on firing rows and Change dismissal on dismissed rows", async ({
   page,
 }) => {
   await setup(page);
@@ -113,8 +121,8 @@ test("the ⋯ menu offers Dismiss… on firing rows and Change dismissal… on d
   await expect(firing.menu.getByRole("menuitem")).toHaveText([
     "Assign to me",
     "Resolve",
-    "Link to incident…",
-    "Dismiss…",
+    "Link to incident",
+    "Dismiss",
   ]);
   await page.keyboard.press("Escape");
   const dismissed = menuFor(page, "Queue depth growing");
@@ -122,8 +130,8 @@ test("the ⋯ menu offers Dismiss… on firing rows and Change dismissal… on d
   await expect(dismissed.menu.getByRole("menuitem")).toHaveText([
     "Assign to me",
     "Resolve",
-    "Link to incident…",
-    "Change dismissal…",
+    "Link to incident",
+    "Change dismissal",
     "Undismiss",
   ]);
   await page.keyboard.press("Escape");
@@ -132,7 +140,7 @@ test("the ⋯ menu offers Dismiss… on firing rows and Change dismissal… on d
   await expect(resolved.menu.getByRole("menuitem")).toHaveText([
     "Assign to me",
     "Reopen",
-    "Link to incident…",
+    "Link to incident",
   ]);
   await page.keyboard.press("Escape");
   await expect(
@@ -147,7 +155,7 @@ test("the dialog dismisses for a preset or custom duration with an optional reas
   await page.goto(`/tenants/${tenant}/alerts`);
   const { trigger, menu } = menuFor(page, "Disk usage above 95%");
   await trigger.click();
-  await menu.getByRole("menuitem", { name: "Dismiss…" }).click();
+  await menu.getByRole("menuitem", { name: "Dismiss" }).click();
   const dialog = page.getByRole("dialog", { name: "Dismiss alert" });
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText("Disk usage above 95%");
@@ -188,7 +196,7 @@ test("until a date validates the time and Undismiss sends null", async ({
   await page.goto(`/tenants/${tenant}/alerts`);
   const { trigger, menu } = menuFor(page, "Queue depth growing");
   await trigger.click();
-  await menu.getByRole("menuitem", { name: "Change dismissal…" }).click();
+  await menu.getByRole("menuitem", { name: "Change dismissal" }).click();
   const dialog = page.getByRole("dialog", { name: "Change dismissal" });
   await expect(
     dialog.getByRole("radio", { name: "Until a date" }),
@@ -220,7 +228,7 @@ test("until a date validates the time and Undismiss sends null", async ({
 });
 
 async function feedsAcrossTheEnd(page: Page, nextChange: string | null) {
-  const { feeds } = await setup(page, nextChange);
+  const { feeds } = await setup(page, nextChange, { holdLive: true });
   await page.goto(`/tenants/${tenant}/alerts`);
   await expect(page.getByText("Disk usage above 95%")).toBeVisible();
   // Stop just before 12:10:00 so other timers settle, then step across it.
@@ -232,14 +240,55 @@ async function feedsAcrossTheEnd(page: Page, nextChange: string | null) {
   return feeds.length - before;
 }
 
-test("the Feed re-queries when the next dismissal ends", async ({ page }) => {
-  expect(await feedsAcrossTheEnd(page, "2026-10-28T12:10:00Z")).toBeGreaterThan(
-    0,
-  );
+test("the Feed re-queries when the next dismissal ends", async ({
+  browser,
+}) => {
+  // Live reconnects and polling may also query; compare like with like.
+  const across = async (nextChange: string | null) => {
+    const context = await browser.newContext();
+    try {
+      return await feedsAcrossTheEnd(await context.newPage(), nextChange);
+    } finally {
+      await context.close();
+    }
+  };
+  const without = await across(null);
+  const withEnd = await across("2026-10-28T12:10:00Z");
+  expect(withEnd).toBeGreaterThan(without);
 });
 
-test("without a dismissal ending the same moment brings no extra query", async ({
+test("an empty custom field waits without an error and the dialog keeps its size", async ({
   page,
 }) => {
-  expect(await feedsAcrossTheEnd(page, null)).toBe(0);
+  await setup(page);
+  await page.goto(`/tenants/${tenant}/alerts`);
+  const { trigger, menu } = menuFor(page, "Disk usage above 95%");
+  await trigger.click();
+  await menu.getByRole("menuitem", { name: "Dismiss" }).click();
+  const dialog = page.getByRole("dialog", { name: "Dismiss alert" });
+  const height = async () => (await dialog.boundingBox())!.height;
+  const sizes = [await height()];
+  await dialog.getByRole("spinbutton", { name: "Custom" }).click();
+  await expect(dialog.getByRole("status")).toHaveText(
+    "Enter how many minutes, hours or days to dismiss it for.",
+  );
+  await expect(dialog.getByRole("alert")).toHaveCount(0);
+  await expect(dialog.locator(".dismiss-custom")).toHaveClass(/\bon\b/);
+  await expect(
+    dialog.getByRole("button", { name: "Dismiss", exact: true }),
+  ).toBeDisabled();
+  sizes.push(await height());
+  await dialog.getByRole("spinbutton", { name: "Custom" }).fill("0");
+  await expect(dialog.getByRole("alert")).toHaveText(
+    "Enter a whole number greater than zero.",
+  );
+  sizes.push(await height());
+  await dialog.locator("label", { hasText: "Until a date" }).click();
+  sizes.push(await height());
+  await dialog.getByLabel("Date", { exact: true }).fill("2020-01-01");
+  await expect(dialog.getByRole("alert")).toContainText(
+    "Choose a time after now",
+  );
+  sizes.push(await height());
+  expect(new Set(sizes.map(Math.round)).size).toBe(1);
 });

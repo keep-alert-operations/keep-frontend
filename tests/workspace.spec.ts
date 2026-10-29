@@ -584,7 +584,12 @@ for (const section of ["alerts", "incidents"]) {
       },
     );
     await page.goto(`/tenants/${global}/${section}/${alert}`);
-    await page.getByRole("button", { name: "Assign…", exact: true }).click();
+    await page
+      .getByRole("button", {
+        name: section === "alerts" ? "Assign" : "Assign…",
+        exact: true,
+      })
+      .click();
     const picker = page.getByRole("region", {
       name:
         section === "alerts"
@@ -701,7 +706,7 @@ for (const status of [401, 403]) {
     await page
       .getByRole("textbox", { name: "Add a note", exact: true })
       .fill("Protected unsaved note");
-    await page.getByRole("button", { name: "Assign…", exact: true }).click();
+    await page.getByRole("button", { name: "Assign", exact: true }).click();
     await page
       .getByRole("button", { name: "Assign to me", exact: true })
       .click();

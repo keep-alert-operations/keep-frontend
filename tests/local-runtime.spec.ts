@@ -90,7 +90,7 @@ test("native alert reaches the real feed and supports browser acknowledgement an
   await expect(
     page.getByRole("heading", { name: message, exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Assign…", exact: true }).click();
+  await page.getByRole("button", { name: "Assign", exact: true }).click();
   await page.getByRole("button", { name: "Assign to me", exact: true }).click();
   await expect(page.locator(".ad-marks .st-acknowledged")).toBeVisible();
   const note =

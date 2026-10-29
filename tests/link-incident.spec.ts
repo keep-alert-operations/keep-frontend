@@ -100,7 +100,7 @@ test("the Feed row menu links an alert to an incident", async ({ page }) => {
   await page
     .getByRole("button", { name: "Actions for Disk almost full" })
     .click();
-  await page.getByRole("menuitem", { name: "Link to incident…" }).click();
+  await page.getByRole("menuitem", { name: "Link to incident" }).click();
 
   const dialog = page.getByRole("dialog", { name: "Link to incident" });
   await expect(dialog).toBeVisible();
@@ -130,7 +130,7 @@ test("the alert page moves an owned alert to another incident", async ({
 }) => {
   const posts = await setup(page);
   await page.goto(`/tenants/${tenant}/alerts/${owned.id}`);
-  await page.getByRole("button", { name: "Link to incident…" }).click();
+  await page.getByRole("button", { name: "Link to incident" }).click();
 
   const dialog = page.getByRole("dialog", { name: "Link to incident" });
   await expect(dialog).toContainText("is linked to Checkout degraded");
@@ -157,7 +157,7 @@ test("the alert page moves an owned alert to another incident", async ({
 test("Escape closes the dialog and returns focus", async ({ page }) => {
   const posts = await setup(page);
   await page.goto(`/tenants/${tenant}/alerts/${free.id}`);
-  const open = page.getByRole("button", { name: "Link to incident…" });
+  const open = page.getByRole("button", { name: "Link to incident" });
   await open.click();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -171,6 +171,6 @@ test("viewers see no link action", async ({ page }) => {
   await page.goto(`/tenants/${tenant}/alerts/${free.id}`);
   await expect(page.getByText("Disk almost full").first()).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Link to incident…" }),
+    page.getByRole("button", { name: "Link to incident" }),
   ).toHaveCount(0);
 });
