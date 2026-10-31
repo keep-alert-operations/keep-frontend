@@ -7759,6 +7759,7 @@ export interface operations {
               component: string;
               impact: string;
               message: string;
+              name?: string;
               node_name?: string;
               runbook_url: string;
               /** @enum {string} */
@@ -7776,6 +7777,7 @@ export interface operations {
                   component: string;
                   impact: string;
                   message: string;
+                  name?: string;
                   node_name?: string;
                   runbook_url: string;
                   /** @enum {string} */
