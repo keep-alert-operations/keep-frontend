@@ -12,6 +12,7 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
     refresh: "M20 7v5h-5M4 17v-5h5M6 6a8 8 0 0 1 14 6M18 18a8 8 0 0 1-14-6",
     arrow: "M5 12h14M13 6l6 6-6 6",
     plus: "M12 5v14M5 12h14",
+    "chevron-down": "M6 9l6 6 6-6",
     edit: "M16 3l5 5M3 21l4-1L21 6l-4-4L3 16v5z",
     view: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
     resolve: "M21 11.1V12a9 9 0 1 1-5.3-8.2M21 4.5 12 13.5l-3-3",

@@ -75,6 +75,8 @@ On 2026-10-28 the user approved dismissing an alert for a time window (REV-49, [
 
 On 2026-10-29 the user asked for plainer alert actions (REV-51): Dismiss, Link to incident and Assign lose their trailing ellipsis in the row menu and on the alert page, and every alert-page action (View alert, Resolve or Reopen alert, Dismiss, Assign, Link to incident, Open runbook, and the band's Change and Undismiss) shows an icon from `icons.tsx`. In the dismiss dialog an empty Custom field waits for a number without an error, and both modes plus the longest summary share fixed grid cells so the dialog keeps one size.
 
+On 2026-10-29 the user asked to merge the panel dialog's search box and preset list (REV-52). Saved preset is one combobox with a chevron that shows it opens a list: typing searches shared presets by name and lists the loaded page below it, clicking a row or Enter on the highlighted row chooses it, and the field then shows its name. The list floats over the dialog, fixed below the field, so opening it never resizes or scrolls the dialog. It opens on click, the chevron, typing or the arrow keys; Escape closes only the list, and leaving the field without choosing restores the chosen name. First page, Next page, the loaded count and Retry loading presets sit at the bottom of the open list, so paging keeps it open.
+
 ## Review and verification
 
 The user’s 2026-10-08 correction puts editing on the regular dashboard screen.
