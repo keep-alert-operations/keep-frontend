@@ -105,7 +105,7 @@ for (const customize of [false, true]) {
         .getByRole("button", { name: "Remove Component", exact: true })
         .click();
       await page
-        .getByRole("button", { name: "Move Message up", exact: true })
+        .getByRole("button", { name: "Move Alert up", exact: true })
         .click();
     }
     const labels = await page
@@ -171,7 +171,7 @@ test("saved presets adapt legacy acknowledgement columns without changing their 
   ).toHaveText([
     "",
     "Severity",
-    "Message",
+    "Alert",
     "Status",
     "Application",
     "Component",
@@ -189,7 +189,7 @@ test("saved preset renders configured fields in order with its actual sort", asy
   const table = page.getByRole("table", { name: "Alerts", exact: true });
   await expect(table.getByRole("columnheader")).toHaveText([
     "",
-    "Message",
+    "Alert",
     "Site ↑",
     "Assignee",
     "Last received",
@@ -287,7 +287,7 @@ test("draft column removal and reordering update the preview without saving", as
   await expect(table.getByRole("columnheader")).toHaveText([
     "Selection",
     "Site ↑",
-    "Message",
+    "Alert",
     "Assignee",
   ]);
   await expect(

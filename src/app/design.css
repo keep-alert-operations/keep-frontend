@@ -1101,6 +1101,23 @@ textarea.inp {
   gap: 8px;
   min-width: 0;
 }
+.alert-detail-message {
+  /* A named alert's message under its title (REV-54): at most two lines here,
+     the full text in its tooltip and View alert. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.alert-sub {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12.5px;
+  color: var(--muted);
+}
 .owner-cell {
   display: flex;
   flex-direction: column;

@@ -1,6 +1,6 @@
 "use client";
 import { FormEvent, useEffect, useId, useRef, useState } from "react";
-import { RecordData } from "@/lib/api";
+import { alertTitle, RecordData } from "@/lib/api";
 import { components } from "@/lib/generated";
 import { CommandFeedback } from "./ui";
 
@@ -207,7 +207,7 @@ export function DismissDialog({
           <h2 id={`${id}-heading`}>
             {editing ? "Change dismissal" : "Dismiss alert"}
           </h2>
-          <span className="dismiss-alert">{String(alert.message ?? "")}</span>
+          <span className="dismiss-alert">{alertTitle(alert)}</span>
         </div>
         <button
           type="button"

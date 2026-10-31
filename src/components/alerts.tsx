@@ -12,7 +12,15 @@ import {
 import { useEffect, useRef, useState } from "react";
 import type { components } from "@/lib/generated";
 import { alertOperatorLabel } from "@/lib/alert-operator";
-import { count, display, RecordData, request, tenantPath } from "@/lib/api";
+import {
+  alertSubtitle,
+  alertTitle,
+  count,
+  display,
+  RecordData,
+  request,
+  tenantPath,
+} from "@/lib/api";
 import { useCommand, useDirtyWarning, useResource } from "@/lib/hooks";
 import { useSearchResource } from "@/lib/search-resource";
 import {
@@ -1118,7 +1126,7 @@ function AlertDetail(scope: Scope & { id: string }) {
         ]
       : [{ label: "Feed", href: `/tenants/${scope.tenant.id}/alerts` }];
   const title = alert
-    ? display(alert.message ?? alert.application)
+    ? alertTitle(alert)
     : detail.error
       ? "Alert unavailable"
       : "Alert";
@@ -1175,6 +1183,17 @@ function AlertDetail(scope: Scope & { id: string }) {
       title={title}
       crumbs={crumbs}
       className="alert-detail-page"
+      extra={
+        alert &&
+        alertSubtitle(alert) && (
+          <span
+            className="page-subtitle alert-detail-message"
+            title={alertSubtitle(alert)}
+          >
+            {alertSubtitle(alert)}
+          </span>
+        )
+      }
       actions={
         list && (
           <>

@@ -60,7 +60,9 @@ export function LinkIncidentDialog({
     document.addEventListener("keydown", key);
     return () => document.removeEventListener("keydown", key);
   }, [locked, onClose]);
-  const text = display(alert.message ?? alert.application ?? alert.id);
+  const text = display(
+    alert.name ?? alert.message ?? alert.application ?? alert.id,
+  );
   const ownerTitle = display(
     source.data?.data.title ??
       alert.active_incident_title ??

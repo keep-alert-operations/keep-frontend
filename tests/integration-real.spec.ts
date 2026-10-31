@@ -75,16 +75,30 @@ elif action=='setup':
     publisher=Capture()
     status,_=asyncio.run(KafkaAdmission(publisher,environment=config.environment,global_tenant_id=tenant).admit(canonical(native),'v1'))
     if status!=202: raise RuntimeError('Synthetic admission was not accepted')
-    topic,key,value=publisher.records[-1]
-    for attempt in range(4):
-        try:
-            changed=apply_record(db,topic=topic,partition=0,offset=0,key=key,value=value,settings=config,profile=None)
-            break
-        except ReceiveTimeAhead as ahead:
-            # The receipt is stamped from this host's clock; wait out its lead.
-            if attempt==3: raise
-            time.sleep(ahead.lead+RECEIVE_LEAD_MARGIN)
-    alert=json.loads(changed)['alert_id']
+    def apply(offset):
+        topic,key,value=publisher.records[-1]
+        for attempt in range(4):
+            try:
+                return apply_record(db,topic=topic,partition=0,offset=offset,key=key,value=value,settings=config,profile=None)
+            except ReceiveTimeAhead as ahead:
+                # The receipt is stamped from this host's clock; wait out its lead.
+                if attempt==3: raise
+                time.sleep(ahead.lead+RECEIVE_LEAD_MARGIN)
+    alert=json.loads(apply(0))['alert_id']
+    # REV-54: a named v2 alert in a specific tenant this user can edit.
+    named_tenant=uuid4(); operator=uuid4()
+    with db.transaction() as conn:
+        conn.execute("INSERT INTO tenants(id,kind,name,name_key) VALUES(%s,'specific','Browser v2','browser v2')", (named_tenant,))
+        for table in ('tenant_work_state','tenant_view_state','tenant_configuration_guard'):
+            conn.execute(sql.SQL('INSERT INTO {}(tenant_id) VALUES(%s)').format(sql.Identifier(table)), (named_tenant,))
+        conn.execute('INSERT INTO admission_capacity(scope) VALUES(%s)', (str(named_tenant),))
+        conn.execute("INSERT INTO operators(id,tenant_id,name,name_key,lifecycle) VALUES(%s,%s,'Browser operator','browser operator','ready')", (operator,named_tenant))
+        conn.execute("INSERT INTO tenant_grants(tenant_id,principal_id,role) VALUES(%s,%s,'edit')", (named_tenant,principal))
+    gateway=SimpleNamespace(verified=True,tenant_id=str(named_tenant),operator_id=str(operator),credential_id=str(uuid4()),policy_generation='1',routing_names=('Browser operator',),authorized_at=None)
+    v2={'application':'browser-smoke-'+str(uuid4()),'component':'api','message':'Checkout failing in the browser smoke','severity':'critical','status':'firing','site':'lab','impact':'Orders fail','runbook_url':'https://example.invalid/runbook','name':'Checkout errors'}
+    status,_=asyncio.run(KafkaAdmission(publisher,environment=config.environment,global_tenant_id=tenant).admit(canonical(v2),'v2',gateway=gateway))
+    if status!=202: raise RuntimeError('Synthetic v2 admission was not accepted')
+    named=json.loads(apply(1))['alert_id']
     db.close()
     key=rsa.generate_private_key(public_exponent=65537,key_size=2048)
     now=datetime.now(timezone.utc)
@@ -92,7 +106,7 @@ elif action=='setup':
     certificate=(x509.CertificateBuilder().subject_name(subject).issuer_name(subject).public_key(key.public_key()).serial_number(x509.random_serial_number()).not_valid_before(now-timedelta(minutes=1)).not_valid_after(now+timedelta(days=1)).add_extension(x509.SubjectAlternativeName([x509.DNSName('localhost'),x509.IPAddress(ipaddress.ip_address('127.0.0.1'))]),critical=False).sign(key,hashes.SHA256()))
     (temp/'key.pem').write_bytes(key.private_bytes(serialization.Encoding.PEM,serialization.PrivateFormat.PKCS8,serialization.NoEncryption()))
     (temp/'cert.pem').write_bytes(certificate.public_bytes(serialization.Encoding.PEM))
-    print(json.dumps({'tenant':str(tenant),'alert':str(alert),'handle':handle}))
+    print(json.dumps({'tenant':str(tenant),'alert':str(alert),'handle':handle,'named_tenant':str(named_tenant),'named':str(named)}))
 elif action=='verify':
     with psycopg.connect(os.environ['APPCHI_DATABASE_URL']) as conn:
         assignee,revision=conn.execute('SELECT assignee_id,revision FROM alerts WHERE id=%s',(os.environ['APPCHI_BROWSER_ALERT_ID'],)).fetchone()
@@ -183,7 +197,13 @@ async function healthy(
 }
 
 type Stack = {
-  seeded: { tenant: string; alert: string; handle: string };
+  seeded: {
+    tenant: string;
+    alert: string;
+    handle: string;
+    named_tenant: string;
+    named: string;
+  };
   page: import("@playwright/test").Page;
   origin: string;
   environment: NodeJS.ProcessEnv;
@@ -245,7 +265,7 @@ async function withStack(
         encoding: "utf8",
         timeout: 45000,
       }),
-    ) as { tenant: string; alert: string; handle: string };
+    ) as Stack["seeded"];
     backendProcess = launch(
       python,
       [
@@ -692,6 +712,45 @@ test("real HTTPS browser reports incident handling from PostgreSQL", async ({
     ).toBeVisible();
     await expect(page.getByRole("link", { name: "Disk pressure" })).toHaveCount(
       0,
+    );
+  });
+});
+
+test("real HTTPS browser titles a named v2 alert by its name", async ({
+  browser,
+  playwright,
+}) => {
+  // Requirements: REV-54; alert operations 3, 24.
+  test.skip(
+    !adminUrl,
+    "Opt in with APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL pointing to an isolated local PostgreSQL administrator database",
+  );
+  test.setTimeout(180000);
+  await withStack(browser, playwright, {}, async ({ seeded, page, origin }) => {
+    const detail = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/tenants/") &&
+        response.url().endsWith(`/alerts/${seeded.named}`) &&
+        response.request().method() === "GET",
+    );
+    await page.goto(
+      `${origin}/tenants/${seeded.named_tenant}/alerts/${seeded.named}`,
+    );
+    const body = await (await detail).json();
+    expect(body.data.name).toBe("Checkout errors");
+    expect(body.data.key_field).toMatch(/^[0-9a-f]{64}$/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Checkout errors",
+    );
+    await expect(page.locator(".alert-detail-message")).toHaveText(
+      "Checkout failing in the browser smoke",
+    );
+    // A v1 alert has no name and keeps its message as the title.
+    await page.goto(
+      `${origin}/tenants/${seeded.tenant}/alerts/${seeded.alert}`,
+    );
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Real database browser smoke",
     );
   });
 });

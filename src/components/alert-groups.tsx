@@ -17,6 +17,7 @@ import { personLabel, RelativeTime } from "./page";
 export const GROUP_FIELDS = [
   ["severity", "Severity"],
   ["display_status", "Status"],
+  ["name", "Alert name"],
   ["application", "Application"],
   ["component", "Component"],
   ["node_name", "Node"],

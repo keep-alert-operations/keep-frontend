@@ -149,6 +149,18 @@ export function display(value: unknown): string {
       ? JSON.stringify(value)
       : String(value);
 }
+/** An alert's title (REV-54): its name, which only v1 alerts lack. */
+export function alertTitle(alert: Record<string, unknown>): string {
+  return display(alert.name ?? alert.message ?? alert.application);
+}
+/** The message shown under a named alert's title. */
+export function alertSubtitle(
+  alert: Record<string, unknown>,
+): string | undefined {
+  return typeof alert.name === "string" && typeof alert.message === "string"
+    ? alert.message
+    : undefined;
+}
 export function count(value: unknown): string {
   return typeof value === "string" && /^\d+$/.test(value)
     ? BigInt(value).toLocaleString()

@@ -140,6 +140,7 @@ export const SORT_FIELDS = [
   "timestamp",
   "severity",
   "status",
+  "name",
   "application",
   "component",
   "node_name",
@@ -158,6 +159,7 @@ export function nextQuickSort(
 }
 /** Fields offered by the editor's "Insert field" chips (reference S06). */
 export const INSERT_FIELDS = [
+  "name",
   "application",
   "component",
   "node_name",
@@ -173,7 +175,9 @@ export const INSERT_FIELDS = [
 ];
 const LABELS: Record<string, string> = {
   severity: "Severity",
-  message: "Message",
+  // The title column shows the alert name with its message (REV-54).
+  message: "Alert",
+  name: "Alert name",
   status: "Lifecycle",
   display_status: "Status",
   application: "Application",
