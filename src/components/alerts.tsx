@@ -17,6 +17,7 @@ import {
   alertTitle,
   count,
   display,
+  providerLabel,
   RecordData,
   request,
   tenantPath,
@@ -1136,6 +1137,13 @@ function AlertDetail(scope: Scope & { id: string }) {
     /^https?:\/\//.test(alert.runbook_url)
       ? alert.runbook_url
       : undefined;
+  // The Grafana rule that fired the alert (REV-55); API alerts have none.
+  const alertRule =
+    alert &&
+    typeof alert.alert_rule_url === "string" &&
+    /^https?:\/\//.test(alert.alert_rule_url)
+      ? alert.alert_rule_url
+      : undefined;
   const noteRows = notes.data?.data ?? [];
   const counts: Partial<Record<Tab, string | undefined>> = {
     notes: pageCount(notes.data),
@@ -1149,6 +1157,7 @@ function AlertDetail(scope: Scope & { id: string }) {
         ["Node name", display(alert.node_name)],
         ["Site", display(alert.site)],
         ["Operator", alertOperatorLabel(alert)],
+        ["Provider", providerLabel(alert.provider)],
         ["Impact", display(alert.impact)],
         [
           "First received",
@@ -1446,6 +1455,17 @@ function AlertDetail(scope: Scope & { id: string }) {
                     >
                       <Icon name="external" size={14} />
                       Open runbook
+                    </a>
+                  )}
+                  {alertRule && (
+                    <a
+                      className="btn"
+                      href={alertRule}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Icon name="external" size={14} />
+                      Open alert rule
                     </a>
                   )}
                 </div>

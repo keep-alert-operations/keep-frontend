@@ -12,6 +12,7 @@ import {
   alertTitle,
   ApiError,
   display,
+  providerLabel,
   RecordData,
   request,
   tenantPath,
@@ -282,6 +283,7 @@ function AlertField({
   if (field === "assignee_id")
     return personLabel(scope, value, row.assignee_display_name);
   if (field === "operator") return alertOperatorLabel(row);
+  if (field === "provider") return providerLabel(value);
   if (
     [
       "timestamp",
