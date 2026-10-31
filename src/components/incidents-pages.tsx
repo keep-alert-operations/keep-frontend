@@ -409,7 +409,10 @@ function IncidentDetail({ scope, id }: { scope: Scope; id: string }) {
       ? String(linkedRows.filter((row) => !row.message && !row.id).length)
       : undefined);
   const alertNames = new Map(
-    linkedRows.map((row) => [alertKey(row), str(row.message) ?? alertKey(row)]),
+    linkedRows.map((row) => [
+      alertKey(row),
+      str(row.name) ?? str(row.message) ?? alertKey(row),
+    ]),
   );
 
   const cycleRows = Array.isArray(cycles.data?.data) ? cycles.data.data : [];
@@ -926,7 +929,8 @@ function LinkedAlerts({ scope, rows }: { scope: Scope; rows: RecordData[] }) {
       {rows.map((row) => {
         const key = alertKey(row);
         const available = Boolean(row.message ?? row.id ?? row.alert_id);
-        const text = str(row.message) ?? "Unavailable alert reference";
+        const text =
+          str(row.name) ?? str(row.message) ?? "Unavailable alert reference";
         const assignee = who(scope, row.assignee_id, row.assignee_display_name);
         return (
           <div

@@ -240,7 +240,7 @@ export function IncidentMembership({
             <span role="columnheader">Status</span>
           </div>
           {rows.map((row) => {
-            const text = row.message ? display(row.message) : row.id;
+            const text = display(row.name ?? row.message ?? row.id);
             return (
               <div
                 role="row"

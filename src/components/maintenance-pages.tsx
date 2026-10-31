@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
+  alertTitle,
   ApiError,
   display,
   type RecordData,
@@ -827,7 +828,7 @@ function SuppressedAlerts({
                   href={`/tenants/${scope.tenant.id}/alerts/${alertId}`}
                   className={`lnk mw-alert-link alert-row-link ${row.status === "resolved" ? "mw-res" : ""}`}
                 >
-                  {display(row.message)}
+                  {alertTitle(row)}
                   <AlertStatus
                     value={row.status}
                     assigneeId={row.assignee_id}

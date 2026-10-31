@@ -7,7 +7,15 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import { ApiError, display, RecordData, request, tenantPath } from "@/lib/api";
+import {
+  alertSubtitle,
+  alertTitle,
+  ApiError,
+  display,
+  RecordData,
+  request,
+  tenantPath,
+} from "@/lib/api";
 import { alertOperatorLabel } from "@/lib/alert-operator";
 import { useCommand } from "@/lib/hooks";
 import {
@@ -627,7 +635,8 @@ export function AlertTable({
         )}
       </div>
       {rows.map((row) => {
-        const message = display(row.message ?? row.application);
+        const title = alertTitle(row);
+        const subtitle = alertSubtitle(row);
         const selected = selection?.has(row.id) ?? false;
         const resolved = row.status === "resolved";
         const mine = row.assignee_id === scope.session.principal.id;
@@ -648,7 +657,7 @@ export function AlertTable({
               {selectable && (
                 <input
                   type="checkbox"
-                  aria-label={`Select ${message}`}
+                  aria-label={`Select ${title}`}
                   checked={selected}
                   disabled={busy}
                   onChange={() => toggle(row)}
@@ -663,17 +672,22 @@ export function AlertTable({
                   key={field}
                 >
                   {field === "message" ? (
-                    <span className="alert-title">
-                      <NavLink
-                        scope={scope}
-                        className="msg alert-row-link"
-                        href={`/tenants/${scope.tenant.id}/alerts/${row.id}`}
-                        aria-label={`Open ${message}`}
-                      >
-                        {message}
-                      </NavLink>
-                      <SuppressedChip alert={row} />
-                    </span>
+                    <>
+                      <span className="alert-title">
+                        <NavLink
+                          scope={scope}
+                          className="msg alert-row-link"
+                          href={`/tenants/${scope.tenant.id}/alerts/${row.id}`}
+                          aria-label={`Open ${title}`}
+                        >
+                          {title}
+                        </NavLink>
+                        <SuppressedChip alert={row} />
+                      </span>
+                      {subtitle && (
+                        <span className="alert-sub">{subtitle}</span>
+                      )}
+                    </>
                   ) : (
                     <AlertField field={field} row={row} scope={scope} />
                   )}
@@ -692,12 +706,13 @@ export function AlertTable({
                       scope={scope}
                       className="msg alert-row-link"
                       href={`/tenants/${scope.tenant.id}/alerts/${row.id}`}
-                      aria-label={`Open ${message}`}
+                      aria-label={`Open ${title}`}
                     >
-                      {message}
+                      {title}
                     </NavLink>
                     <SuppressedChip alert={row} />
                   </span>
+                  {subtitle && <span className="alert-sub">{subtitle}</span>}
                 </span>
                 {shown("display_status") && (
                   <span role="cell" className="cell">
@@ -753,7 +768,7 @@ export function AlertTable({
                       scope={scope}
                       className="lnk alert-row-link"
                       href={`/tenants/${scope.tenant.id}/alerts/${row.id}`}
-                      aria-label={`Open ${message}`}
+                      aria-label={`Open ${title}`}
                     >
                       Open alert
                     </NavLink>
@@ -762,7 +777,7 @@ export function AlertTable({
                 )}
                 {actions && !narrow && (
                   <Menu
-                    label={`Actions for ${message}`}
+                    label={`Actions for ${title}`}
                     className="row-menu"
                     content={dots}
                     flip
