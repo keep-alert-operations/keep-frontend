@@ -63,6 +63,8 @@ colors:
   incident-soft-2: "#f7f6fe"
   incident-line: "#dcd8f8"
   syntax-number: "#6b46c1"
+  chart-1: "#0a6fb0"
+  chart-2: "#2e9e62"
   bar-bg: "#0b2545"
   bar-ink: "#f2f7fc"
   bar-muted: "#c3d5e6"
@@ -130,6 +132,8 @@ colors:
   incident-soft-2-dark: "#1b1d3d"
   incident-line-dark: "#3b3a72"
   syntax-number-dark: "#c3a8ff"
+  chart-1-dark: "#2f8fcf"
+  chart-2-dark: "#33a06c"
   bar-bg-dark: "#23476a"
   bar-ink-dark: "#f2f7fc"
   bar-muted-dark: "#c3d5e6"
@@ -426,6 +430,7 @@ A cool, restrained Ocean palette: blue-tinted neutrals carry the screen, one sat
 
 ### Tertiary
 - **Incident Violet** (`incident` #5b4bd1 / #9d94ff): incident timeline dots. `incident-ink` (#4136a8 / #c0baff) on `incident-soft` (#efedfc / #25244d) is the incident chip; `incident-soft-2` and `incident-line` tint incident panels. `syntax-number` (#6b46c1 / #c3a8ff) colours numbers in CEL.
+- **Report chart pair** (`chart-1` #0a6fb0 / #2f8fcf and `chart-2` #2e9e62 / #33a06c): opened and resolved bars and bar-list fills in the incident report (REV-53). The pair passes the colour-vision and contrast checks on both surfaces; labels and values stay in text roles.
 
 ### Neutral
 - **Ocean Canvas** (`bg` #f7fafd / #0b141e): page ground, fullscreen board ground.
@@ -556,6 +561,9 @@ A floating 12px-radius bar centred over the content, 30px from the bottom, in `b
 
 ### Dashboard count panels
 12px-radius `surface` panels on a 12-column, 48px-row grid, with the count in Geist Mono display sizes. Threshold colour is carried by a 4px coloured top border (`critical-mark`, `amber-mark`, `ok`, `primary`, or `border` when none matches), and by 3px top borders on the dashboard list's mini previews. Stale panels show a diagonal `surface`/`surface-2` stripe; a selected panel gets a 2px `focus` ring.
+
+### Incident report (REV-53)
+The Reports page (rail item after Boards) shows the incident report in the existing page frame. The period row holds a segmented control (24 hours, 7, 30, 90 days, Custom) whose Custom choice opens a 340px popover with From and To dates, the 13px 500 range label with exact instants in its tooltip, the Compare with previous period checkbox and its `subtle` "vs …" line, then a right-aligned "Computed … ago" and a small Refresh button. A 12px panel holds five figures separated by `line` hairlines: a 12.5px 500 `muted` label with a 20px round ⓘ button (`faint`, hover `accent` on `accent-soft`) opening a 300px definition popover, the value at 26px 600 tabular, a 12px `subtle` sub-line and a 12px change line (`ok-ink` better, `high` worse, `subtle` neutral). The chart panel draws opened and resolved as paired 9px bars with 3px rounded tops in `chart-1` and `chart-2`, three `line` gridlines, sparse 11px axis labels, a legend with totals, hover tooltips and View as table. Bar lists (resolution cause) use an 8px `fill` track with a `chart-1` fill. The breakdown is one panel with a segmented switcher and a grid table whose Opened column carries a 58px mini bar. First loads use flat `fill-strong` placeholders without animation. Below 1180px the figures form three columns and the panels stack; at 640px two columns, and tables scroll inside their panel.
 
 ### Theme switch and theme mechanism
 A sun/moon switch in the account menu: a 56×30 `fill-strong` track with a 24px `surface` thumb that slides 26px in 160ms (no motion under reduced-motion). Light is the default regardless of OS preference; a dark choice is stored as `appchi-theme` in localStorage and applied as `data-theme` on `<html>` by an inline bootstrap script before first paint. Each theme sets `color-scheme`, so native controls, scrollbars and form widgets follow. Browser surfaces are themed from the palette: `accent-color` and `caret-color` are `primary`, `::selection` is `primary-soft` with `text`, placeholders are `subtle` at full opacity, scrollbars are `border-hover` on transparent, and focus is the 2px `focus` outline.

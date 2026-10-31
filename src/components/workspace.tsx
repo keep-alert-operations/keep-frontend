@@ -26,6 +26,7 @@ const sections = [
   ["correlation-rules", "Correlation rules"],
   ["maintenance", "Maintenance"],
   ["dashboards", "Dashboards"],
+  ["reports", "Reports"],
   ["operators", "Operators"],
 ] as const;
 export interface Scope {

@@ -1,0 +1,736 @@
+/* Reports screen: incident report (REV-53; see docs/ui-design.md). */
+
+.rp {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* ---------- period row ---------- */
+.rp-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-height: 36px;
+}
+.rp-period {
+  position: relative;
+  max-width: 100%;
+}
+.rp-seg {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.rp-range {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+}
+.rp-range-sub,
+.rp-stamp {
+  font-size: 12.5px;
+  color: var(--subtle);
+  white-space: nowrap;
+}
+.rp-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+.rp-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.rp-check input {
+  margin: 0;
+}
+.rp-custom {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px var(--shade-3);
+}
+.rp-custom-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.rp-custom-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+.rp-custom-row .inp {
+  width: 100%;
+}
+.rp-custom-note,
+.rp-custom-err {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+.rp-custom-err {
+  color: var(--error);
+}
+.rp-custom-f {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ---------- notes and failure ---------- */
+.rp-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  border: 1px solid var(--info-line);
+  font-size: 13px;
+  color: var(--text);
+}
+.rp-note svg {
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.rp-note .btn {
+  margin: -3px 0 -3px auto;
+}
+.rp-warn {
+  background: var(--warning-bg);
+  border-color: var(--warning-line);
+}
+.rp-warn svg {
+  color: var(--warning);
+}
+.rp-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px 24px;
+  background: var(--error-bg);
+  border-color: var(--error-line);
+}
+.rp-error svg {
+  color: var(--error);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.rp-error b {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.rp-error .btn {
+  margin-left: auto;
+}
+.rp-req {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--subtle);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- definitions ---------- */
+.rp-def {
+  position: relative;
+  display: inline-flex;
+}
+.rp-info {
+  all: unset;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--faint);
+}
+.rp-info:hover,
+.rp-info[aria-expanded="true"] {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.rp-info:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.rp-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: -8px;
+  z-index: 30;
+  width: 300px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px var(--shade-3);
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  text-align: left;
+  white-space: normal;
+  letter-spacing: 0;
+}
+.rp-pop-end,
+.rp-fig:last-child .rp-pop {
+  left: auto;
+  right: -8px;
+}
+
+/* ---------- figure strip ---------- */
+.rp-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.rp-fig {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 14px 18px 15px;
+  border-left: 1px solid var(--line);
+}
+.rp-fig:first-child {
+  border-left: 0;
+}
+.rp-fig-l {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.rp-fig-v {
+  margin-top: 2px;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.rp-na {
+  color: var(--faint);
+}
+.rp-fig-s {
+  font-size: 12px;
+  color: var(--subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rp-delta {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.rp-good {
+  color: var(--ok-ink);
+}
+.rp-bad {
+  color: var(--high);
+}
+.rp-flat {
+  color: var(--subtle);
+}
+
+/* ---------- placeholders (first load only, no animation) ---------- */
+.rp-skel {
+  display: block;
+  border-radius: 6px;
+  background: var(--fill-strong);
+}
+.rp-skel-v {
+  width: 84px;
+  height: 28px;
+  margin: 5px 0 6px;
+}
+.rp-skel-s {
+  width: 130px;
+  height: 11px;
+}
+.rp-skel-chart {
+  height: 200px;
+  margin: 8px 0 26px;
+}
+.rp-skel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 6px 0;
+}
+.rp-skel-list .rp-skel {
+  height: 12px;
+}
+
+/* ---------- panels ---------- */
+.rp-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+.rp-panel-h {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.rp-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.rp-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.rp-legend b {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.rp-sw {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--chart-1);
+}
+.rp-sw2 {
+  background: var(--chart-2);
+}
+.rp-empty {
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  color: var(--muted);
+}
+.rp-empty b {
+  color: var(--text);
+  font-size: 14px;
+}
+.rp-empty .btn {
+  margin-top: 6px;
+}
+.rp-empty-row {
+  margin: 0;
+  padding: 24px 18px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ---------- chart ---------- */
+.rp-chart {
+  position: relative;
+  height: 200px;
+  margin: 8px 0 26px 34px;
+}
+.rp-tick {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px solid var(--line);
+}
+.rp-tick span {
+  position: absolute;
+  left: -34px;
+  top: -8px;
+  width: 26px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--subtle);
+  font-variant-numeric: tabular-nums;
+}
+.rp-plot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+.rp-col {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 4px;
+}
+.rp-col:hover {
+  background: var(--row-hover);
+}
+.rp-bar {
+  display: block;
+  width: min(9px, 40%);
+  border-radius: 3px 3px 0 0;
+  background: var(--chart-1);
+}
+.rp-bar2 {
+  background: var(--chart-2);
+}
+.rp-xl {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--subtle);
+  white-space: nowrap;
+}
+.rp-tip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px var(--shade-3);
+  font-size: 12px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.rp-tip b {
+  color: var(--text);
+  font-weight: 600;
+}
+.rp-col:hover .rp-tip {
+  display: flex;
+}
+.rp-tip-start {
+  left: 0;
+  transform: none;
+}
+.rp-tip-end {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+.rp-ctab {
+  max-height: 236px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.rp-ct-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px 96px;
+  column-gap: 12px;
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rp-ct-row span:not(:first-child) {
+  text-align: right;
+}
+.rp-ct-head {
+  position: sticky;
+  top: 0;
+  background: var(--surface-2);
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* ---------- bar list ---------- */
+.rp-bl {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(48px, 1fr) 44px 44px;
+  align-items: center;
+  column-gap: 12px;
+  min-height: 34px;
+  padding: 3px 0;
+}
+/* Names wrap rather than truncate; the panel is narrow beside the chart. */
+.rp-bl-n {
+  min-width: 0;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.rp-bl-n small {
+  display: block;
+  font-size: 11.5px;
+  line-height: 1.25;
+  color: var(--subtle);
+}
+.rp-bl-t {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--fill);
+  overflow: hidden;
+}
+.rp-bl-f {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--chart-1);
+}
+.rp-bl-v,
+.rp-bl-p {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.rp-bl-p {
+  font-size: 12.5px;
+  color: var(--subtle);
+}
+
+/* ---------- breakdown table ---------- */
+.rp-tablebox {
+  min-width: 0;
+}
+.rp-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.4fr) 150px 90px 130px 150px 96px;
+  align-items: center;
+  column-gap: 14px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--line);
+}
+.rp-row:hover {
+  background: var(--row-hover);
+}
+.rp-rows > .rp-row:last-child {
+  border-bottom: 0;
+}
+.rp-head {
+  min-height: 36px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  border-bottom-color: var(--border);
+}
+.rp-head:hover {
+  background: transparent;
+}
+.rp-num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.rp-cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-lnk {
+  color: var(--text);
+  font-weight: 500;
+}
+.rp-lnk:hover {
+  text-decoration: underline;
+}
+.rp-muted {
+  color: var(--subtle);
+  font-style: italic;
+}
+.rp-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  margin-left: 8px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: var(--fill);
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 500;
+  vertical-align: middle;
+}
+.rp-other {
+  color: var(--subtle);
+}
+.rp-mini {
+  display: inline-block;
+  width: 58px;
+  height: 6px;
+  margin-right: 10px;
+  border-radius: 3px;
+  background: var(--fill);
+  overflow: hidden;
+  vertical-align: middle;
+}
+.rp-mini span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--chart-1);
+}
+.rp-foot {
+  font-size: 12.5px;
+  color: var(--subtle);
+}
+
+/* ---------- definitions list ---------- */
+.rp-defs {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.rp-defs summary {
+  cursor: pointer;
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+.rp-defs dl {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 8px 18px;
+  margin: 0;
+  padding: 2px 18px 14px;
+}
+.rp-defs dt {
+  font-size: 13px;
+  font-weight: 600;
+}
+.rp-defs dd {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.rp-defs p {
+  margin: 0;
+  padding: 10px 18px 14px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--subtle);
+}
+
+/* ---------- narrower screens ---------- */
+@media (max-width: 1180px) {
+  .rp-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .rp-fig {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .rp-fig:nth-child(-n + 3) {
+    border-top: 0;
+  }
+  .rp-fig:nth-child(3n + 2),
+  .rp-fig:nth-child(3n) {
+    border-left: 1px solid var(--line);
+  }
+  .rp-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 1023px) {
+  .rp-tablebox {
+    overflow-x: auto;
+  }
+  .rp-tablebox .rp-rows {
+    min-width: 860px;
+  }
+}
+@media (max-width: 640px) {
+  .rp-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rp-fig,
+  .rp-fig:nth-child(3n + 2),
+  .rp-fig:nth-child(3n) {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .rp-fig:nth-child(-n + 2) {
+    border-top: 0;
+  }
+  .rp-fig:nth-child(2n) {
+    border-left: 1px solid var(--line);
+  }
+  .rp-fig-v {
+    font-size: 22px;
+  }
+  .rp-fig-s {
+    white-space: normal;
+  }
+  .rp-seg {
+    flex-wrap: wrap;
+  }
+  .rp-bl {
+    grid-template-columns: minmax(0, 1.2fr) minmax(36px, 0.7fr) 32px 40px;
+    column-gap: 8px;
+  }
+  .rp-stamp {
+    display: none;
+  }
+  .rp-chart {
+    margin-left: 28px;
+  }
+  .rp-legend {
+    gap: 10px;
+  }
+  .rp-defs dl {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px 0;
+  }
+  .rp-defs dd {
+    margin-bottom: 8px;
+  }
+  .rp-pop,
+  .rp-custom {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    top: auto;
+    width: auto;
+  }
+}

@@ -83,6 +83,10 @@
   --incident-line: #dcd8f8;
   --syntax-number: #6b46c1;
 
+  /* Report charts: opened and resolved, validated for colour-vision separation */
+  --chart-1: #0a6fb0;
+  --chart-2: #2e9e62;
+
   /* Floating bulk bar */
   --bar-bg: #0b2545;
   --bar-ink: #f2f7fc;
@@ -170,6 +174,9 @@
   --incident-soft-2: #1b1d3d;
   --incident-line: #3b3a72;
   --syntax-number: #c3a8ff;
+
+  --chart-1: #2f8fcf;
+  --chart-2: #33a06c;
 
   --bar-bg: #23476a;
   --bar-ink: #f2f7fc;
