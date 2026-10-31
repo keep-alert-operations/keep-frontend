@@ -1,5 +1,6 @@
 "use client";
 import { useId, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ApiError, RecordData, tenantPath, timestamp } from "@/lib/api";
 import { useResource } from "@/lib/hooks";
 import type { Scope } from "./workspace";
@@ -27,6 +28,8 @@ const defaults = {
   direction: "desc",
 };
 type Filters = typeof defaults;
+const assigneeKindOf = (value: string) =>
+  ["", "me", "unassigned"].includes(value) ? value : "id";
 const uuidPattern =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const timeFields = ["created", "activity", "resolved"] as const;
@@ -83,14 +86,36 @@ export function linkedSummary(row: RecordData) {
   return parts.join(" · ");
 }
 
+/**
+ * Filters named in the URL, so a link (for example from a report) opens the list
+ * already filtered. Unknown keys are ignored; values are validated on apply.
+ */
+function linkedFilters(search: URLSearchParams): Filters {
+  const filters = { ...defaults };
+  for (const key of Object.keys(defaults) as (keyof Filters)[]) {
+    const value = search.get(key);
+    if (value !== null) filters[key] = value;
+  }
+  return filters;
+}
+
 export function IncidentList({ scope }: { scope: Scope }) {
   const moreId = useId();
-  const [draft, setDraft] = useState<Filters>(defaults);
-  const [filters, setFilters] = useState<Filters>(defaults);
+  const searchParams = useSearchParams();
+  // App Router can render before window.location updates; read the link once.
+  const [linked] = useState(() => linkedFilters(searchParams));
+  const [draft, setDraft] = useState<Filters>(linked);
+  const [filters, setFilters] = useState<Filters>(linked);
   const [cursor, setCursor] = useState<string | null>(null);
-  const [assigneeKind, setAssigneeKind] = useState("");
+  const [assigneeKind, setAssigneeKind] = useState(
+    assigneeKindOf(linked.assignee),
+  );
   const [validation, setValidation] = useState<string>();
-  const [more, setMore] = useState(false);
+  const [more, setMore] = useState(
+    () =>
+      advancedKeys.some((key) => linked[key]) ||
+      assigneeKindOf(linked.assignee) === "id",
+  );
   const prefix = tenantPath(scope.tenant.id);
   const params = new URLSearchParams(filters);
   for (const [key, value] of Object.entries(filters)) {

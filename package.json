@@ -29,6 +29,6 @@
     "openapi-typescript": "7.13.0",
     "prettier": "3.9.8",
     "typescript": "5.9.3",
-    "@appchi/contracts": "git+https://github.com/appchi-alert-operations/appchi-contracts.git#9f4736f13ffef549b3ef20b2109965b6018ebe0b"
+    "@appchi/contracts": "git+https://github.com/appchi-alert-operations/appchi-contracts.git#8e473d329e986e8f65f2e75ac853d5369b808b00"
   }
 }

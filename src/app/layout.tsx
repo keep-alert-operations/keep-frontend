@@ -10,6 +10,7 @@ import "./styles/incidents.css";
 import "./styles/rules.css";
 import "./styles/maintenance.css";
 import "./styles/admin.css";
+import "./styles/reports.css";
 const geist = localFont({
   src: "../../node_modules/next/dist/next-devtools/server/font/geist-latin.woff2",
   variable: "--font-geist",

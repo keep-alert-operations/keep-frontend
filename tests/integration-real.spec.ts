@@ -527,3 +527,171 @@ test("real HTTPS browser dismisses an alert for a time window and it returns on 
     },
   );
 });
+
+/**
+ * Requirements: REV-53; incident operations 4, 14, 20; system completion 3, 4.
+ * The Reports page against the real API and PostgreSQL: a confirmed empty
+ * period, first load, figures from real incident commands, the breakdown and
+ * its link to the Incidents list, light and dark at desktop and phone width,
+ * and a failed report that recovers on Retry.
+ */
+test("real HTTPS browser reports incident handling from PostgreSQL", async ({
+  browser,
+  playwright,
+}) => {
+  test.skip(
+    !adminUrl,
+    "Opt in with APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL pointing to an isolated local PostgreSQL administrator database",
+  );
+  test.setTimeout(300000);
+  await withStack(browser, playwright, {}, async ({ seeded, page, origin }) => {
+    const shot = (name: string) =>
+      page.screenshot({
+        path: test.info().outputPath(`${name}.png`),
+        fullPage: true,
+      });
+    const summary = page.getByRole("region", { name: "Incident summary" });
+    await page.goto(`${origin}/tenants/${seeded.tenant}/reports`);
+    await expect(
+      page.getByRole("heading", { name: "Reports", level: 1 }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("No incidents opened or resolved"),
+    ).toBeVisible();
+    await shot("reports-empty-light");
+
+    // Two incidents worked through the real API with the session's CSRF token.
+    await page.evaluate(async (tenant) => {
+      const session = await (await fetch("/auth/session")).json();
+      const call = async (path: string, body: Record<string, unknown>) => {
+        const response = await fetch(`/api/tenants/${tenant}${path}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": session.data.csrf_token,
+          },
+          body: JSON.stringify({ command_id: crypto.randomUUID(), ...body }),
+        });
+        if (!response.ok)
+          throw new Error(
+            `${path} ${response.status} ${await response.text()}`,
+          );
+        return (await response.json()).data;
+      };
+      const first = await call("/incidents", {
+        title: "Checkout slowness",
+        severity: "critical",
+      });
+      let revision = (
+        await call(`/incidents/${first.id}/assignment`, {
+          expected_revision: first.revision,
+          assignee_id: session.data.principal.id,
+        })
+      ).revision;
+      revision = (
+        await call(`/incidents/${first.id}/status`, {
+          expected_revision: revision,
+          status: "investigating",
+        })
+      ).revision;
+      revision = (
+        await call(`/incidents/${first.id}/status`, {
+          expected_revision: revision,
+          status: "resolved",
+        })
+      ).revision;
+      await call(`/incidents/${first.id}/status`, {
+        expected_revision: revision,
+        status: "open",
+      });
+      await call("/incidents", { title: "Disk pressure", severity: "low" });
+    }, seeded.tenant);
+
+    // Hold one real response so the first-load placeholders are visible.
+    let release = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    await page.route(
+      "**/reports/incidents?*",
+      async (route) => {
+        await held;
+        await route.continue();
+      },
+      { times: 1 },
+    );
+    await page.reload();
+    await expect(page.getByText("Computing…")).toBeVisible();
+    await expect(page.getByText("No incidents opened or resolved")).toHaveCount(
+      0,
+    );
+    await shot("reports-loading-light");
+    release();
+    await expect(summary.getByText("2 new · 1 reopened")).toBeVisible();
+    await expect(summary.getByText("1 of 1 resolutions")).toBeVisible();
+    await expect(page.getByText(/^Computed /)).toBeVisible();
+    await shot("reports-light-desktop");
+
+    const breakdown = page.getByRole("region", { name: "Breakdown" });
+    await breakdown.getByRole("button", { name: "Assignee" }).click();
+    await expect(
+      breakdown.getByRole("link", { name: "Synthetic browser user (you)" }),
+    ).toBeVisible();
+    await breakdown.getByRole("button", { name: "Severity" }).click();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(390);
+    await shot("reports-light-phone");
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.getByRole("button", { name: /^Account/ }).click();
+    await page.getByLabel("Dark mode").click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await page.getByRole("button", { name: /^Account/ }).click();
+    await shot("reports-dark-desktop");
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(390);
+    await shot("reports-dark-phone");
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    // One failed report shows the error panel; Retry reads the real API again.
+    await page.route(
+      "**/reports/incidents?*",
+      (route) =>
+        route.fulfill({
+          status: 503,
+          json: {
+            error: {
+              code: "query_deadline",
+              message:
+                "Required capability is unavailable. Retry after recovery.",
+              request_id: "browser-synthetic-failure",
+            },
+          },
+        }),
+      { times: 1 },
+    );
+    await page
+      .getByRole("group", { name: "Period" })
+      .getByRole("button", { name: "90 days" })
+      .click();
+    const failure = page
+      .getByRole("alert")
+      .filter({ hasText: "Reports couldn't be computed" });
+    await expect(failure).toBeVisible();
+    await shot("reports-error-dark");
+    await failure.getByRole("button", { name: "Retry" }).click();
+    await expect(summary.getByText("2 new · 1 reopened")).toBeVisible();
+
+    // A breakdown row opens the Incidents list filtered by that value and period.
+    await breakdown.getByRole("link", { name: "Critical" }).click();
+    await expect(page).toHaveURL(/\/incidents\?.*severity=critical/);
+    await expect(
+      page.getByRole("link", { name: "Checkout slowness" }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Disk pressure" })).toHaveCount(
+      0,
+    );
+  });
+});

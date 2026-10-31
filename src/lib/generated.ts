@@ -1411,6 +1411,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/tenants/{tenant_id}/reports/incidents": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Incident Report
+     * @description Incident figures for one tenant and period (incident operations 20).
+     */
+    get: operations["incident_report_api_tenants__tenant_id__reports_incidents_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/tenants": {
     parameters: {
       query?: never;
@@ -2350,6 +2370,31 @@ export interface components {
     } & {
       [key: string]: unknown;
     };
+    /** IncidentReport */
+    IncidentReport: {
+      period: components["schemas"]["ReportPeriod"];
+      previous: components["schemas"]["ReportRange"] | null;
+      /**
+       * Previous Unavailable
+       * @description past_retention, not_requested or null.
+       */
+      previous_unavailable: string | null;
+      summary: components["schemas"]["ReportSummary"];
+      previous_summary: components["schemas"]["ReportSummary"] | null;
+      /** Series */
+      series: components["schemas"]["ReportSeriesBin"][];
+      breakdowns: components["schemas"]["ReportBreakdowns"];
+      /**
+       * Unavailable
+       * @description Sections that could not be read in time.
+       */
+      unavailable: string[];
+    };
+    /** IncidentReportRead */
+    IncidentReportRead: {
+      data: components["schemas"]["IncidentReport"];
+      meta: components["schemas"]["ReportMeta"];
+    };
     /** IncidentStatus */
     IncidentStatus: {
       /** Command Id */
@@ -2642,6 +2687,201 @@ export interface components {
       command_id: string;
       /** Expected Revision */
       expected_revision: string;
+    };
+    /** ReportAssigneeBreakdown */
+    ReportAssigneeBreakdown: {
+      /** Rows */
+      rows: components["schemas"]["ReportAssigneeGroup"][];
+      other: components["schemas"]["ReportOtherGroups"] | null;
+    };
+    /** ReportAssigneeGroup */
+    ReportAssigneeGroup: {
+      /** Opened */
+      opened: string;
+      /** Resolved */
+      resolved: string;
+      /** Reopened */
+      reopened: string;
+      /** First Response Median Seconds */
+      first_response_median_seconds: string | null;
+      /** Time To Resolve Median Seconds */
+      time_to_resolve_median_seconds: string | null;
+      /** Assignee Id */
+      assignee_id: string | null;
+      /** Display Name */
+      display_name: string | null;
+    };
+    /** ReportBreakdowns */
+    ReportBreakdowns: {
+      /** Severity */
+      severity: components["schemas"]["ReportSeverityGroup"][];
+      /** Origin */
+      origin: components["schemas"]["ReportOriginGroup"][];
+      rule: components["schemas"]["ReportRuleBreakdown"];
+      /** @description Null when assignment history is unavailable. */
+      assignee: components["schemas"]["ReportAssigneeBreakdown"] | null;
+    };
+    /** ReportDurations */
+    ReportDurations: {
+      /** Median Seconds */
+      median_seconds: string | null;
+      /** P90 Seconds */
+      p90_seconds: string | null;
+    };
+    /** ReportFirstResponse */
+    ReportFirstResponse: {
+      /** Median Seconds */
+      median_seconds: string | null;
+      /** P90 Seconds */
+      p90_seconds: string | null;
+      /** Responded */
+      responded: string;
+      /** Waiting */
+      waiting: string;
+    };
+    /** ReportMeta */
+    ReportMeta: {
+      /** Computed At */
+      computed_at: string;
+    } & {
+      [key: string]: unknown;
+    };
+    /** ReportOriginGroup */
+    ReportOriginGroup: {
+      /** Opened */
+      opened: string;
+      /** Resolved */
+      resolved: string;
+      /** Reopened */
+      reopened: string;
+      /** First Response Median Seconds */
+      first_response_median_seconds: string | null;
+      /** Time To Resolve Median Seconds */
+      time_to_resolve_median_seconds: string | null;
+      /** Origin */
+      origin: string;
+    };
+    /** ReportOtherGroups */
+    ReportOtherGroups: {
+      /** Groups */
+      groups: string;
+      /** Opened */
+      opened: string;
+      /** Resolved */
+      resolved: string;
+      /** Reopened */
+      reopened: string;
+    };
+    /** ReportPeriod */
+    ReportPeriod: {
+      /** Requested From */
+      requested_from: string;
+      /** Requested To */
+      requested_to: string;
+      /**
+       * Covered From
+       * @description Start of the reported range after the 90-day retention clamp.
+       */
+      covered_from: string;
+      /** Covered To */
+      covered_to: string;
+      /**
+       * Retention From
+       * @description Earliest instant whose history is guaranteed to be retained.
+       */
+      retention_from: string;
+      /** Time Zone */
+      time_zone: string;
+      /**
+       * Bin
+       * @description hour, day or week.
+       */
+      bin: string;
+    };
+    /** ReportRange */
+    ReportRange: {
+      /** From */
+      from: string;
+      /** To */
+      to: string;
+    };
+    /** ReportResolvedByCause */
+    ReportResolvedByCause: {
+      /** Manual */
+      manual: string;
+      /** Alerts Resolved */
+      alerts_resolved: string;
+      /** Inactivity */
+      inactivity: string;
+    };
+    /** ReportRuleBreakdown */
+    ReportRuleBreakdown: {
+      /** Rows */
+      rows: components["schemas"]["ReportRuleGroup"][];
+      other: components["schemas"]["ReportOtherGroups"] | null;
+    };
+    /** ReportRuleGroup */
+    ReportRuleGroup: {
+      /** Opened */
+      opened: string;
+      /** Resolved */
+      resolved: string;
+      /** Reopened */
+      reopened: string;
+      /** First Response Median Seconds */
+      first_response_median_seconds: string | null;
+      /** Time To Resolve Median Seconds */
+      time_to_resolve_median_seconds: string | null;
+      /** Rule Id */
+      rule_id: string;
+      /**
+       * Name
+       * @description Null for a deleted rule whose history is no longer retained.
+       */
+      name: string | null;
+      /** Deleted */
+      deleted: boolean;
+    };
+    /** ReportSeriesBin */
+    ReportSeriesBin: {
+      /** Start */
+      start: string;
+      /** Opened */
+      opened: string;
+      /** Resolved */
+      resolved: string;
+    };
+    /** ReportSeverityGroup */
+    ReportSeverityGroup: {
+      /** Opened */
+      opened: string;
+      /** Resolved */
+      resolved: string;
+      /** Reopened */
+      reopened: string;
+      /** First Response Median Seconds */
+      first_response_median_seconds: string | null;
+      /** Time To Resolve Median Seconds */
+      time_to_resolve_median_seconds: string | null;
+      /** Severity */
+      severity: string;
+    };
+    /** ReportSummary */
+    ReportSummary: {
+      /** Opened */
+      opened: string;
+      /** Opened New */
+      opened_new: string;
+      /** Opened Reopened */
+      opened_reopened: string;
+      /** Resolved */
+      resolved: string;
+      resolved_by_cause: components["schemas"]["ReportResolvedByCause"];
+      /** Reopened */
+      reopened: string;
+      time_to_resolve: components["schemas"]["ReportDurations"] | null;
+      /** @description Null when assignment history is unavailable. */
+      first_response: components["schemas"]["ReportFirstResponse"] | null;
     };
     /** SavedTest */
     SavedTest: {
@@ -6432,6 +6672,42 @@ export interface operations {
         };
         content: {
           "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  incident_report_api_tenants__tenant_id__reports_incidents_get: {
+    parameters: {
+      query: {
+        from: string;
+        to: string;
+        time_zone?: string;
+        compare?: boolean;
+      };
+      header?: never;
+      path: {
+        tenant_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IncidentReportRead"];
         };
       };
       /** @description Validation Error */
