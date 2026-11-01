@@ -82,6 +82,8 @@ On 2026-10-30 the user approved the incident report (REV-53, [incident reports m
 
 On 2026-10-31 the user asked for an optional v2 alert name (REV-54). An alert's title is its name: the Feed, preset and dashboard rows show it as the link with the message as one muted line under it (`alertTitle` and `alertSubtitle` in `lib/api.ts`, `.alert-sub` in `design.css`), and the alert page heading (with the message in at most two lines beside it and in full in its tooltip, `.alert-detail-message`), the dismiss and link dialogs and the incident and maintenance alert lists use it too. An unnamed v2 alert is named by its 64-character key; a v1 alert has no name and keeps its message. The title column keeps its stored `message` identifier and is labelled Alert, and grouping and sorting offer Alert name, so it is not confused with a preset's own Name field.
 
+On 2026-10-31 the user asked to show where an alert came from (REV-55). Alert detail lists Provider (Grafana, API, or a dash for a v2 alert stored before providers that the backfill has not reached, `providerLabel` in `lib/api.ts`) after Operator, and a Grafana alert with a rule URL gets an Open alert rule button beside Open runbook, with the same safe new-tab link. Provider is a selectable preset column and CEL editor field; the rule URL is searchable but not offered as a column.
+
 ## Review and verification
 
 The user’s 2026-10-08 correction puts editing on the regular dashboard screen.

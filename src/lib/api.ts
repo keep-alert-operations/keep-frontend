@@ -161,6 +161,10 @@ export function alertSubtitle(
     ? alert.message
     : undefined;
 }
+/** Where an alert came from (REV-55); a v2 alert awaiting backfill has none. */
+export function providerLabel(value: unknown): string {
+  return value === "grafana" ? "Grafana" : value === "api" ? "API" : "—";
+}
 export function count(value: unknown): string {
   return typeof value === "string" && /^\d+$/.test(value)
     ? BigInt(value).toLocaleString()
