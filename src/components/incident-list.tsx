@@ -76,13 +76,19 @@ export function IncidentStatus({ value }: { value: unknown }) {
   );
 }
 
-/** "3 linked · 1 suppressed" from whichever link totals the row carries. */
+/**
+ * "3 linked · 1 suppressed · 1 unavailable" from the row's link counts (REV-56).
+ * Zero parts are left out; suppressed is null while maintenance proof is pending.
+ */
 export function linkedSummary(row: RecordData) {
-  const total = row.total_linked ?? row.alert_count;
-  if (typeof total !== "string" && typeof total !== "number") return "—";
+  const total = row.total_linked;
+  if (typeof total !== "string") return "—";
   const parts = [`${total} linked`];
-  if (typeof row.suppressed === "string" || typeof row.suppressed === "number")
-    parts.push(`${row.suppressed} suppressed`);
+  for (const key of ["suppressed", "unavailable"] as const) {
+    const value = row[key];
+    if (typeof value === "string" && value !== "0")
+      parts.push(`${value} ${key}`);
+  }
   return parts.join(" · ");
 }
 

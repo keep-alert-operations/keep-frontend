@@ -84,6 +84,8 @@ On 2026-10-31 the user asked for an optional v2 alert name (REV-54). An alert's 
 
 On 2026-10-31 the user asked to show where an alert came from (REV-55). Alert detail lists Provider (Grafana, API, or a dash for a v2 alert stored before providers that the backfill has not reached, `providerLabel` in `lib/api.ts`) after Operator, and a Grafana alert with a rule URL gets an Open alert rule button beside Open runbook, with the same safe new-tab link. Provider is a selectable preset column and CEL editor field; the rule URL is searchable but not offered as a column.
 
+On 2026-11-01 the user chose to fill the incident list's Linked alerts column, which showed "—" on every row because the list returned no counts (REV-56). `linkedSummary` in `incident-list.tsx` reads the row's `total_linked`, `suppressed` and `unavailable` and shows "3 linked · 1 suppressed · 1 unavailable", leaving out zero parts. A row whose maintenance proof is pending shows its total alone, and "—" remains only for a row without counts.
+
 ## Review and verification
 
 The user’s 2026-10-08 correction puts editing on the regular dashboard screen.
