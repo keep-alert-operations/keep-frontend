@@ -2328,6 +2328,21 @@ export interface components {
        * @description Current name of the originating rule; null when deleted or unknown.
        */
       origin_rule_name?: string | null;
+      /**
+       * Total Linked
+       * @description Current linked alert references, each counted once, including unavailable ones.
+       */
+      total_linked?: string | null;
+      /**
+       * Suppressed
+       * @description Retained linked alerts suppressed by maintenance or dismissal now; null in a list row whose maintenance proof is not yet current (REV-56).
+       */
+      suppressed?: string | null;
+      /**
+       * Unavailable
+       * @description Current linked references whose alert is no longer retained.
+       */
+      unavailable?: string | null;
     } & {
       [key: string]: unknown;
     };

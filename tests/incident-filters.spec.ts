@@ -398,3 +398,55 @@ test("late incident responses cannot replace a newer applied filter", async ({
     page.getByRole("link", { name: "Stale slow incident", exact: true }),
   ).toHaveCount(0);
 });
+
+/**
+ * Requirements: I5, REV-56; incident operations 7 and 14. Each row shows its
+ * link counts, without zero parts, and a suppressed count only once it is known.
+ */
+test("incident rows show their linked alert counts", async ({ page }) => {
+  await setup(page);
+  const rows = [
+    ["Mixed", { total_linked: "3", suppressed: "1", unavailable: "1" }],
+    ["Plain", { total_linked: "2", suppressed: "0", unavailable: "0" }],
+    [
+      "Proof pending",
+      { total_linked: "4", suppressed: null, unavailable: "0" },
+    ],
+    ["Empty", { total_linked: "0", suppressed: "0", unavailable: "0" }],
+    ["Older API", {}],
+  ] as const;
+  await page.route("**/incidents?**", (route) => {
+    if (new URL(route.request().url()).searchParams.get("q") !== "counts")
+      return route.fallback();
+    return route.fulfill({
+      json: {
+        data: rows.map(([title, counts], index) => ({
+          id: `00000000-0000-4000-8000-00000000010${index}`,
+          revision: "1",
+          title,
+          status: "open",
+          severity: "high",
+          origin: "manual",
+          last_activity: "2026-09-22T10:00:00Z",
+          ...counts,
+        })),
+        next_cursor: null,
+      },
+    });
+  });
+  await page.getByLabel("Search incidents").fill("counts");
+  await page.getByLabel("Search incidents").press("Enter");
+  const linked = (title: string) =>
+    page
+      .getByRole("row")
+      .filter({ has: page.getByRole("link", { name: title, exact: true }) })
+      .getByRole("cell")
+      .nth(3);
+  await expect(linked("Mixed")).toHaveText(
+    "3 linked · 1 suppressed · 1 unavailable",
+  );
+  await expect(linked("Plain")).toHaveText("2 linked");
+  await expect(linked("Proof pending")).toHaveText("4 linked");
+  await expect(linked("Empty")).toHaveText("0 linked");
+  await expect(linked("Older API")).toHaveText("—");
+});
