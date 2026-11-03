@@ -120,7 +120,6 @@
   overflow: hidden;
   line-height: 1.2;
 }
-.pn > b,
 .pn > .small {
   flex-shrink: 0;
 }
@@ -244,21 +243,32 @@
 .pn-selected {
   box-shadow: 0 0 0 2px var(--focus);
 }
-.pn > b {
+/* The count fills the space under the title: centered, and sized from the
+   panel's own width and height so it grows and shrinks with the panel. */
+.pn-value {
+  flex: 1 1 0;
+  min-height: 0;
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pn-value > b {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   line-height: 1;
   color: var(--text);
+  white-space: nowrap;
+  /* A mono digit is about 0.6em wide; keep every digit inside the panel. */
+  font-size: clamp(
+    12px,
+    min(100cqh, calc(100cqw / (var(--pn-chars, 1) * 0.62))),
+    240px
+  );
 }
-.fs-l {
-  font-size: 56px;
-}
-.fs-m {
-  font-size: 36px;
-}
-.pn > b.pn-none-value {
+.pn-value > b.pn-none-value {
   color: var(--subtle);
 }
 .pn-head {
@@ -642,8 +652,5 @@
 @media (max-width: 1023px) {
   .de-grid > .de-tile {
     padding-right: 38px;
-  }
-  .pg > .pn .fs-l {
-    font-size: 36px;
   }
 }
