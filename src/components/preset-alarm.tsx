@@ -180,8 +180,7 @@ export function AlarmBanner({
         <SpeakerOffIcon />
         <span>
           <b>Alarm muted on this screen.</b> {alerts} still{" "}
-          {total === "1" ? "matches" : "match"}. Anyone else with this preset
-          open still hears it.
+          {total === "1" ? "matches" : "match"}.
         </span>
         <button
           type="button"
@@ -225,10 +224,10 @@ export function AlarmBanner({
       </span>
       <span>
         <b>Alarm playing.</b> {alerts} {total === "1" ? "matches" : "match"}{" "}
-        this preset. It stops when none match.
+        this preset.
       </span>
       <button type="button" className="btn btn-sm" onClick={() => onMute(true)}>
-        Mute on this screen
+        Mute
       </button>
     </div>
   );
