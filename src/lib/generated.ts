@@ -2507,6 +2507,11 @@ export interface components {
       columns: string[];
       /** Group By */
       group_by?: string | null;
+      /**
+       * Noisy
+       * @default false
+       */
+      noisy: boolean;
       /** Command Id */
       command_id: string;
     };
@@ -2522,6 +2527,11 @@ export interface components {
       columns: string[];
       /** Group By */
       group_by?: string | null;
+      /**
+       * Noisy
+       * @default false
+       */
+      noisy: boolean;
     };
     /** PresetGroups */
     PresetGroups: {
@@ -2613,6 +2623,11 @@ export interface components {
       columns: string[];
       /** Group By */
       group_by?: string | null;
+      /**
+       * Noisy
+       * @default false
+       */
+      noisy: boolean;
       /** Command Id */
       command_id: string;
       /** Expected Revision */

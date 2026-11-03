@@ -26,6 +26,7 @@ import {
 import type { Scope } from "./workspace";
 import { CommandFeedback, ErrorNotice } from "./ui";
 import { CelEditor } from "./cel-editor";
+import { AlarmSample } from "./preset-alarm";
 import { Page, useConfirm, type Crumb } from "./page";
 import {
   AlertTable,
@@ -122,6 +123,8 @@ function presetDefinition(value?: Record<string, unknown>) {
         : DEFAULT_COLUMNS,
     sort: sortItems(value?.sort).length ? sortItems(value?.sort) : DEFAULT_SORT,
     group_by: isGroupField(value?.group_by) ? value.group_by : null,
+    // Revisions saved before REV-58 have no alarm flag: they were silent.
+    noisy: value?.noisy === true,
   };
 }
 
@@ -130,6 +133,7 @@ const SETTINGS_TABS = [
   ["columns", "Columns"],
   ["sort", "Sort"],
   ["group", "Group by"],
+  ["sound", "Sound"],
 ] as const;
 type SettingsTab = (typeof SETTINGS_TABS)[number][0];
 const GROUP_CHOICES: readonly (readonly [GroupField | null, string])[] = [
@@ -189,7 +193,8 @@ export function PresetEditor({
     [cel, setCel] = useState(initial.cel),
     [selectedColumns, setColumns] = useState<string[]>(initial.columns),
     [sort, setSort] = useState<SortItem[]>(initial.sort),
-    [groupBy, setGroupBy] = useState<GroupField | null>(initial.group_by);
+    [groupBy, setGroupBy] = useState<GroupField | null>(initial.group_by),
+    [noisy, setNoisy] = useState(initial.noisy);
   const [previewCel, setPreviewCel] = useState(initial.cel);
   const [quick, setQuick] = useState<QuickViewKey>("all"),
     [suppressed, setSuppressed] = useState(false);
@@ -226,6 +231,7 @@ export function PresetEditor({
     columns: selectedColumns,
     sort,
     group_by: groupBy,
+    noisy,
   };
   const dirty = !savedRow && JSON.stringify(draft) !== JSON.stringify(baseline);
   useDirtyGuard(scope, dirty);
@@ -317,6 +323,7 @@ export function PresetEditor({
         sort,
         columns: selectedColumns,
         group_by: groupBy,
+        noisy,
         ...(existing ? { expected_revision: existing.revision } : {}),
       },
       existing ? "PUT" : "POST",
@@ -332,6 +339,7 @@ export function PresetEditor({
         sort,
         columns: selectedColumns,
         group_by: groupBy,
+        noisy,
       },
     );
     if (result) {
@@ -389,8 +397,10 @@ export function PresetEditor({
       )
     ) : key === "sort" ? (
       <b>{sort.length}</b>
-    ) : (
+    ) : key === "group" ? (
       groupBy && <b>{groupFieldLabel(groupBy)}</b>
+    ) : (
+      noisy && <b>On</b>
     );
   const newer =
     existing &&
@@ -940,6 +950,57 @@ export function PresetEditor({
                     ? `Each ${groupFieldLabel(groupBy).toLowerCase()} gets its own table. Rows inside follow the sort.`
                     : "Results show as one table."}
                 </span>
+              </div>
+              <div
+                id={`${formId}-panel-sound`}
+                role="tabpanel"
+                aria-labelledby={`${formId}-tab-sound`}
+                className="pe-panel pe-sound"
+                hidden={tab !== "sound"}
+              >
+                <div className="pe-switch-row">
+                  <button
+                    type="button"
+                    role="switch"
+                    className="pe-switch"
+                    aria-checked={noisy}
+                    aria-labelledby={`${formId}-noisy`}
+                    aria-describedby={`${formId}-noisy-help`}
+                    onClick={() => setNoisy((value) => !value)}
+                  />
+                  <span className="pe-switch-text">
+                    <span className="pe-switch-title" id={`${formId}-noisy`}>
+                      Noisy preset
+                    </span>
+                    <span className="help" id={`${formId}-noisy-help`}>
+                      Play an alarm while this preset is open and alerts match
+                      it.
+                    </span>
+                  </span>
+                </div>
+                <div className={`pe-alarm ${noisy ? "" : "is-off"}`}>
+                  <span className="lbl">Alarm</span>
+                  <div className="pe-alarm-row">
+                    <AlarmSample />
+                    <span className="help">
+                      Heavy trailer alarm · 27 s, repeats
+                    </span>
+                  </div>
+                </div>
+                <ul className="pe-notes">
+                  <li>
+                    Everyone who opens this preset hears it until no alerts
+                    match.
+                  </li>
+                  <li>
+                    Anyone can mute it on their own screen. Muting doesn&apos;t
+                    change the preset.
+                  </li>
+                  <li>
+                    Browsers play sound only after a click on the page, so a
+                    reloaded screen asks to turn sound on.
+                  </li>
+                </ul>
               </div>
             </div>
             <p className="help pe-def-foot">
