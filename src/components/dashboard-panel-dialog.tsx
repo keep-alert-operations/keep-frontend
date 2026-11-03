@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { display, request, tenantPath } from "@/lib/api";
-import { usePresetChoices } from "@/lib/preset-choices";
+import { previewTotal, usePresetChoices } from "@/lib/preset-choices";
 import { useDirtyWarning } from "@/lib/hooks";
 import { MAX_PANEL_HTML, sanitizePanelHtml } from "@/lib/panel-html";
 import {
@@ -306,6 +306,11 @@ export function DashboardPanelDialog({
   const [active, setActive] = useState(0);
   const [error, setError] = useState("");
   const [removed, setRemoved] = useState<Removal[]>([]);
+  const [previewCount, setPreviewCount] = useState<{
+    preset: string;
+    value?: string;
+    failed?: boolean;
+  }>();
   const presets = usePresetChoices(
     `${tenantPath(scope.tenant.id)}/presets`,
     [draft.preset_id],
@@ -351,9 +356,37 @@ export function DashboardPanelDialog({
     };
   }, []);
 
+  const csrf = scope.session.csrf_token;
+  // Count the chosen preset for the preview the way a dashboard does: its saved
+  // query over current alerts, without suppressed ones.
+  const selectedCel =
+    selected && typeof selected.cel === "string" ? selected.cel : undefined;
+  useEffect(() => {
+    if (kind !== "count" || !draft.preset_id || selectedCel === undefined)
+      return;
+    const preset = draft.preset_id;
+    const controller = new AbortController();
+    setPreviewCount({ preset });
+    previewTotal(
+      scope.tenant.id,
+      csrf,
+      { cel: selectedCel },
+      controller.signal,
+    ).then(
+      (value) => {
+        if (!controller.signal.aborted)
+          setPreviewCount({ preset, value, failed: value === undefined });
+      },
+      () => {
+        if (!controller.signal.aborted)
+          setPreviewCount({ preset, failed: true });
+      },
+    );
+    return () => controller.abort();
+  }, [kind, draft.preset_id, selectedCel, scope.tenant.id, csrf]);
+
   // The server's sanitizer is the authority on what an HTML panel keeps; ask it
   // shortly after typing stops which parts it would remove.
-  const csrf = scope.session.csrf_token;
   useEffect(() => {
     if (kind !== "html" || !htmlDraft.html.trim()) {
       setRemoved([]);
@@ -782,10 +815,14 @@ export function DashboardPanelDialog({
     </>
   );
 
+  // The live count wins; until it arrives, an unchanged saved panel keeps its last count.
+  const live =
+    previewCount?.preset === draft.preset_id ? previewCount : undefined;
   const counted =
-    panel.type !== "html" && draft.preset_id === panel.preset_id
+    live?.value ??
+    (panel.type !== "html" && draft.preset_id === panel.preset_id
       ? latestCount
-      : undefined;
+      : undefined);
   const countPreview = (
     <Preview panel={draft}>
       <CountTile
@@ -795,9 +832,13 @@ export function DashboardPanelDialog({
         presetName={selected ? display(selected.name) : undefined}
         value={counted}
         placeholder={
-          counted === undefined
-            ? "Save the dashboard to count this panel"
-            : undefined
+          counted !== undefined
+            ? undefined
+            : !selected
+              ? "Choose a preset to see its count"
+              : live?.failed
+                ? "Count unavailable"
+                : "Counting…"
         }
         layoutStyle={previewSize(draft)}
       />
