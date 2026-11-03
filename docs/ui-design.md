@@ -44,6 +44,8 @@ Incident, correlation rule and maintenance window list rows use the same full-ro
 
 Alert details opened from saved preset results show a Presets / preset breadcrumb and a Back to preset action (REV-25). Previous and Next follow the visible result page. The source is remembered for the opened alert in the browser tab, so a direct alert link without that context starts at Feed.
 
+Alert details opened from an incident's linked alerts show an Incidents / incident breadcrumb and a Back to incident action the same way (REV-59). Previous and Next follow the visible page of linked alerts, skipping unavailable references.
+
 The active and deleted preset-list rows open their existing primary destination when clicked anywhere in the row. Row-level Edit, History and action-menu controls stay independent; keyboard focus on the primary link outlines the row (REV-26).
 
 Saved presets and editor previews render every configured field as its own column

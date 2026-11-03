@@ -174,3 +174,55 @@ test("viewers see no link action", async ({ page }) => {
     page.getByRole("button", { name: "Link to incident" }),
   ).toHaveCount(0);
 });
+
+/**
+ * Requirements: REV-59; incident operations 15. An alert opened from an
+ * incident names that incident in its breadcrumb and returns to it, and
+ * Previous and Next follow the linked alerts. A direct link starts at Feed.
+ */
+test("an alert opened from an incident keeps the incident as its path", async ({
+  page,
+}) => {
+  await setup(page);
+  const crumbs = page.getByRole("navigation", { name: "Breadcrumb" });
+  const incidentHref = `/tenants/${tenant}/incidents/${incidents[0].id}`;
+
+  await page.goto(`/tenants/${tenant}/alerts/${owned.id}`);
+  await expect(crumbs.getByRole("link", { name: "Feed" })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "← Back to incident" }),
+  ).toHaveCount(0);
+
+  await page.goto(incidentHref);
+  await page
+    .getByRole("table", { name: "Linked alerts" })
+    .getByRole("link", { name: "Checkout latency" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Checkout latency", level: 1 }),
+  ).toBeVisible();
+  await expect(crumbs.getByRole("link", { name: "Feed" })).toHaveCount(0);
+  await expect(
+    crumbs.getByRole("link", { name: "Incidents", exact: true }),
+  ).toHaveAttribute("href", `/tenants/${tenant}/incidents`);
+  await expect(
+    crumbs.getByRole("link", { name: "Checkout degraded" }),
+  ).toHaveAttribute("href", incidentHref);
+  await expect(
+    page.getByRole("button", { name: "Next alert in list" }),
+  ).toBeDisabled();
+
+  await page.getByRole("button", { name: "Previous alert in list" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Disk almost full", level: 1 }),
+  ).toBeVisible();
+  await expect(
+    crumbs.getByRole("link", { name: "Checkout degraded" }),
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: "← Back to incident" }).click();
+  await expect(page).toHaveURL(incidentHref);
+  await expect(
+    page.getByRole("heading", { name: "Checkout degraded", level: 1 }),
+  ).toBeVisible();
+});
