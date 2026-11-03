@@ -88,6 +88,8 @@ On 2026-10-31 the user asked to show where an alert came from (REV-55). Alert de
 
 On 2026-11-01 the user chose to fill the incident list's Linked alerts column, which showed "—" on every row because the list returned no counts (REV-56). `linkedSummary` in `incident-list.tsx` reads the row's `total_linked`, `suppressed` and `unavailable` and shows "3 linked · 1 suppressed · 1 unavailable", leaving out zero parts. A row whose maintenance proof is pending shows its total alone, and "—" remains only for a row without counts.
 
+On 2026-11-03 the user added dashboard panel types (REV-57, [panel types mock](https://claude.ai/artifact/193U2ejvHGUg2tjpUjWq6k)). Create and Edit panel open one fixed 1000 × 720 dialog for every type (`dashboard-panel-dialog.tsx`): a Panel type dropdown with a search box on top (locked when editing), the type's settings on the left, a preview at the panel's grid size on the right, and the draft note with Cancel and Create/Apply at the bottom; only the middle scrolls. Alert count keeps the preset combobox, title and thresholds; HTML has a title and a line-numbered editor, a live preview and a warning listing what the server's sanitizer would remove (from `POST /dashboards/validate`). `HtmlTile` in `dashboard-counts.tsx` shows stored HTML after a second sanitizing pass (`lib/panel-html.ts`, the same allowlist as appchi-domain), with `.pn-html` styles in `dashboards.css`. A dashboard with no count panels makes no count request.
+
 ## Review and verification
 
 The user’s 2026-10-08 correction puts editing on the regular dashboard screen.

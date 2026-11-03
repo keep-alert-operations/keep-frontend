@@ -3,15 +3,23 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
   type FormEvent,
+  type ReactNode,
 } from "react";
-import { display, tenantPath } from "@/lib/api";
+import { display, request, tenantPath } from "@/lib/api";
 import { usePresetChoices } from "@/lib/preset-choices";
 import { useDirtyWarning } from "@/lib/hooks";
-import type { Panel } from "./dashboard-counts";
+import { MAX_PANEL_HTML, sanitizePanelHtml } from "@/lib/panel-html";
+import {
+  CountTile,
+  type CountPanel,
+  type HtmlPanel,
+  type Panel,
+} from "./dashboard-counts";
 import { Icon } from "./icons";
 import type { Scope } from "./workspace";
 import { ErrorNotice } from "./ui";
@@ -19,11 +27,242 @@ import "../app/styles/dashboard-panel-dialog.css";
 
 const decimal = /^(0|[1-9][0-9]*)$/;
 const colors = ["blue", "green", "amber", "red"];
+type Kind = "count" | "html";
+interface Removal {
+  panel_id: string;
+  line: number;
+  what: string;
+}
+
+const glyph = (path: string) => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.9"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d={path} />
+  </svg>
+);
+/** Panel types in the order the type list shows them (REV-57). */
+const TYPES: {
+  id: Kind;
+  name: string;
+  description: string;
+  icon: ReactNode;
+}[] = [
+  {
+    id: "count",
+    name: "Alert count",
+    description: "Exact count from a saved preset, with color thresholds.",
+    icon: glyph("M9 4 7 20M17 4l-2 16M4 9h17M3 15h17"),
+  },
+  {
+    id: "html",
+    name: "HTML",
+    description: "Your own notes, links and tables, written as HTML.",
+    icon: glyph("M8 7 3 12l5 5M16 7l5 5-5 5M14 4l-4 16"),
+  },
+];
+
+const layoutOf = (panel: Panel) => ({
+  id: panel.id,
+  title: panel.title ?? null,
+  x: panel.x,
+  y: panel.y,
+  w: panel.w,
+  h: panel.h,
+});
+function normalized(panel: Panel): Panel {
+  const title = (panel.title ?? "").trim().normalize("NFC") || null;
+  return panel.type === "html"
+    ? { ...layoutOf(panel), title, type: "html", html: panel.html }
+    : {
+        ...layoutOf(panel),
+        title,
+        preset_id: panel.preset_id,
+        thresholds: (panel.thresholds ?? []).map((item) => ({ ...item })),
+      };
+}
+
+/** The panel type field: a dropdown list of types with a search box. */
+function TypeField({
+  id,
+  value,
+  locked,
+  onChange,
+}: {
+  id: string;
+  value: Kind;
+  locked: boolean;
+  onChange: (kind: Kind) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [active, setActive] = useState(0);
+  const button = useRef<HTMLButtonElement>(null);
+  const search = useRef<HTMLInputElement>(null);
+  const current = TYPES.find((type) => type.id === value) ?? TYPES[0];
+  const words = query.trim().toLowerCase();
+  const shown = TYPES.filter((type) =>
+    `${type.name} ${type.description}`.toLowerCase().includes(words),
+  );
+  const highlighted = Math.min(active, shown.length - 1);
+  useEffect(() => {
+    if (open) search.current?.focus();
+  }, [open]);
+  function close(focus = true) {
+    setOpen(false);
+    setQuery("");
+    if (focus) button.current?.focus();
+  }
+  function choose(kind: Kind) {
+    onChange(kind);
+    close();
+  }
+  return (
+    <div
+      className="f dashboard-panel-type"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) close(false);
+      }}
+    >
+      <span className="lbl" id={`${id}-type-label`}>
+        Panel type
+      </span>
+      <button
+        ref={button}
+        type="button"
+        className="dashboard-panel-type-button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-labelledby={`${id}-type-label ${id}-type-value`}
+        disabled={locked}
+        onClick={() => (open ? close() : setOpen(true))}
+        onKeyDown={(event) => {
+          if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+            event.preventDefault();
+            setOpen(true);
+          }
+        }}
+      >
+        <span className="dashboard-panel-type-icon">{current.icon}</span>
+        <span className="dashboard-panel-type-text" id={`${id}-type-value`}>
+          <b>{current.name}</b>
+          <span className="help">{current.description}</span>
+        </span>
+        {!locked && <Icon name="chevron-down" size={16} />}
+      </button>
+      {locked && (
+        <span className="help">
+          A panel keeps its type. To show something else, create a new panel.
+        </span>
+      )}
+      {open && (
+        <div className="dashboard-panel-type-popup">
+          <input
+            ref={search}
+            type="search"
+            className="inp"
+            placeholder="Search panel types"
+            aria-label="Search panel types"
+            role="combobox"
+            aria-expanded="true"
+            aria-controls={`${id}-types`}
+            aria-activedescendant={
+              shown.length ? `${id}-type-${shown[highlighted].id}` : undefined
+            }
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setActive(0);
+            }}
+            onKeyDown={(event) => {
+              if (
+                ["ArrowDown", "ArrowUp"].includes(event.key) &&
+                shown.length
+              ) {
+                event.preventDefault();
+                setActive(
+                  (highlighted +
+                    (event.key === "ArrowDown" ? 1 : shown.length - 1)) %
+                    shown.length,
+                );
+              } else if (event.key === "Enter" && shown.length) {
+                event.preventDefault();
+                choose(shown[highlighted].id);
+              } else if (event.key === "Escape") {
+                // Close the list without closing the dialog.
+                event.preventDefault();
+                event.stopPropagation();
+                close();
+              }
+            }}
+          />
+          {shown.length ? (
+            <ul
+              id={`${id}-types`}
+              role="listbox"
+              aria-label="Panel types"
+              className="dashboard-panel-type-list"
+            >
+              {shown.map((type, index) => (
+                <li
+                  key={type.id}
+                  id={`${id}-type-${type.id}`}
+                  role="option"
+                  aria-selected={index === highlighted}
+                  data-current={type.id === value || undefined}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onMouseMove={() => setActive(index)}
+                  onClick={() => choose(type.id)}
+                >
+                  <span className="dashboard-panel-type-icon">{type.icon}</span>
+                  <span className="dashboard-panel-type-text">
+                    <b>{type.name}</b>
+                    <span className="help">{type.description}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="help dashboard-panel-empty">No panel types match.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The preview area: the panel at its current grid size. */
+function Preview({ panel, children }: { panel: Panel; children: ReactNode }) {
+  return (
+    <div className="f">
+      <span className="lbl">Preview</span>
+      <div className="dashboard-panel-preview">{children}</div>
+      <p className="help">
+        Shown at the panel&apos;s current size, {panel.w} × {panel.h}. Resize it
+        on the dashboard grid.
+      </p>
+    </div>
+  );
+}
+const previewSize = (panel: Panel): CSSProperties => ({
+  width: `${Math.min(100, (panel.w / 6) * 100)}%`,
+  minWidth: 220,
+  height: Math.min(panel.h * 48 + (panel.h - 1) * 12, 420),
+});
 
 export function DashboardPanelDialog({
   scope,
   panel,
   creating,
+  latestCount,
   error: placementError,
   onDirtyChange,
   returnFocus,
@@ -33,6 +272,8 @@ export function DashboardPanelDialog({
   scope: Scope;
   panel: Panel;
   creating: boolean;
+  /** The last count of the panel being edited, for a local threshold preview. */
+  latestCount?: string;
   error?: string;
   onDirtyChange?: (dirty: boolean) => void;
   returnFocus?: HTMLElement | null;
@@ -43,17 +284,28 @@ export function DashboardPanelDialog({
   const dialog = useRef<HTMLDialogElement>(null);
   const form = useRef<HTMLFormElement>(null);
   const addThreshold = useRef<HTMLButtonElement>(null);
-  const baseline = useRef<Panel>({
-    ...panel,
-    title: panel.title ?? null,
-    thresholds: (panel.thresholds ?? []).map((threshold) => ({ ...threshold })),
-  });
-  const [draft, setDraft] = useState<Panel>(baseline.current);
+  const gutter = useRef<HTMLDivElement>(null);
+  const baseline = useRef<Panel>(normalized(panel));
+  const [kind, setKind] = useState<Kind>(
+    panel.type === "html" ? "html" : "count",
+  );
+  // Each type keeps its own draft, so switching types while creating loses nothing.
+  const [draft, setDraft] = useState<CountPanel>(
+    panel.type === "html"
+      ? { ...layoutOf(panel), preset_id: "", thresholds: [] }
+      : (baseline.current as CountPanel),
+  );
+  const [htmlDraft, setHtmlDraft] = useState<HtmlPanel>(
+    panel.type === "html"
+      ? (baseline.current as HtmlPanel)
+      : { ...layoutOf(panel), type: "html", html: "" },
+  );
   // Typed text searches presets; null shows the selected preset's name instead.
   const [search, setSearch] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [error, setError] = useState("");
+  const [removed, setRemoved] = useState<Removal[]>([]);
   const presets = usePresetChoices(
     `${tenantPath(scope.tenant.id)}/presets`,
     [draft.preset_id],
@@ -71,11 +323,15 @@ export function DashboardPanelDialog({
   const field = useRef<HTMLInputElement>(null);
   const [place, setPlace] = useState<CSSProperties>();
   const thresholds = draft.thresholds ?? [];
+  const current: Panel = kind === "html" ? htmlDraft : draft;
+  const title = current.title ?? "";
   const dirty =
-    JSON.stringify({
-      ...draft,
-      title: (draft.title ?? "").trim().normalize("NFC") || null,
-    }) !== JSON.stringify(baseline.current);
+    JSON.stringify(normalized(current)) !== JSON.stringify(baseline.current);
+  const shownHtml = useMemo(
+    () => (kind === "html" ? sanitizePanelHtml(htmlDraft.html) : ""),
+    [kind, htmlDraft.html],
+  );
+  const lines = Math.max(1, htmlDraft.html.split("\n").length);
   const dirtyChanged = useRef(onDirtyChange);
   dirtyChanged.current = onDirtyChange;
   const focusTarget = useRef(returnFocus);
@@ -94,6 +350,57 @@ export function DashboardPanelDialog({
       if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
     };
   }, []);
+
+  // The server's sanitizer is the authority on what an HTML panel keeps; ask it
+  // shortly after typing stops which parts it would remove.
+  const csrf = scope.session.csrf_token;
+  useEffect(() => {
+    if (kind !== "html" || !htmlDraft.html.trim()) {
+      setRemoved([]);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      request<{ valid: boolean; removed?: Removal[] }>(
+        `${tenantPath(scope.tenant.id)}/dashboards/validate`,
+        {
+          method: "POST",
+          csrf,
+          signal: controller.signal,
+          body: {
+            name: "Panel check",
+            panels: [
+              {
+                id: htmlDraft.id,
+                type: "html",
+                x: 0,
+                y: 0,
+                w: htmlDraft.w,
+                h: Math.min(htmlDraft.h, 100),
+                html: htmlDraft.html,
+              },
+            ],
+          },
+        },
+      )
+        .then((response) => setRemoved(response.data.removed ?? []))
+        .catch(() => {
+          if (!controller.signal.aborted) setRemoved([]);
+        });
+    }, 500);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [
+    kind,
+    htmlDraft.html,
+    htmlDraft.id,
+    htmlDraft.w,
+    htmlDraft.h,
+    scope.tenant.id,
+    csrf,
+  ]);
 
   // The list is fixed below the field so it overlays the dialog instead of
   // growing or scrolling it; follow the field while the dialog scrolls.
@@ -125,8 +432,24 @@ export function DashboardPanelDialog({
         ?.scrollIntoView({ block: "nearest" });
   }, [id, listed, highlighted]);
 
-  function update(patch: Partial<Panel>) {
+  function update(patch: Partial<CountPanel>) {
     setDraft((current) => ({ ...current, ...patch }));
+    setError("");
+  }
+  function updateHtml(patch: Partial<HtmlPanel>) {
+    setHtmlDraft((current) => ({ ...current, ...patch }));
+    setError("");
+  }
+  function setTitle(value: string) {
+    if (kind === "html") updateHtml({ title: value });
+    else update({ title: value });
+  }
+  function switchKind(next: Kind) {
+    if (next === kind) return;
+    // The title follows the panel across types; type-specific settings stay put.
+    if (next === "html") setHtmlDraft((current) => ({ ...current, title }));
+    else setDraft((current) => ({ ...current, title }));
+    setKind(next);
     setError("");
   }
 
@@ -153,16 +476,27 @@ export function DashboardPanelDialog({
 
   function apply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selected) {
-      invalid("Select an available shared preset.", "preset");
-      return;
-    }
-    const title = (draft.title ?? "").trim().normalize("NFC");
+    const trimmed = title.trim().normalize("NFC");
     if (
-      [...title].length > 120 ||
-      /[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/u.test(title)
+      [...trimmed].length > 120 ||
+      /[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/u.test(trimmed)
     ) {
       invalid("Use a single-line title of up to 120 characters.", "title");
+      return;
+    }
+    if (kind === "html") {
+      if (htmlDraft.html.length > 65_536 || shownHtml.length > MAX_PANEL_HTML) {
+        invalid(
+          `Keep the HTML under ${MAX_PANEL_HTML.toLocaleString()} characters after removed parts.`,
+          "html",
+        );
+        return;
+      }
+      onApply({ ...htmlDraft, title: trimmed || null });
+      return;
+    }
+    if (!selected) {
+      invalid("Select an available shared preset.", "preset");
       return;
     }
     let previous = -1n;
@@ -188,8 +522,361 @@ export function DashboardPanelDialog({
       }
       previous = bound;
     }
-    onApply({ ...draft, title: title || null, thresholds });
+    onApply({ ...draft, title: trimmed || null, thresholds });
   }
+
+  const titleField = (
+    <label className="f">
+      <span className="lbl">
+        {kind === "html" ? "Title (optional)" : "Custom title (optional)"}
+      </span>
+      <input
+        name="title"
+        className="inp"
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+        aria-describedby={`${id}-title-help`}
+      />
+      <span className="help" id={`${id}-title-help`}>
+        {kind === "html"
+          ? "Shown above the content. Leave blank for a panel without a header."
+          : "Leave blank to use the preset name. Up to 120 characters."}
+      </span>
+    </label>
+  );
+
+  const countSettings = (
+    <>
+      <div
+        className="f dashboard-panel-preset"
+        onBlur={(event) => {
+          if (event.currentTarget.contains(event.relatedTarget)) return;
+          setOpen(false);
+          setSearch(null);
+        }}
+      >
+        <label className="lbl" htmlFor={`${id}-preset`}>
+          Saved preset
+        </label>
+        <div className="dashboard-panel-combo">
+          <input
+            ref={field}
+            id={`${id}-preset`}
+            name="preset"
+            className="inp"
+            role="combobox"
+            required
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="Search shared presets"
+            value={search ?? selectedName}
+            aria-autocomplete="list"
+            aria-expanded={open}
+            aria-controls={open ? `${id}-popup` : undefined}
+            aria-activedescendant={
+              listed ? `${id}-preset-${highlighted}` : undefined
+            }
+            onFocus={(event) => event.currentTarget.select()}
+            onClick={() => setOpen(true)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              presets.search(event.target.value);
+              setOpen(true);
+              setActive(0);
+            }}
+            onKeyDown={(event) => {
+              if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+                event.preventDefault();
+                if (!listed) {
+                  setOpen(true);
+                  return;
+                }
+                setActive(
+                  (highlighted +
+                    (event.key === "ArrowDown" ? 1 : presets.rows.length - 1)) %
+                    presets.rows.length,
+                );
+              } else if (listed && event.key === "Enter") {
+                event.preventDefault();
+                choose(presets.rows[highlighted]);
+              } else if (open && event.key === "Escape") {
+                // Close the list without closing the dialog.
+                event.preventDefault();
+                event.stopPropagation();
+                setOpen(false);
+                setSearch(null);
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="dashboard-panel-toggle"
+            tabIndex={-1}
+            aria-label={open ? "Hide presets" : "Show presets"}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => {
+              field.current?.focus();
+              setOpen((current) => !current);
+            }}
+          >
+            <Icon name="chevron-down" size={16} />
+          </button>
+        </div>
+        {open && (
+          <div
+            id={`${id}-popup`}
+            className="dashboard-panel-popup"
+            style={place}
+          >
+            {listed ? (
+              <ul
+                id={`${id}-presets`}
+                role="listbox"
+                aria-label="Shared presets"
+                className="dashboard-panel-presets"
+              >
+                {presets.rows.map((preset, index) => (
+                  <li
+                    key={preset.id}
+                    id={`${id}-preset-${index}`}
+                    role="option"
+                    aria-selected={index === highlighted}
+                    data-current={preset.id === draft.preset_id || undefined}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onMouseMove={() => setActive(index)}
+                    onClick={() => choose(preset)}
+                  >
+                    {display(preset.name)}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              !presets.loading &&
+              !presets.error && (
+                <p className="help dashboard-panel-empty">No presets match.</p>
+              )
+            )}
+            {failure}
+            <div className="dashboard-panel-pager">
+              <span className="help" role="status">
+                {presets.loading
+                  ? "Loading presets…"
+                  : `${presets.rows.length} available presets loaded`}
+              </span>
+              {presets.cursor && (
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={presets.loading}
+                  onClick={() => {
+                    presets.restart();
+                    setActive(0);
+                  }}
+                >
+                  First page
+                </button>
+              )}
+              {presets.nextCursor && (
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={presets.loading}
+                  onClick={() => {
+                    presets.next();
+                    setActive(0);
+                  }}
+                >
+                  Next page
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        {!open && failure}
+      </div>
+      {titleField}
+      <fieldset className="dashboard-panel-thresholds">
+        <legend className="lbl">Count thresholds</legend>
+        <p className="help">
+          Up to three increasing bounds. Counts below the first remain neutral.
+        </p>
+        {thresholds.map((threshold, index) => (
+          <div className="dashboard-panel-threshold" key={index}>
+            <label className="f">
+              <span className="lbl">Exact lower bound {index + 1}</span>
+              <input
+                name={`lower-bound-${index + 1}`}
+                className="inp"
+                inputMode="numeric"
+                pattern="0|[1-9][0-9]*"
+                required
+                value={threshold.lower_bound}
+                onChange={(event) =>
+                  update({
+                    thresholds: thresholds.map((item, position) =>
+                      position === index
+                        ? { ...item, lower_bound: event.target.value }
+                        : item,
+                    ),
+                  })
+                }
+              />
+            </label>
+            <label className="f">
+              <span className="lbl">Color {index + 1}</span>
+              <select
+                name={`color-${index + 1}`}
+                className="inp"
+                value={threshold.color}
+                onChange={(event) =>
+                  update({
+                    thresholds: thresholds.map((item, position) =>
+                      position === index
+                        ? { ...item, color: event.target.value }
+                        : item,
+                    ),
+                  })
+                }
+              >
+                {colors.map((color) => (
+                  <option key={color} value={color}>
+                    {color[0].toUpperCase() + color.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="btn btn-sm"
+              aria-label={`Remove threshold ${index + 1}`}
+              onClick={() => {
+                update({
+                  thresholds: thresholds.filter(
+                    (_, position) => position !== index,
+                  ),
+                });
+                requestAnimationFrame(() => addThreshold.current?.focus());
+              }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        <button
+          ref={addThreshold}
+          type="button"
+          className="btn btn-sm"
+          disabled={thresholds.length >= 3}
+          onClick={() => {
+            const last = thresholds.at(-1)?.lower_bound;
+            const next =
+              last && decimal.test(last) ? String(BigInt(last) + 1n) : "0";
+            update({
+              thresholds: [...thresholds, { lower_bound: next, color: "blue" }],
+            });
+          }}
+        >
+          Add threshold
+        </button>
+      </fieldset>
+    </>
+  );
+
+  const counted =
+    panel.type !== "html" && draft.preset_id === panel.preset_id
+      ? latestCount
+      : undefined;
+  const countPreview = (
+    <Preview panel={draft}>
+      <CountTile
+        scope={scope}
+        panel={{ ...draft, thresholds }}
+        title={title.trim() || selectedName || "Select a preset"}
+        presetName={selected ? display(selected.name) : undefined}
+        value={counted}
+        placeholder={
+          counted === undefined
+            ? "Save the dashboard to count this panel"
+            : undefined
+        }
+        layoutStyle={previewSize(draft)}
+      />
+    </Preview>
+  );
+
+  const htmlSettings = (
+    <>
+      {titleField}
+      <div className="f">
+        <label className="lbl" htmlFor={`${id}-html`}>
+          HTML
+        </label>
+        <div className="dashboard-panel-code">
+          <div
+            className="dashboard-panel-gutter"
+            ref={gutter}
+            aria-hidden="true"
+          >
+            {Array.from({ length: lines }, (_, index) => (
+              <div key={index}>{index + 1}</div>
+            ))}
+          </div>
+          <textarea
+            id={`${id}-html`}
+            name="html"
+            spellCheck={false}
+            wrap="off"
+            value={htmlDraft.html}
+            aria-describedby={`${id}-html-help`}
+            onChange={(event) => updateHtml({ html: event.target.value })}
+            onScroll={(event) => {
+              if (gutter.current)
+                gutter.current.scrollTop = event.currentTarget.scrollTop;
+            }}
+          />
+        </div>
+        <div className="dashboard-panel-code-help">
+          <p className="help" id={`${id}-html-help`}>
+            Text, headings, lists, tables, links and inline styles render.
+            Scripts, images, iframes, forms and event handlers are removed.
+          </p>
+          <span className="help">
+            {shownHtml.length.toLocaleString()} /{" "}
+            {MAX_PANEL_HTML.toLocaleString()}
+          </span>
+        </div>
+      </div>
+      {removed.length > 0 && (
+        <div className="banner bn-warn" role="status">
+          These parts won&apos;t be saved:{" "}
+          {removed
+            .map((item) => `${item.what} on line ${item.line}`)
+            .join(", ")}
+          . The preview shows what everyone will see.
+        </div>
+      )}
+    </>
+  );
+
+  const htmlPreview = (
+    <Preview panel={htmlDraft}>
+      <article
+        className="pn pn-html"
+        aria-label={`${title.trim() || "HTML panel"} preview`}
+        style={previewSize(htmlDraft)}
+      >
+        {title.trim() && (
+          <span className="pn-head">
+            <span className="pn-title">{title.trim()}</span>
+          </span>
+        )}
+        <div
+          className="pn-html-body"
+          dangerouslySetInnerHTML={{ __html: shownHtml }}
+        />
+      </article>
+    </Preview>
+  );
 
   return (
     <dialog
@@ -230,278 +917,48 @@ export function DashboardPanelDialog({
           onClose();
       }}
     >
-      <h2 id={`${id}-heading`}>{creating ? "Create panel" : "Edit panel"}</h2>
       <form
         ref={form}
         className="dashboard-panel-form"
         onSubmit={apply}
         noValidate
       >
-        <div
-          className="f dashboard-panel-preset"
-          onBlur={(event) => {
-            if (event.currentTarget.contains(event.relatedTarget)) return;
-            setOpen(false);
-            setSearch(null);
-          }}
-        >
-          <label className="lbl" htmlFor={`${id}-preset`}>
-            Saved preset
-          </label>
-          <div className="dashboard-panel-combo">
-            <input
-              ref={field}
-              id={`${id}-preset`}
-              name="preset"
-              className="inp"
-              role="combobox"
-              required
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="Search shared presets"
-              value={search ?? selectedName}
-              aria-autocomplete="list"
-              aria-expanded={open}
-              aria-controls={open ? `${id}-popup` : undefined}
-              aria-activedescendant={
-                listed ? `${id}-preset-${highlighted}` : undefined
-              }
-              onFocus={(event) => event.currentTarget.select()}
-              onClick={() => setOpen(true)}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                presets.search(event.target.value);
-                setOpen(true);
-                setActive(0);
-              }}
-              onKeyDown={(event) => {
-                if (["ArrowDown", "ArrowUp"].includes(event.key)) {
-                  event.preventDefault();
-                  if (!listed) {
-                    setOpen(true);
-                    return;
-                  }
-                  setActive(
-                    (highlighted +
-                      (event.key === "ArrowDown"
-                        ? 1
-                        : presets.rows.length - 1)) %
-                      presets.rows.length,
-                  );
-                } else if (listed && event.key === "Enter") {
-                  event.preventDefault();
-                  choose(presets.rows[highlighted]);
-                } else if (open && event.key === "Escape") {
-                  // Close the list without closing the dialog.
-                  event.preventDefault();
-                  event.stopPropagation();
-                  setOpen(false);
-                  setSearch(null);
-                }
-              }}
-            />
-            <button
-              type="button"
-              className="dashboard-panel-toggle"
-              tabIndex={-1}
-              aria-label={open ? "Hide presets" : "Show presets"}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => {
-                field.current?.focus();
-                setOpen((current) => !current);
-              }}
-            >
-              <Icon name="chevron-down" size={16} />
-            </button>
-          </div>
-          {open && (
-            <div
-              id={`${id}-popup`}
-              className="dashboard-panel-popup"
-              style={place}
-            >
-              {listed ? (
-                <ul
-                  id={`${id}-presets`}
-                  role="listbox"
-                  aria-label="Shared presets"
-                  className="dashboard-panel-presets"
-                >
-                  {presets.rows.map((preset, index) => (
-                    <li
-                      key={preset.id}
-                      id={`${id}-preset-${index}`}
-                      role="option"
-                      aria-selected={index === highlighted}
-                      data-current={preset.id === draft.preset_id || undefined}
-                      onMouseDown={(event) => event.preventDefault()}
-                      onMouseMove={() => setActive(index)}
-                      onClick={() => choose(preset)}
-                    >
-                      {display(preset.name)}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                !presets.loading &&
-                !presets.error && (
-                  <p className="help dashboard-panel-empty">
-                    No presets match.
-                  </p>
-                )
-              )}
-              {failure}
-              <div className="dashboard-panel-pager">
-                <span className="help" role="status">
-                  {presets.loading
-                    ? "Loading presets…"
-                    : `${presets.rows.length} available presets loaded`}
-                </span>
-                {presets.cursor && (
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    disabled={presets.loading}
-                    onClick={() => {
-                      presets.restart();
-                      setActive(0);
-                    }}
-                  >
-                    First page
-                  </button>
-                )}
-                {presets.nextCursor && (
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    disabled={presets.loading}
-                    onClick={() => {
-                      presets.next();
-                      setActive(0);
-                    }}
-                  >
-                    Next page
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-          {!open && failure}
-        </div>
-        <label className="f">
-          <span className="lbl">Custom title (optional)</span>
-          <input
-            name="title"
-            className="inp"
-            value={draft.title ?? ""}
-            onChange={(event) => update({ title: event.target.value })}
-            aria-describedby={`${id}-title-help`}
+        <div className="dashboard-panel-top">
+          <h2 id={`${id}-heading`}>
+            {creating ? "Create panel" : "Edit panel"}
+          </h2>
+          <TypeField
+            id={id}
+            value={kind}
+            locked={!creating}
+            onChange={switchKind}
           />
-          <span className="help" id={`${id}-title-help`}>
-            Leave blank to use the preset name. Up to 120 characters.
-          </span>
-        </label>
-        <fieldset className="dashboard-panel-thresholds">
-          <legend className="lbl">Count thresholds</legend>
-          <p className="help">
-            Up to three increasing bounds. Counts below the first remain
-            neutral.
-          </p>
-          {thresholds.map((threshold, index) => (
-            <div className="dashboard-panel-threshold" key={index}>
-              <label className="f">
-                <span className="lbl">Exact lower bound {index + 1}</span>
-                <input
-                  name={`lower-bound-${index + 1}`}
-                  className="inp"
-                  inputMode="numeric"
-                  pattern="0|[1-9][0-9]*"
-                  required
-                  value={threshold.lower_bound}
-                  onChange={(event) =>
-                    update({
-                      thresholds: thresholds.map((item, position) =>
-                        position === index
-                          ? { ...item, lower_bound: event.target.value }
-                          : item,
-                      ),
-                    })
-                  }
-                />
-              </label>
-              <label className="f">
-                <span className="lbl">Color {index + 1}</span>
-                <select
-                  name={`color-${index + 1}`}
-                  className="inp"
-                  value={threshold.color}
-                  onChange={(event) =>
-                    update({
-                      thresholds: thresholds.map((item, position) =>
-                        position === index
-                          ? { ...item, color: event.target.value }
-                          : item,
-                      ),
-                    })
-                  }
-                >
-                  {colors.map((color) => (
-                    <option key={color} value={color}>
-                      {color[0].toUpperCase() + color.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                className="btn btn-sm"
-                aria-label={`Remove threshold ${index + 1}`}
-                onClick={() => {
-                  update({
-                    thresholds: thresholds.filter(
-                      (_, position) => position !== index,
-                    ),
-                  });
-                  requestAnimationFrame(() => addThreshold.current?.focus());
-                }}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-          <button
-            ref={addThreshold}
-            type="button"
-            className="btn btn-sm"
-            disabled={thresholds.length >= 3}
-            onClick={() => {
-              const last = thresholds.at(-1)?.lower_bound;
-              const next =
-                last && decimal.test(last) ? String(BigInt(last) + 1n) : "0";
-              update({
-                thresholds: [
-                  ...thresholds,
-                  { lower_bound: next, color: "blue" },
-                ],
-              });
-            }}
-          >
-            Add threshold
-          </button>
-        </fieldset>
-        {(error || placementError) && (
-          <div role="alert" className="notice error">
-            {error || placementError}
+        </div>
+        <div className="dashboard-panel-body">
+          <div className="dashboard-panel-column">
+            {kind === "html" ? htmlSettings : countSettings}
+            {(error || placementError) && (
+              <div role="alert" className="notice error">
+                {error || placementError}
+              </div>
+            )}
           </div>
-        )}
-        <p className="help" id={`${id}-save-help`}>
-          Panel changes stay in your draft until you save the dashboard.
-        </p>
-        <div className="dlg-actions">
+          <div className="dashboard-panel-column">
+            {kind === "html" ? htmlPreview : countPreview}
+          </div>
+        </div>
+        <div className="dashboard-panel-foot">
+          <p className="help" id={`${id}-save-help`}>
+            Panel changes stay in your draft until you save the dashboard.
+          </p>
           <button type="button" className="btn" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="btn btn-p" disabled={!selected}>
+          <button
+            type="submit"
+            className="btn btn-p"
+            disabled={kind === "count" && !selected}
+          >
             {creating ? "Create panel" : "Apply changes"}
           </button>
         </div>
