@@ -22,6 +22,8 @@ import { Icon } from "./icons";
 import {
   DashboardBoard,
   CountTile,
+  HtmlTile,
+  isHtmlPanel,
   type DashboardModel,
   type Panel,
 } from "./dashboard-counts";
@@ -36,19 +38,26 @@ function definition(value?: Record<string, unknown>): {
     name: String(value?.name ?? ""),
     panels: Array.isArray(value?.panels)
       ? compactPanels(
-          (value.panels as Panel[]).map((panel) => ({
-            id: panel.id,
-            preset_id: panel.preset_id,
-            title: panel.title ?? null,
-            x: panel.x,
-            y: panel.y,
-            w: panel.w,
-            h: panel.h,
-            thresholds: (panel.thresholds ?? []).map((item) => ({
-              lower_bound: String(item.lower_bound),
-              color: item.color,
-            })),
-          })),
+          (value.panels as Panel[]).map((panel): Panel => {
+            const layout = {
+              id: panel.id,
+              title: panel.title ?? null,
+              x: panel.x,
+              y: panel.y,
+              w: panel.w,
+              h: panel.h,
+            };
+            return isHtmlPanel(panel)
+              ? { ...layout, type: "html", html: panel.html }
+              : {
+                  ...layout,
+                  preset_id: panel.preset_id,
+                  thresholds: (panel.thresholds ?? []).map((item) => ({
+                    lower_bound: String(item.lower_bound),
+                    color: item.color,
+                  })),
+                };
+          }),
         )
       : [],
   };
@@ -288,12 +297,16 @@ export function DashboardWorkspace({
     setPanelError("");
     setMessage("Panel updated. Save the dashboard to keep your changes.");
   }
+  const observation = (panel: Panel) =>
+    isHtmlPanel(panel)
+      ? undefined
+      : model?.state.batch?.panels.find(
+          (item) =>
+            item.panel_id === panel.id && item.preset_id === panel.preset_id,
+        );
   const panelLabel = (panel: Panel) =>
     panel.title ??
-    model?.state.batch?.panels.find(
-      (item) =>
-        item.panel_id === panel.id && item.preset_id === panel.preset_id,
-    )?.preset_name ??
+    (isHtmlPanel(panel) ? "HTML panel" : observation(panel)?.preset_name) ??
     "Panel";
   function movePanel(panel: Panel, delta: number) {
     const index = draft.panels.findIndex((item) => item.id === panel.id),
@@ -688,30 +701,41 @@ export function DashboardWorkspace({
             }))
           }
           onSelect={() => {}}
-          renderPanel={(panel, controls, active, style) => (
-            <CountTile
-              key={panel.id}
-              scope={scope}
-              panel={panel}
-              title={panelLabel(panel)}
-              placeholder="Save the dashboard to count this panel"
-              layoutControls={
-                <>
-                  {controls}
-                  {canEdit && panelOptions(panel)}
-                </>
-              }
-              layoutActive={active}
-              layoutStyle={style}
-            />
-          )}
+          renderPanel={(panel, controls, active, style) => {
+            const layoutControls = (
+              <>
+                {controls}
+                {canEdit && panelOptions(panel)}
+              </>
+            );
+            return isHtmlPanel(panel) ? (
+              <HtmlTile
+                key={panel.id}
+                panel={panel}
+                layoutControls={layoutControls}
+                layoutActive={active}
+                layoutStyle={style}
+              />
+            ) : (
+              <CountTile
+                key={panel.id}
+                scope={scope}
+                panel={panel}
+                title={panelLabel(panel)}
+                placeholder="Save the dashboard to count this panel"
+                layoutControls={layoutControls}
+                layoutActive={active}
+                layoutStyle={style}
+              />
+            );
+          }}
         />
       ) : (
         <div className="panel db-empty">
           <h2>This dashboard has no panels</h2>
           <p>
             {canEdit
-              ? "Create a panel to count a saved preset."
+              ? "Create a panel to count a saved preset or show your own notes."
               : "Panels created by editors appear here."}
           </p>
         </div>
@@ -721,6 +745,7 @@ export function DashboardWorkspace({
           key={panelDialog.panel.id}
           scope={scope}
           {...panelDialog}
+          latestCount={observation(panelDialog.panel)?.count}
           error={panelError}
           onDirtyChange={setPanelDraftDirty}
           onApply={applyPanel}

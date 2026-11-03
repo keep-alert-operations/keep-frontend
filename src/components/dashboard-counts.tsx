@@ -22,17 +22,32 @@ import { ErrorNotice } from "./ui";
 import { NavLink, RelativeTime } from "./page";
 import { DashboardLayout } from "./dashboard-layout";
 import { compactPanels } from "@/lib/dashboard-layout";
+import { sanitizePanelHtml } from "@/lib/panel-html";
 
-export interface Panel {
+interface PanelLayout {
   id: string;
-  preset_id: string;
   title?: string | null;
   x: number;
   y: number;
   w: number;
   h: number;
+}
+/** A preset count panel; a panel without `type` is one (REV-57). */
+export interface CountPanel extends PanelLayout {
+  type?: "count";
+  preset_id: string;
   thresholds?: { lower_bound: string; color: string }[];
 }
+/** A panel showing sanitized HTML; it references no preset (REV-57). */
+export interface HtmlPanel extends PanelLayout {
+  type: "html";
+  html: string;
+}
+export type Panel = CountPanel | HtmlPanel;
+export const isHtmlPanel = (panel: Panel): panel is HtmlPanel =>
+  panel.type === "html";
+export const countPanels = (panels: Panel[]) =>
+  panels.filter((panel): panel is CountPanel => !isHtmlPanel(panel));
 interface PanelCount {
   panel_id: string;
   preset_id: string;
@@ -66,7 +81,7 @@ const panelsOf = (definition: RecordData) =>
   Array.isArray(definition.panels) ? (definition.panels as Panel[]) : [];
 
 function checkedBatch(value: Batch, definition: RecordData): Batch {
-  const panels = panelsOf(definition);
+  const panels = countPanels(panelsOf(definition));
   if (
     !value ||
     value.dashboard_revision !== definition.revision ||
@@ -179,6 +194,12 @@ export function useCounts(
         for (let attempt = 0; attempt < 2; attempt++) {
           const definition = currentDefinition.current;
           const { scope: current } = latest.current;
+          if (!countPanels(panelsOf(definition)).length) {
+            // Only count panels are counted, so there is nothing to request.
+            relative = false;
+            setState({ key, definition, loading: false });
+            return;
+          }
           try {
             const response = await request<Batch>(
               `${tenantPath(current.tenant.id)}/dashboards/${definition.id}/counts`,
@@ -389,7 +410,7 @@ export function CountTile({
   layoutStyle,
 }: {
   scope: Scope;
-  panel: Panel;
+  panel: CountPanel;
   title: string;
   presetName?: string;
   value?: string;
@@ -484,6 +505,46 @@ export function CountTile({
   );
 }
 
+/** One HTML panel: its title, if any, above the sanitized content. */
+export function HtmlTile({
+  panel,
+  layoutControls,
+  layoutActive,
+  layoutStyle,
+}: {
+  panel: HtmlPanel;
+  layoutControls?: ReactNode;
+  layoutActive?: boolean;
+  layoutStyle?: CSSProperties;
+}) {
+  const [html, setHtml] = useState("");
+  // DOMPurify needs the browser DOM, so the content renders after mounting.
+  useEffect(() => setHtml(sanitizePanelHtml(panel.html)), [panel.html]);
+  return (
+    <article
+      className={`pn pn-html ${layoutControls ? "de-tile" : ""} ${layoutActive ? "de-tile-active" : ""}`}
+      aria-label={panel.title ?? "HTML panel"}
+      data-layout-panel={panel.id}
+      style={{
+        gridColumn: `${panel.x + 1} / span ${panel.w}`,
+        gridRow: `${panel.y + 1} / span ${panel.h}`,
+        ...layoutStyle,
+      }}
+    >
+      {panel.title && (
+        <span className="pn-head">
+          <span className="pn-title">{panel.title}</span>
+        </span>
+      )}
+      <div
+        className="pn-html-body"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+      {layoutControls}
+    </article>
+  );
+}
+
 /** Count engine plus transient fullscreen state for one open dashboard. */
 export function useDashboard(
   scope: Scope,
@@ -570,6 +631,22 @@ export function DashboardBoard({
     active?: boolean,
     style?: CSSProperties,
   ) {
+    const layoutControls = editable ? (
+      <>
+        {controls}
+        {editing.options(panel)}
+      </>
+    ) : undefined;
+    if (isHtmlPanel(panel))
+      return (
+        <HtmlTile
+          key={panel.id}
+          panel={panel}
+          layoutControls={layoutControls}
+          layoutActive={active}
+          layoutStyle={style}
+        />
+      );
     const observation = batch?.panels.find(
       (item) =>
         item.panel_id === panel.id && item.preset_id === panel.preset_id,
@@ -612,14 +689,7 @@ export function DashboardBoard({
         paused={paused}
         capturedAt={batch?.evaluated_at}
         href={`/tenants/${scope.tenant.id}/presets/${panel.preset_id}?from=dashboard`}
-        layoutControls={
-          editable ? (
-            <>
-              {controls}
-              {editing.options(panel)}
-            </>
-          ) : undefined
-        }
+        layoutControls={layoutControls}
         layoutActive={active}
         layoutStyle={style}
       />
@@ -658,7 +728,11 @@ export function DashboardBoard({
             panels={panels}
             disabled={editing.disabled}
             label={(panel) =>
-              panel.title ?? names.get(panel.preset_id) ?? "Panel"
+              panel.title ??
+              (isHtmlPanel(panel)
+                ? "HTML panel"
+                : names.get(panel.preset_id)) ??
+              "Panel"
             }
             onChange={editing.onChange}
             onSelect={() => {}}
@@ -674,7 +748,7 @@ export function DashboardBoard({
           <h2>This dashboard has no panels</h2>
           <p>
             {editing
-              ? "Create a panel to count a saved preset."
+              ? "Create a panel to count a saved preset or show your own notes."
               : "Panels created by editors appear here."}
           </p>
         </div>

@@ -16,6 +16,7 @@
     "format:check": "prettier --check src tests *.ts *.json"
   },
   "dependencies": {
+    "dompurify": "3.4.17",
     "next": "16.3.6",
     "openapi-fetch": "0.17.0",
     "react": "19.3.0",
@@ -29,6 +30,6 @@
     "openapi-typescript": "7.13.0",
     "prettier": "3.9.8",
     "typescript": "5.9.3",
-    "@appchi/contracts": "git+https://github.com/appchi-alert-operations/appchi-contracts.git#0523e26442b1624c8fba8cb2a7453ec9c54452d9"
+    "@appchi/contracts": "git+https://github.com/appchi-alert-operations/appchi-contracts.git#258e77ea537e429a481236624a9eb287c25783e0"
   }
 }

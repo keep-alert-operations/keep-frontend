@@ -2167,7 +2167,9 @@ export interface components {
       /** Name */
       name: string;
       /** Panels */
-      panels: components["schemas"]["Panel"][];
+      panels: (
+        components["schemas"]["Panel"] | components["schemas"]["HtmlPanel"]
+      )[];
       /** Command Id */
       command_id: string;
     };
@@ -2176,14 +2178,18 @@ export interface components {
       /** Name */
       name: string;
       /** Panels */
-      panels: components["schemas"]["Panel"][];
+      panels: (
+        components["schemas"]["Panel"] | components["schemas"]["HtmlPanel"]
+      )[];
     };
     /** DashboardPreview */
     DashboardPreview: {
       /** Name */
       name: string;
       /** Panels */
-      panels: components["schemas"]["Panel"][];
+      panels: (
+        components["schemas"]["Panel"] | components["schemas"]["HtmlPanel"]
+      )[];
       /** Preset Revisions */
       preset_revisions: {
         [key: string]: string;
@@ -2194,7 +2200,9 @@ export interface components {
       /** Name */
       name: string;
       /** Panels */
-      panels: components["schemas"]["Panel"][];
+      panels: (
+        components["schemas"]["Panel"] | components["schemas"]["HtmlPanel"]
+      )[];
       /** Command Id */
       command_id: string;
       /** Expected Revision */
@@ -2271,6 +2279,34 @@ export interface components {
     HTTPValidationError: {
       /** Detail */
       detail?: components["schemas"]["ValidationError"][];
+    };
+    /**
+     * HtmlPanel
+     * @description A panel showing HTML; it references no preset (REV-57).
+     *
+     *     Validation bounds only the raw size. Callers sanitize with ``sanitize_panels``
+     *     after authorizing the request, so unauthenticated bodies are never parsed.
+     */
+    HtmlPanel: {
+      /** Id */
+      id: string;
+      /** Title */
+      title?: string | null;
+      /** X */
+      x: number;
+      /** Y */
+      y: number;
+      /** W */
+      w: number;
+      /** H */
+      h: number;
+      /**
+       * Type
+       * @constant
+       */
+      type: "html";
+      /** Html */
+      html: string;
     };
     /** IncidentAssignment */
     IncidentAssignment: {
@@ -2476,12 +2512,13 @@ export interface components {
       /** Name */
       name: string;
     };
-    /** Panel */
+    /**
+     * Panel
+     * @description A preset count panel; a panel without ``type`` is one (REV-57).
+     */
     Panel: {
       /** Id */
       id: string;
-      /** Preset Id */
-      preset_id: string;
       /** Title */
       title?: string | null;
       /** X */
@@ -2492,6 +2529,14 @@ export interface components {
       w: number;
       /** H */
       h: number;
+      /**
+       * Type
+       * @default count
+       * @constant
+       */
+      type: "count";
+      /** Preset Id */
+      preset_id: string;
       /** Thresholds */
       thresholds?: components["schemas"]["Threshold"][];
     };
