@@ -149,7 +149,7 @@ test("a noisy preset sounds while alerts match and mutes for this tab", async ({
   await expect.poll(async () => (await audio(page)).playing).toBe(true);
   expect(String((await audio(page)).src)).toMatch(/\.wav$/);
 
-  await page.getByRole("button", { name: "Mute on this screen" }).click();
+  await page.getByRole("button", { name: "Mute", exact: true }).click();
   await expect(page.getByText("Alarm muted on this screen.")).toBeVisible();
   expect((await audio(page)).playing).toBe(false);
   await page.getByRole("button", { name: "Unmute" }).click();
