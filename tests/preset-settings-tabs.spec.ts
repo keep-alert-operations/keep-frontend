@@ -1,10 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /*
- * Requirements: REV-47; preset operations 3, 4, 8 and 9.
+ * Requirements: REV-47, REV-58; preset operations 3, 4, 8 and 9.
  * The preset editor keeps its preview beside a Preset settings panel: Name
- * above Filter, Columns, Sort and Group by tabs. Tabs keep their state, show
- * problems while hidden, and the saved definition is unchanged.
+ * above Filter, Columns, Sort, Group by and Sound tabs. Tabs keep their state,
+ * show problems while hidden, and the saved definition is unchanged.
  */
 
 const tenant = "00000000-0000-4000-8000-000000000001";
@@ -113,14 +113,20 @@ test("tabs follow the keyboard pattern and keep each panel's state", async ({
     page.getByRole("list", { name: "Columns, in order" }),
   ).toBeVisible();
   await page.keyboard.press("End");
+  await expect(tab(page, "Sound")).toBeFocused();
+  await expect(
+    page.getByRole("switch", { name: "Noisy preset" }),
+  ).toBeVisible();
+  await page.keyboard.press("ArrowLeft");
   await expect(tab(page, "Group by")).toBeFocused();
   await expect(
     page.getByRole("radiogroup", { name: "Group by" }),
   ).toBeVisible();
+  await page.keyboard.press("End");
   await page.keyboard.press("ArrowRight");
   await expect(tab(page, "Filter")).toBeFocused();
   await page.keyboard.press("ArrowLeft");
-  await expect(tab(page, "Group by")).toBeFocused();
+  await expect(tab(page, "Sound")).toBeFocused();
   await page.keyboard.press("Home");
   await expect(tab(page, "Filter")).toHaveAttribute("aria-selected", "true");
   await expect(filter(page)).toHaveValue('severity == "critical"');

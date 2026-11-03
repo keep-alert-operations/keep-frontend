@@ -48,6 +48,7 @@ import {
 import { CelCode, Dialog, PresetEditor } from "./definition-editor";
 import { LinkIncidentDialog } from "./link-incident";
 import { ConfigurationHistory } from "./configuration-history";
+import { AlarmBanner, NoisyChip, useAlarm } from "./preset-alarm";
 
 /** Routes this area's list, detail, editor and history screens. */
 export function PresetPages(scope: Scope & { section: string; id?: string }) {
@@ -402,13 +403,16 @@ function PresetList({ scope }: { scope: Scope }) {
                 key={row.id}
               >
                 <span role="cell" className="pl-name">
-                  <NavLink
-                    scope={scope}
-                    className="lnk alert-row-link"
-                    href={href}
-                  >
-                    {display(row.name)}
-                  </NavLink>
+                  <span className="pl-name-row">
+                    <NavLink
+                      scope={scope}
+                      className="lnk alert-row-link"
+                      href={href}
+                    >
+                      {display(row.name)}
+                    </NavLink>
+                    {row.noisy === true && !isDeleted && <NoisyChip />}
+                  </span>
                   <span className="sub">
                     {typeof row.cel === "string"
                       ? row.cel
@@ -911,6 +915,22 @@ function PresetResults({
     typeof meta?.total === "string" && /^\d+$/.test(meta.total)
       ? BigInt(meta.total).toLocaleString()
       : undefined;
+  // Noisy presets (REV-58) sound while the view's exact total is above zero.
+  // A loading or failed total keeps the last answer instead of counting as zero.
+  const noisy = preset.noisy === true;
+  const viewMeta = showGroups ? grouped.meta : meta;
+  const [alarmTotal, setAlarmTotal] = useState<string>();
+  const [muted, setMuted] = useState(false);
+  useEffect(() => {
+    setAlarmTotal(undefined);
+    setMuted(false);
+  }, [preset.id]);
+  useEffect(() => {
+    const value = viewMeta?.total;
+    if (typeof value === "string" && /^\d+$/.test(value)) setAlarmTotal(value);
+  }, [viewMeta]);
+  const hasAlerts = alarmTotal !== undefined && !/^0+$/.test(alarmTotal);
+  const alarm = useAlarm(noisy && hasAlerts && !muted);
   return (
     <Page
       scope={scope}
@@ -919,6 +939,12 @@ function PresetResults({
       crumbs={[{ label: "Presets", href: listHref }]}
       extra={
         <>
+          {noisy && (
+            <NoisyChip
+              ringing={alarm === "playing"}
+              quiet={alarmTotal !== undefined && !hasAlerts}
+            />
+          )}
           <PresetSwitcher scope={scope} current={preset.id} />
         </>
       }
@@ -1036,6 +1062,14 @@ function PresetResults({
               </button>
             )}
         </div>
+      )}
+      {noisy && hasAlerts && (
+        <AlarmBanner
+          state={alarm}
+          muted={muted}
+          total={BigInt(alarmTotal!).toLocaleString()}
+          onMute={setMuted}
+        />
       )}
       <div className="ps-bar">
         {canEdit ? (

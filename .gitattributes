@@ -4,3 +4,4 @@
 *.woff2 -text
 
 *.sh text eol=lf
+*.wav -text

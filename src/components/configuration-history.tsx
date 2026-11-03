@@ -73,16 +73,26 @@ const FIELDS: Record<Kind, [string, string][]> = {
     ["columns", "Columns"],
     ["sort", "Sort"],
     ["group_by", "Grouping"],
+    ["noisy", "Alarm"],
   ],
   dashboards: [
     ["name", "Name"],
     ["panels", "Panels"],
   ],
 };
-const CHANGED: Record<string, string> = { cel: "filter", group_by: "grouping" };
+const CHANGED: Record<string, string> = {
+  cel: "filter",
+  group_by: "grouping",
+  noisy: "alarm",
+};
 // Revisions saved before REV-44 have no group_by: they were not grouped.
+// Revisions saved before REV-58 have no noisy flag: they were silent.
 const fieldValue = (definition: Record<string, unknown>, field: string) =>
-  field === "group_by" ? (definition[field] ?? null) : definition[field];
+  field === "group_by"
+    ? (definition[field] ?? null)
+    : field === "noisy"
+      ? definition[field] === true
+      : definition[field];
 function activityVerb(kind: string) {
   return /delet/i.test(kind)
     ? "Deleted"
@@ -274,6 +284,7 @@ export function ConfigurationHistory({
   const timezone = timezoneLabel().split(" ")[0];
   function renderValue(field: string, value: unknown) {
     if (field === "group_by") return groupFieldLabel(value);
+    if (field === "noisy") return value === true ? "Noisy" : "Silent";
     if (value === undefined) return <span className="muted">Unavailable</span>;
     if (field === "cel")
       return (
