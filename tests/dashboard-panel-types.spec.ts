@@ -31,6 +31,7 @@ async function setup(page: Page, panels: Record<string, unknown>[]) {
     saves: [] as Record<string, unknown>[],
     counts: 0,
     validations: [] as Record<string, unknown>[],
+    previews: [] as Record<string, unknown>[],
   };
   await page.route("**/auth/session", (route) =>
     route.fulfill({
@@ -76,7 +77,7 @@ async function setup(page: Page, panels: Record<string, unknown>[]) {
       }
       return route.fulfill({ json: { data: state.definition } });
     }
-    if (path.endsWith("/counts")) {
+    if (path === `${api}/counts`) {
       state.counts += 1;
       return route.fulfill({
         json: {
@@ -120,6 +121,10 @@ async function setup(page: Page, panels: Record<string, unknown>[]) {
           },
         },
       });
+    }
+    if (path.endsWith("/alerts/counts")) {
+      state.previews.push(route.request().postDataJSON());
+      return route.fulfill({ json: { data: { counts: { total: "42" } } } });
     }
     if (path.endsWith("/presets"))
       return route.fulfill({
@@ -252,4 +257,30 @@ test("editing a panel keeps its type locked", async ({ page }) => {
   await expect(dialog.getByLabel("HTML", { exact: true })).toHaveValue(
     notes.html,
   );
+});
+
+test("the count preview counts the chosen preset before saving", async ({
+  page,
+}) => {
+  // Requirements: REV-57; dashboard operations 3 and 5.
+  const state = await setup(page, [count]);
+  await page.getByRole("button", { name: "Create panel", exact: true }).click();
+  const dialog = page.getByRole("dialog", {
+    name: "Create panel",
+    exact: true,
+  });
+  const preview = dialog.getByRole("article", { name: /count$/ });
+  await expect(preview).toContainText("Choose a preset to see its count");
+  await dialog
+    .getByRole("combobox", { name: "Saved preset", exact: true })
+    .click();
+  await dialog.getByRole("option", { name: "All alerts" }).click();
+  await expect(preview).toContainText("42");
+  await expect(preview).toContainText("Exact logical alerts");
+  expect(state.previews.at(-1)).toMatchObject({
+    queries: [{ id: "total", cel: "true", include_suppressed: false }],
+  });
+  await dialog.getByRole("button", { name: "Add threshold" }).click();
+  await expect(preview).toContainText("At least 0 · Blue");
+  expect(state.saves).toHaveLength(0);
 });
