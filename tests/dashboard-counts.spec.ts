@@ -199,16 +199,19 @@ async function setup(page: Page) {
   });
   return state;
 }
+/** A first panel showing its fresh count, with no status caption. */
+async function expectFresh(page: Page) {
+  const first = page.getByRole("article", { name: "First panel count" });
+  await expect(first).toContainText("9,007,199,254,740,993");
+  await expect(first).not.toHaveClass(/pn-stale/);
+  await expect(first.locator(".small")).toHaveCount(0);
+}
 async function open(page: Page) {
   await page.goto(`/tenants/${tenant}/dashboards/${id}`);
-  await expect(
-    page.getByRole("article", { name: "First panel count" }),
-  ).toContainText("Exact logical alerts");
+  await expectFresh(page);
   // Let the first observed view state's merged refresh finish.
   await page.clock.runFor(LIVE_QUIET_MS + 100);
-  await expect(
-    page.getByRole("article", { name: "First panel count" }),
-  ).toContainText("Exact logical alerts");
+  await expectFresh(page);
 }
 
 test("static dashboards issue no periodic counts and preserve exact partial and stale states", async ({
@@ -230,9 +233,7 @@ test("static dashboards issue no periodic counts and preserve exact partial and 
   await expect(
     page.getByRole("article", { name: "First panel count" }),
   ).toContainText("Preset: Saved preset");
-  await expect(
-    page.getByRole("article", { name: "First panel count" }),
-  ).toContainText("Exact logical alerts");
+  await expectFresh(page);
   state.failure = true;
   await page.getByRole("button", { name: "Refresh counts" }).click();
   await expect(
@@ -384,9 +385,7 @@ test("refreshes coalesce behind one in-flight count without cancelling it", asyn
   expect(waiting).toBe(1);
   release();
   await expect.poll(() => waiting).toBe(2);
-  await expect(
-    page.getByRole("article", { name: "First panel count" }),
-  ).toContainText("Exact logical alerts");
+  await expectFresh(page);
   await page.clock.runFor(3000);
   expect(waiting).toBe(2);
   expect(state.calls).toBe(before);

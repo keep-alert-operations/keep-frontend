@@ -1002,9 +1002,7 @@ for (const width of [800, 390]) {
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
-    const valueLabel = tile(page, "Edited").getByText("Exact logical alerts", {
-      exact: true,
-    });
+    const valueLabel = tile(page, "Edited").locator(".pn-value > b");
     const labelBox = (await valueLabel.boundingBox())!;
     const panelBox = (await tile(page, "Edited").boundingBox())!;
     expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(

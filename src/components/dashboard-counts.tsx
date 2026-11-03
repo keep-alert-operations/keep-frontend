@@ -10,7 +10,6 @@ import {
 } from "react";
 import {
   ApiError,
-  count,
   display,
   request,
   tenantPath,
@@ -364,13 +363,6 @@ export function useCounts(
   };
 }
 
-const COLOR_NAMES: Record<string, string> = {
-  red: "Red",
-  amber: "Amber",
-  green: "Green",
-  blue: "Blue",
-};
-
 /** Highest threshold whose exact lower bound the count reaches. */
 export function thresholdFor(
   value: string | undefined,
@@ -429,7 +421,31 @@ export function CountTile({
   const threshold = thresholdFor(value, panel.thresholds);
   const tone = threshold?.color ?? "none";
   const isStale = Boolean(stale && value !== undefined);
-  const size = panel.h >= 3 ? "fs-l" : "fs-m";
+  const shown =
+    value !== undefined && decimal.test(value)
+      ? BigInt(value).toLocaleString()
+      : "—";
+  // A fresh, live count needs no caption; only exceptional states explain it.
+  const status =
+    unavailable !== undefined ? (
+      unavailable
+    ) : placeholder ? (
+      placeholder
+    ) : value === undefined ? (
+      "Count unavailable"
+    ) : isStale ? (
+      <>
+        Previous observation · stale
+        {capturedAt && (
+          <>
+            {" "}
+            · captured <RelativeTime value={capturedAt} />
+          </>
+        )}
+      </>
+    ) : paused ? (
+      "Captured observation · paused"
+    ) : null;
   return (
     <article
       className={`pn pn-${tone} ${isStale ? "pn-stale" : ""} ${selected ? "pn-selected" : ""} ${layoutControls ? "de-tile" : ""} ${layoutActive ? "de-tile-active" : ""}`}
@@ -459,47 +475,23 @@ export function CountTile({
           <span className="pn-title">{title}</span>
         )}
         <span style={{ flexGrow: 1 }} />
-        {isStale ? (
-          <span className="chip b-dash">Stale</span>
-        ) : threshold ? (
-          <span className={`chip b-${threshold.color}`}>
-            At least {count(threshold.lower_bound)} ·{" "}
-            {COLOR_NAMES[threshold.color] ?? threshold.color}
-          </span>
-        ) : null}
+        {isStale && <span className="chip b-dash">Stale</span>}
       </span>
       {presetName && (panel.title || panel.h >= 3) && (
         <span className="sub">Preset: {presetName}</span>
       )}
-      <span style={{ flexGrow: 1 }} />
-      <b className={`${size} ${value === undefined ? "pn-none-value" : ""}`}>
-        {value !== undefined && decimal.test(value)
-          ? BigInt(value).toLocaleString()
-          : "—"}
-      </b>
-      <span className={`small ${isStale ? "ack-n" : "muted"}`}>
-        {unavailable !== undefined ? (
-          unavailable
-        ) : placeholder ? (
-          placeholder
-        ) : value === undefined ? (
-          "Count unavailable"
-        ) : isStale ? (
-          <>
-            Previous observation · stale
-            {capturedAt && (
-              <>
-                {" "}
-                · captured <RelativeTime value={capturedAt} />
-              </>
-            )}
-          </>
-        ) : paused ? (
-          "Captured observation · paused"
-        ) : (
-          "Exact logical alerts"
-        )}
+      {/* The number is centered in the space left and scales with the panel. */}
+      <span className="pn-value">
+        <b
+          className={value === undefined ? "pn-none-value" : undefined}
+          style={{ "--pn-chars": shown.length } as CSSProperties}
+        >
+          {shown}
+        </b>
       </span>
+      {status !== null && (
+        <span className={`small ${isStale ? "ack-n" : "muted"}`}>{status}</span>
+      )}
       {layoutControls}
     </article>
   );

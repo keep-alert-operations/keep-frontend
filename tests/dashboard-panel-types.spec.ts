@@ -276,11 +276,13 @@ test("the count preview counts the chosen preset before saving", async ({
     .click();
   await dialog.getByRole("option", { name: "All alerts" }).click();
   await expect(preview).toContainText("42");
-  await expect(preview).toContainText("Exact logical alerts");
+  await expect(preview).not.toContainText("Exact logical alerts");
   expect(state.previews.at(-1)).toMatchObject({
     queries: [{ id: "total", cel: "true", include_suppressed: false }],
   });
   await dialog.getByRole("button", { name: "Add threshold" }).click();
-  await expect(preview).toContainText("At least 0 · Blue");
+  // The threshold colors the panel without a caption naming its bound.
+  await expect(preview).toHaveClass(/pn-blue/);
+  await expect(preview).not.toContainText("At least");
   expect(state.saves).toHaveLength(0);
 });
