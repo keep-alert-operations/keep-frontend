@@ -11,6 +11,7 @@ import { useCommand, useDirtyWarning, useResource } from "@/lib/hooks";
 import type { Scope } from "./workspace";
 import { ErrorNotice } from "./ui";
 import { AlertStatus, NavLink, Page, Severity, personLabel } from "./page";
+import { rememberAlertList } from "./alerts";
 import { DirectoryPicker } from "./directory-picker";
 import { IncidentList, INCIDENT_STATUS } from "./incident-list";
 import { IncidentMembership } from "./incident-membership";
@@ -678,7 +679,12 @@ function IncidentDetail({ scope, id }: { scope: Scope; id: string }) {
                 </span>
               )}
             </div>
-            <LinkedAlerts scope={scope} rows={linkedRows} />
+            <LinkedAlerts
+              scope={scope}
+              rows={linkedRows}
+              label={title}
+              href={`${listHref}/${id}`}
+            />
             <ErrorNotice error={linked.error} />
             {linked.loading && !linked.data && (
               <p className="inc-table-state" role="status">
@@ -916,7 +922,21 @@ function Pager({
   );
 }
 
-function LinkedAlerts({ scope, rows }: { scope: Scope; rows: RecordData[] }) {
+function alertAvailable(row: RecordData) {
+  return Boolean(row.message ?? row.id ?? row.alert_id);
+}
+
+function LinkedAlerts({
+  scope,
+  rows,
+  label,
+  href,
+}: {
+  scope: Scope;
+  rows: RecordData[];
+  label: string;
+  href: string;
+}) {
   return (
     <div role="table" aria-label="Linked alerts" className="table-body">
       <div role="row" className="row head g-ia">
@@ -928,7 +948,7 @@ function LinkedAlerts({ scope, rows }: { scope: Scope; rows: RecordData[] }) {
       </div>
       {rows.map((row) => {
         const key = alertKey(row);
-        const available = Boolean(row.message ?? row.id ?? row.alert_id);
+        const available = alertAvailable(row);
         const text =
           str(row.name) ?? str(row.message) ?? "Unavailable alert reference";
         const assignee = who(scope, row.assignee_id, row.assignee_display_name);
@@ -948,6 +968,14 @@ function LinkedAlerts({ scope, rows }: { scope: Scope; rows: RecordData[] }) {
                     scope={scope}
                     className="msg alert-row-link"
                     href={`/tenants/${scope.tenant.id}/alerts/${key}`}
+                    onClickCapture={() =>
+                      rememberAlertList(scope.tenant.id, {
+                        label,
+                        href,
+                        ids: rows.filter(alertAvailable).map(alertKey),
+                        current: key,
+                      })
+                    }
                   >
                     {text}
                   </NavLink>

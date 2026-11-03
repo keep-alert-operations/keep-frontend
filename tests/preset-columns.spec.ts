@@ -264,6 +264,14 @@ test("operator column shows the managed name rather than its stable ID", async (
   await table.getByRole("link", { name: "Open Database latency" }).click();
   await expect(page.getByText("Payments", { exact: true })).toBeVisible();
   await expect(page.getByText(row.operator, { exact: true })).toHaveCount(0);
+  await expect(
+    page
+      .getByRole("navigation", { name: "Breadcrumb" })
+      .getByRole("link", { name: "Presets", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "← Back to preset" }),
+  ).toHaveAttribute("href", `/tenants/${tenant}/presets/${preset}`);
 });
 
 test("draft column removal and reordering update the preview without saving", async ({

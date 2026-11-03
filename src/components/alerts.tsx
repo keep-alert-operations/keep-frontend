@@ -1116,16 +1116,24 @@ function AlertDetail(scope: Scope & { id: string }) {
     scope.navigate(`/tenants/${scope.tenant.id}/alerts/${target}`);
   }
   const position = list ? list.ids.indexOf(scope.id) : -1;
-  const fromPreset = list?.href.startsWith(
-    `/tenants/${scope.tenant.id}/presets/`,
-  );
+  const tenantHref = `/tenants/${scope.tenant.id}`;
+  // A preset or incident names itself in the crumbs; other lists start at Feed.
+  const source = list?.href.startsWith(`${tenantHref}/presets/`)
+    ? { label: "Presets", href: `${tenantHref}/presets`, back: "preset" }
+    : list?.href.startsWith(`${tenantHref}/incidents/`)
+      ? {
+          label: "Incidents",
+          href: `${tenantHref}/incidents`,
+          back: "incident",
+        }
+      : undefined;
   const crumbs: Crumb[] =
-    list && fromPreset
+    list && source
       ? [
-          { label: "Presets", href: `/tenants/${scope.tenant.id}/presets` },
+          { label: source.label, href: source.href },
           { label: list.label, href: list.href },
         ]
-      : [{ label: "Feed", href: `/tenants/${scope.tenant.id}/alerts` }];
+      : [{ label: "Feed", href: `${tenantHref}/alerts` }];
   const title = alert
     ? alertTitle(alert)
     : detail.error
@@ -1206,9 +1214,9 @@ function AlertDetail(scope: Scope & { id: string }) {
       actions={
         list && (
           <>
-            {fromPreset && (
+            {source && (
               <NavLink scope={scope} className="btn" href={list.href}>
-                ← Back to preset
+                ← Back to {source.back}
               </NavLink>
             )}
             <button
