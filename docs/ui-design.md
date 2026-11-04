@@ -125,8 +125,9 @@ pixels while a placeholder shows its compacted grid destination. Neighbors and
 the released panel settle smoothly; reduced-motion preference skips settling
 animations. Saved dimensions use the existing grid choices; arrow keys provide the same
 operations. Escape or pointer cancellation restores the pre-gesture draft.
-Width/Height controls and Move up/down actions remain available through panel
-options on narrow screens. Responsive display preserves desktop columns and sizes.
+Panels are moved and resized only on the desktop grid (REV-50, REV-60), so the panel
+options hold Edit and Delete and narrow screens show the saved layout without
+rearranging it. Responsive display preserves desktop columns and sizes.
 
 Assistant-selected collision handling pins the edited rectangle, visits other
 panels in saved y/x/UUID order and moves overlapping panels downward until they
