@@ -2,7 +2,6 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import {
   compactPanels,
   firstPanelGap,
-  packPanels,
   placePanel,
 } from "../src/lib/dashboard-layout";
 
@@ -1029,29 +1028,17 @@ test("viewers see counts without editing controls", async ({ page }) => {
   ).toHaveCount(0);
 });
 
-test("Move down puts a narrow panel after a full-width panel and keeps keyboard focus", async ({
+/** Requirements: REV-60; dashboard operations 4. Panels move on the grid only. */
+test("panel options offer Edit and Delete without Move actions", async ({
   page,
 }) => {
-  const wide = { ...panel(32, "Wide", 0, 2), w: 12 };
-  const state = await setup(page, {
-    panels: [initial.panels[0], initial.panels[1], wide],
-  });
-  const options = page.getByRole("button", {
-    name: "Options for Second",
-    exact: true,
-  });
-  await options.click();
-  await page.getByRole("menuitem", { name: "Move down", exact: true }).click();
-  await expect
-    .poll(() => position(tile(page, "Second")))
-    .toEqual({ column: "1 / span 3", row: "5 / span 2" });
-  await expect(options).toBeFocused();
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect.poll(() => state.saves.length).toBe(1);
-  expect(state.definition.panels.map((item) => item.title)).toEqual([
-    "First",
-    "Wide",
-    "Second",
+  await setup(page);
+  await page
+    .getByRole("button", { name: "Options for Second", exact: true })
+    .click();
+  await expect(page.getByRole("menuitem")).toHaveText([
+    "Edit panel",
+    "Delete panel",
   ]);
 });
 
@@ -1155,10 +1142,6 @@ test("collision chains compact every column and reject actual overflow atomicall
       panel(32, "New", 0),
     ),
   ).toMatchObject({ x: 3, y: 0 });
-  const wide = { ...panel(34, "Wide", 0), w: 12 };
-  expect(
-    packPanels([panels[0], wide, panels[1]]).map((item) => item.y),
-  ).toEqual([0, 2, 4]);
 });
 
 test("drag follows small pointer movements while its destination stays compacted", async ({

@@ -11,7 +11,6 @@ import { useCommand, useDirtyWarning } from "@/lib/hooks";
 import {
   compactPanels,
   firstPanelGap,
-  packPanels,
   placePanel,
 } from "@/lib/dashboard-layout";
 import type { Scope } from "./workspace";
@@ -308,18 +307,7 @@ export function DashboardWorkspace({
     panel.title ??
     (isHtmlPanel(panel) ? "HTML panel" : observation(panel)?.preset_name) ??
     "Panel";
-  function movePanel(panel: Panel, delta: number) {
-    const index = draft.panels.findIndex((item) => item.id === panel.id),
-      target = index + delta;
-    if (target < 0 || target >= draft.panels.length) return;
-    const panels = [...draft.panels];
-    [panels[index], panels[target]] = [panels[target], panels[index]];
-    setDraft((previous) => ({ ...previous, panels: packPanels(panels) }));
-    const focused = document.activeElement as HTMLElement | null;
-    requestAnimationFrame(() => focused?.isConnected && focused.focus());
-  }
   function panelOptions(panel: Panel) {
-    const index = draft.panels.findIndex((item) => item.id === panel.id);
     return (
       <div className="db-panel-options">
         <Menu
@@ -344,30 +332,6 @@ export function DashboardWorkspace({
                 }}
               >
                 Edit panel
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="menu-item"
-                disabled={locked || index === 0}
-                onClick={() => {
-                  close();
-                  movePanel(panel, -1);
-                }}
-              >
-                Move up
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="menu-item"
-                disabled={locked || index === draft.panels.length - 1}
-                onClick={() => {
-                  close();
-                  movePanel(panel, 1);
-                }}
-              >
-                Move down
               </button>
               <button
                 type="button"

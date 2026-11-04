@@ -88,22 +88,3 @@ export function firstPanelGap<T extends GridPanel>(
   }
   return null;
 }
-
-/** Explicit order controls repack in the requested order using the same grid rules. */
-export function packPanels<T extends GridPanel>(panels: T[]): T[] {
-  let x = 0,
-    y = 0,
-    rowHeight = 0;
-  const packed = panels.map((panel) => {
-    if (x + panel.w > 12) {
-      x = 0;
-      y += rowHeight;
-      rowHeight = 0;
-    }
-    const next = { ...panel, x, y };
-    x += panel.w;
-    rowHeight = Math.max(rowHeight, panel.h);
-    return next;
-  });
-  return compactPanels(packed);
-}
