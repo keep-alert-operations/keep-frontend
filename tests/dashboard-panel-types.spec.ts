@@ -175,6 +175,23 @@ test("an HTML panel shows sanitized content beside count panels", async ({
   ).toContainText("12");
 });
 
+test("an HTML panel keeps a font size and drops other styles", async ({
+  page,
+}) => {
+  // Requirements: REV-57 (later decision 2026-11-04); dashboard operations 5.
+  await setup(page, [
+    {
+      ...notes,
+      html: '<p style="font-size: 24px; position: fixed">Large</p>',
+    },
+  ]);
+  const large = page
+    .getByRole("article", { name: "Handover", exact: true })
+    .getByText("Large");
+  await expect(large).toHaveCSS("font-size", "24px");
+  await expect(large).toHaveAttribute("style", "font-size: 24px");
+});
+
 test("a dashboard of only HTML panels makes no count request", async ({
   page,
 }) => {
