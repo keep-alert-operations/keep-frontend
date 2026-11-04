@@ -45,6 +45,7 @@ const ATTRIBUTES: Record<string, string[]> = {
 const STYLES = new Set([
   "color",
   "background-color",
+  "font-size",
   "font-weight",
   "font-style",
   "text-align",
