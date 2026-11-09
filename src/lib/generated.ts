@@ -650,6 +650,86 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/tenants/{tenant_id}/ticket-counts/status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Ticket Count Status
+     * @description Whether ServiceNow ticket panels can show counts in this deployment.
+     */
+    get: operations["ticket_count_status_api_tenants__tenant_id__ticket_counts_status_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/tenants/{tenant_id}/ticket-counts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Ticket Counts
+     * @description Ticket counts for up to 24 panel queries; each query gets its own result.
+     */
+    post: operations["ticket_counts_api_tenants__tenant_id__ticket_counts_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/integrations/ticket-count": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Ticket Count Integration
+     * @description The counting service's connection status, for super admins.
+     */
+    get: operations["ticket_count_integration_api_admin_integrations_ticket_count_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/integrations/ticket-count/test": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Ticket Count Test
+     * @description Ask the counting service once, bypassing the cache; any valid JSON answer passes.
+     */
+    post: operations["ticket_count_test_api_admin_integrations_ticket_count_test_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/tenants/{tenant_id}/maintenance": {
     parameters: {
       query?: never;
@@ -2212,6 +2292,7 @@ export interface components {
         | components["schemas"]["HtmlPanel"]
         | components["schemas"]["ImagePanel"]
         | components["schemas"]["TablePanel"]
+        | components["schemas"]["ServiceNowPanel"]
       )[];
       /** Command Id */
       command_id: string;
@@ -2226,6 +2307,7 @@ export interface components {
         | components["schemas"]["HtmlPanel"]
         | components["schemas"]["ImagePanel"]
         | components["schemas"]["TablePanel"]
+        | components["schemas"]["ServiceNowPanel"]
       )[];
     };
     /** DashboardPreview */
@@ -2238,6 +2320,7 @@ export interface components {
         | components["schemas"]["HtmlPanel"]
         | components["schemas"]["ImagePanel"]
         | components["schemas"]["TablePanel"]
+        | components["schemas"]["ServiceNowPanel"]
       )[];
       /** Preset Revisions */
       preset_revisions: {
@@ -2254,6 +2337,7 @@ export interface components {
         | components["schemas"]["HtmlPanel"]
         | components["schemas"]["ImagePanel"]
         | components["schemas"]["TablePanel"]
+        | components["schemas"]["ServiceNowPanel"]
       )[];
       /** Command Id */
       command_id: string;
@@ -3081,6 +3165,50 @@ export interface components {
       /** Cel */
       cel?: string | null;
     };
+    /**
+     * ServiceNowPanel
+     * @description A panel showing a team's ServiceNow ticket count (REV-65).
+     *
+     *     The API server asks the deployment's ticket counting service for the count of
+     *     ``team``'s tickets in ``ticket_state`` found by ``detection``. It references no
+     *     preset and is never part of a count batch; ``thresholds`` color the count like
+     *     a count panel's.
+     */
+    ServiceNowPanel: {
+      /** Id */
+      id: string;
+      /** Title */
+      title?: string | null;
+      /** X */
+      x: number;
+      /** Y */
+      y: number;
+      /** W */
+      w: number;
+      /** H */
+      h: number;
+      /**
+       * Type
+       * @constant
+       */
+      type: "servicenow";
+      /** Team */
+      team: string;
+      /**
+       * Ticket State
+       * @default open
+       * @enum {string}
+       */
+      ticket_state: "open" | "in_progress" | "both";
+      /**
+       * Detection
+       * @default hamal
+       * @enum {string}
+       */
+      detection: "hamal" | "direct" | "all";
+      /** Thresholds */
+      thresholds?: components["schemas"]["Threshold"][];
+    };
     /** SnapshotClose */
     SnapshotClose: {
       /** Token */
@@ -3204,6 +3332,142 @@ export interface components {
       /** Color */
       color: string;
     };
+    /** TicketCountIntegration */
+    TicketCountIntegration: {
+      /** Configured */
+      configured: boolean;
+      /**
+       * Host
+       * @description The service's scheme, host and port; never its path or query.
+       */
+      host: string | null;
+      /** Last Success At */
+      last_success_at: string | null;
+      /** Last Failure At */
+      last_failure_at: string | null;
+      /**
+       * Last Error
+       * @description The last failure's kind, such as timeout.
+       */
+      last_error: string | null;
+    };
+    /** TicketCountIntegrationRead */
+    TicketCountIntegrationRead: {
+      data: components["schemas"]["TicketCountIntegration"];
+      /** Meta */
+      meta: {
+        [key: string]: unknown;
+      };
+    };
+    /** TicketCountQuery */
+    TicketCountQuery: {
+      /** Team */
+      team: string;
+      /**
+       * Ticket State
+       * @default open
+       * @enum {string}
+       */
+      ticket_state: "open" | "in_progress" | "both";
+      /**
+       * Detection
+       * @default hamal
+       * @enum {string}
+       */
+      detection: "hamal" | "direct" | "all";
+    };
+    /** TicketCountRequest */
+    TicketCountRequest: {
+      /** Queries */
+      queries: components["schemas"]["TicketCountQuery"][];
+    };
+    /** TicketCountResult */
+    TicketCountResult: {
+      /**
+       * Status
+       * @description count: the service gave a count; not_found: it doesn't know the team; no_count: it answered without a usable count; unavailable: it timed out, failed or gave no valid JSON; not_configured: no service is configured.
+       * @enum {string}
+       */
+      status:
+        "count" | "not_found" | "no_count" | "unavailable" | "not_configured";
+      /**
+       * Count
+       * @description The ticket count as a decimal string when status is count; else null.
+       */
+      count: string | null;
+      /**
+       * Checked At
+       * @description When this answer was fetched (answers are cached for up to 30 s); null when not configured or when no call slot was free.
+       */
+      checked_at: string | null;
+      /**
+       * Last Count
+       * @description The last count for this query in the past hour, as a decimal string; null when none.
+       */
+      last_count: string | null;
+      /**
+       * Last Counted At
+       * @description When last_count was fetched.
+       */
+      last_counted_at: string | null;
+    };
+    /** TicketCountResults */
+    TicketCountResults: {
+      /**
+       * Results
+       * @description One result per query, in request order.
+       */
+      results: components["schemas"]["TicketCountResult"][];
+    };
+    /** TicketCountResultsRead */
+    TicketCountResultsRead: {
+      data: components["schemas"]["TicketCountResults"];
+      /** Meta */
+      meta: {
+        [key: string]: unknown;
+      };
+    };
+    /** TicketCountStatus */
+    TicketCountStatus: {
+      /**
+       * Configured
+       * @description Whether this deployment has a ticket counting service.
+       */
+      configured: boolean;
+    };
+    /** TicketCountStatusRead */
+    TicketCountStatusRead: {
+      data: components["schemas"]["TicketCountStatus"];
+      /** Meta */
+      meta: {
+        [key: string]: unknown;
+      };
+    };
+    /** TicketCountTest */
+    TicketCountTest: {
+      /** Ok */
+      ok: boolean;
+      /** Message */
+      message: string;
+      /**
+       * Elapsed Ms
+       * @description Milliseconds the test took, as a decimal string.
+       */
+      elapsed_ms: string;
+    };
+    /** TicketCountTestRead */
+    TicketCountTestRead: {
+      data: components["schemas"]["TicketCountTest"];
+      /** Meta */
+      meta: {
+        [key: string]: unknown;
+      };
+    };
+    /**
+     * TicketCountTestRequest
+     * @description An empty JSON object; product POST bodies are always JSON.
+     */
+    TicketCountTestRequest: Record<string, never>;
     /** TimezoneEdit */
     TimezoneEdit: {
       /** Command Id */
@@ -4858,6 +5122,125 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["AlertGroupPage"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  ticket_count_status_api_tenants__tenant_id__ticket_counts_status_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        tenant_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TicketCountStatusRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  ticket_counts_api_tenants__tenant_id__ticket_counts_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        tenant_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TicketCountRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TicketCountResultsRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  ticket_count_integration_api_admin_integrations_ticket_count_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TicketCountIntegrationRead"];
+        };
+      };
+    };
+  };
+  ticket_count_test_api_admin_integrations_ticket_count_test_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TicketCountTestRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TicketCountTestRead"];
         };
       };
       /** @description Validation Error */

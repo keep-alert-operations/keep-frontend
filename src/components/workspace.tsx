@@ -16,6 +16,7 @@ import { liveStream } from "@/lib/live-stream";
 import { Alerts } from "./alerts";
 import { Resources } from "./resources";
 import { Administration } from "./administration";
+import { Integrations } from "./integrations";
 import { ErrorNotice } from "./ui";
 import { Icon } from "./icons";
 
@@ -314,6 +315,7 @@ export function Workspace() {
     "operators",
     "permissions",
     "audit",
+    "integrations",
     "platform",
   ].includes(section);
   return (
@@ -614,6 +616,7 @@ function TenantWorkspace(
     "operators",
     "permissions",
     "audit",
+    "integrations",
     "platform",
   ].includes(props.section);
   const subnav = adminSection ? (
@@ -626,7 +629,12 @@ function TenantWorkspace(
               ["audit", "Access audit"],
             ]
           : []),
-        ...(props.session.global_super_admin ? [["platform", "Platform"]] : []),
+        ...(props.session.global_super_admin
+          ? [
+              ["integrations", "Integrations"],
+              ["platform", "Platform"],
+            ]
+          : []),
       ].map(([key, label]) => (
         <a
           key={key}
@@ -655,6 +663,8 @@ function TenantWorkspace(
   };
   return props.section === "platform" ? (
     <Administration {...scope} />
+  ) : props.section === "integrations" ? (
+    <Integrations {...scope} />
   ) : props.section === "alerts" ? (
     <Alerts {...scope} id={props.id} />
   ) : sections.some(([key]) => key === props.section) ||
