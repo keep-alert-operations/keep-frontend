@@ -754,3 +754,114 @@ test("real HTTPS browser titles a named v2 alert by its name", async ({
     );
   });
 });
+
+test("real HTTPS browser uploads an image panel and serves it after saving", async ({
+  browser,
+  playwright,
+}) => {
+  // Requirements: REV-62; dashboard operations 2, 13, 14 and 16.
+  test.skip(
+    !adminUrl,
+    "Opt in with APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL pointing to an isolated local PostgreSQL administrator database",
+  );
+  test.setTimeout(180000);
+  await withStack(browser, playwright, {}, async ({ seeded, page, origin }) => {
+    const tenant = seeded.named_tenant;
+    const session = await (
+      await page.request.get(`${origin}/auth/session`)
+    ).json();
+    const created = await page.request.post(
+      `${origin}/api/tenants/${tenant}/dashboards`,
+      {
+        headers: { Origin: origin, "X-CSRF-Token": session.data.csrf_token },
+        data: {
+          command_id: crypto.randomUUID(),
+          name: "Browser images",
+          panels: [],
+        },
+      },
+    );
+    expect(created.status()).toBe(201);
+    const dashboard = (await created.json()).data;
+    await page.goto(`${origin}/tenants/${tenant}/dashboards/${dashboard.id}`);
+    await page
+      .getByRole("button", { name: "Create panel", exact: true })
+      .click();
+    const dialog = page.getByRole("dialog", {
+      name: "Create panel",
+      exact: true,
+    });
+    await dialog.getByRole("button", { name: /Panel type/ }).click();
+    await dialog.getByRole("option", { name: /^Image/ }).click();
+    await dialog.getByLabel("Title (optional)").fill("Topology");
+    // A 2 × 1 PNG; the server reads its real type and size from the header.
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAEUlEQVR42mNk+M9QzwAEjDAGACCDAv8cI7IoAAAAAElFTkSuQmCC",
+      "base64",
+    );
+    const uploaded = page.waitForResponse(
+      (response) =>
+        response.url().endsWith(`/api/tenants/${tenant}/dashboard-images`) &&
+        response.request().method() === "POST",
+    );
+    await dialog.locator('input[type="file"]').setInputFiles({
+      name: "topology.png",
+      mimeType: "image/png",
+      buffer: png,
+    });
+    const image = (await (await uploaded).json()).data;
+    expect(image).toMatchObject({
+      media_type: "image/png",
+      width: "2",
+      height: "1",
+    });
+    await expect(dialog).toContainText("2 × 1 px");
+    await dialog.getByLabel("Image description").fill("Network topology");
+    await dialog
+      .getByRole("button", { name: "Create panel", exact: true })
+      .click();
+    await expect(dialog).toBeHidden();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Save", exact: true }),
+    ).toBeDisabled();
+    const served = page.waitForResponse((response) =>
+      response.url().endsWith(`/dashboard-images/${image.id}`),
+    );
+    await page.reload();
+    // The browser revalidates its cached copy with the ETag, so a reload may be a 304.
+    expect([200, 304]).toContain((await served).status());
+    const direct = await page.request.get(
+      `${origin}/api/tenants/${tenant}/dashboard-images/${image.id}`,
+    );
+    expect(direct.status()).toBe(200);
+    expect(direct.headers()).toMatchObject({
+      "content-type": "image/png",
+      "x-content-type-options": "nosniff",
+      "content-security-policy": "sandbox; default-src 'none'",
+      "cache-control": "private, no-cache",
+    });
+    expect(Buffer.compare(await direct.body(), png)).toBe(0);
+    const picture = page
+      .getByRole("article", { name: "Topology", exact: true })
+      .getByRole("img", { name: "Network topology" });
+    await expect(picture).toBeVisible();
+    await expect
+      .poll(() =>
+        picture.evaluate((element: HTMLImageElement) => element.naturalWidth),
+      )
+      .toBe(2);
+    const stored = await page.request.get(
+      `${origin}/api/tenants/${tenant}/dashboards/${dashboard.id}`,
+    );
+    expect((await stored.json()).data.panels).toMatchObject([
+      {
+        type: "image",
+        image_id: image.id,
+        url: null,
+        fit: "contain",
+        alt: "Network topology",
+      },
+    ]);
+  });
+});

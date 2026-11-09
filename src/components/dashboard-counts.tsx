@@ -42,11 +42,30 @@ export interface HtmlPanel extends PanelLayout {
   type: "html";
   html: string;
 }
-export type Panel = CountPanel | HtmlPanel;
+/** A panel showing an uploaded image or an https image address (REV-62). */
+export interface ImagePanel extends PanelLayout {
+  type: "image";
+  image_id?: string | null;
+  url?: string | null;
+  fit?: "contain" | "cover";
+  alt?: string | null;
+}
+export type Panel = CountPanel | HtmlPanel | ImagePanel;
 export const isHtmlPanel = (panel: Panel): panel is HtmlPanel =>
   panel.type === "html";
-export const countPanels = (panels: Panel[]) =>
-  panels.filter((panel): panel is CountPanel => !isHtmlPanel(panel));
+export const isImagePanel = (panel: Panel): panel is ImagePanel =>
+  panel.type === "image";
+export const isCountPanel = (panel: Panel): panel is CountPanel =>
+  (panel.type ?? "count") === "count";
+export const countPanels = (panels: Panel[]) => panels.filter(isCountPanel);
+/** The name of a panel that has no preset to name it. */
+export const contentPanelName = (panel: Panel) =>
+  isHtmlPanel(panel) ? "HTML panel" : isImagePanel(panel) ? "Image panel" : "";
+/** Where an image panel's picture loads from: the tenant's upload or the link. */
+export const imageSource = (tenantId: string, panel: ImagePanel) =>
+  panel.image_id
+    ? `${tenantPath(tenantId)}/dashboard-images/${panel.image_id}`
+    : (panel.url ?? "");
 interface PanelCount {
   panel_id: string;
   preset_id: string;
@@ -537,6 +556,120 @@ export function HtmlTile({
   );
 }
 
+/**
+ * The picture of an image panel with its loading and unavailable states (REV-62).
+ * `src` may be a local preview; links load with no referrer.
+ */
+export function PanelImage({
+  src,
+  link,
+  fit,
+  alt,
+  emptyText,
+  onStatus,
+}: {
+  src: string;
+  link?: string | null;
+  fit?: "contain" | "cover";
+  alt: string;
+  /** Shown when there is no source yet, instead of "Image unavailable". */
+  emptyText?: string;
+  onStatus?: (status: "loading" | "ready" | "failed") => void;
+}) {
+  const [state, setState] = useState<{
+    src: string;
+    status: "loading" | "ready" | "failed";
+  }>({ src, status: "loading" });
+  const status = state.src === src ? state.status : "loading";
+  const reported = useRef(onStatus);
+  reported.current = onStatus;
+  useEffect(() => reported.current?.(status), [status]);
+  return (
+    <div className="pn-img-box" data-image-state={status}>
+      {src && status !== "failed" && (
+        // eslint-disable-next-line @next/next/no-img-element -- tenant uploads and arbitrary links
+        <img
+          src={src}
+          alt={alt}
+          referrerPolicy="no-referrer"
+          decoding="async"
+          draggable={false}
+          style={{ objectFit: fit ?? "contain" }}
+          onLoad={() => setState({ src, status: "ready" })}
+          onError={() => setState({ src, status: "failed" })}
+        />
+      )}
+      {status === "loading" && src && (
+        <span className="pn-img-state">Loading image…</span>
+      )}
+      {!src && emptyText && <span className="pn-img-state">{emptyText}</span>}
+      {(status === "failed" || (!src && !emptyText)) && (
+        <span className="pn-img-state pn-img-failed">
+          <b>Image unavailable</b>
+          {link && (
+            <a href={link} target="_blank" rel="noopener noreferrer">
+              Open link
+            </a>
+          )}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** One image panel: its title, if any, above the picture; without one the picture fills it. */
+export function ImageTile({
+  tenantId,
+  panel,
+  src,
+  emptyText,
+  onStatus,
+  layoutControls,
+  layoutActive,
+  layoutStyle,
+}: {
+  tenantId: string;
+  panel: ImagePanel;
+  /** A local preview to show instead of the stored source. */
+  src?: string;
+  emptyText?: string;
+  onStatus?: (status: "loading" | "ready" | "failed") => void;
+  layoutControls?: ReactNode;
+  layoutActive?: boolean;
+  layoutStyle?: CSSProperties;
+}) {
+  // Drafts hold "" for a cleared title or description; treat it as none.
+  const title = panel.title?.trim() || null;
+  const label = title ?? "Image panel";
+  return (
+    <article
+      className={`pn pn-img ${title ? "" : "pn-img-bare"} ${layoutControls ? "de-tile" : ""} ${layoutActive ? "de-tile-active" : ""}`}
+      aria-label={label}
+      data-layout-panel={panel.id}
+      style={{
+        gridColumn: `${panel.x + 1} / span ${panel.w}`,
+        gridRow: `${panel.y + 1} / span ${panel.h}`,
+        ...layoutStyle,
+      }}
+    >
+      {title && (
+        <span className="pn-head">
+          <span className="pn-title">{title}</span>
+        </span>
+      )}
+      <PanelImage
+        src={src ?? imageSource(tenantId, panel)}
+        link={panel.image_id ? undefined : panel.url}
+        fit={panel.fit}
+        alt={panel.alt?.trim() || label}
+        emptyText={emptyText}
+        onStatus={onStatus}
+      />
+      {layoutControls}
+    </article>
+  );
+}
+
 /** Count engine plus transient fullscreen state for one open dashboard. */
 export function useDashboard(
   scope: Scope,
@@ -639,6 +772,17 @@ export function DashboardBoard({
           layoutStyle={style}
         />
       );
+    if (isImagePanel(panel))
+      return (
+        <ImageTile
+          key={panel.id}
+          tenantId={scope.tenant.id}
+          panel={panel}
+          layoutControls={layoutControls}
+          layoutActive={active}
+          layoutStyle={style}
+        />
+      );
     const observation = batch?.panels.find(
       (item) =>
         item.panel_id === panel.id && item.preset_id === panel.preset_id,
@@ -721,9 +865,9 @@ export function DashboardBoard({
             disabled={editing.disabled}
             label={(panel) =>
               panel.title ??
-              (isHtmlPanel(panel)
-                ? "HTML panel"
-                : names.get(panel.preset_id)) ??
+              (isCountPanel(panel)
+                ? names.get(panel.preset_id)
+                : contentPanelName(panel)) ??
               "Panel"
             }
             onChange={editing.onChange}
@@ -740,7 +884,7 @@ export function DashboardBoard({
           <h2>This dashboard has no panels</h2>
           <p>
             {editing
-              ? "Create a panel to count a saved preset or show your own notes."
+              ? "Create a panel to count a saved preset or show your own notes or images."
               : "Panels created by editors appear here."}
           </p>
         </div>

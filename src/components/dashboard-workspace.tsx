@@ -22,7 +22,11 @@ import {
   DashboardBoard,
   CountTile,
   HtmlTile,
+  ImageTile,
+  contentPanelName,
+  isCountPanel,
   isHtmlPanel,
+  isImagePanel,
   type DashboardModel,
   type Panel,
 } from "./dashboard-counts";
@@ -46,6 +50,15 @@ function definition(value?: Record<string, unknown>): {
               w: panel.w,
               h: panel.h,
             };
+            if (isImagePanel(panel))
+              return {
+                ...layout,
+                type: "image",
+                image_id: panel.image_id ?? null,
+                url: panel.url ?? null,
+                fit: panel.fit ?? "contain",
+                alt: panel.alt ?? null,
+              };
             return isHtmlPanel(panel)
               ? { ...layout, type: "html", html: panel.html }
               : {
@@ -297,7 +310,7 @@ export function DashboardWorkspace({
     setMessage("Panel updated. Save the dashboard to keep your changes.");
   }
   const observation = (panel: Panel) =>
-    isHtmlPanel(panel)
+    !isCountPanel(panel)
       ? undefined
       : model?.state.batch?.panels.find(
           (item) =>
@@ -305,7 +318,9 @@ export function DashboardWorkspace({
         );
   const panelLabel = (panel: Panel) =>
     panel.title ??
-    (isHtmlPanel(panel) ? "HTML panel" : observation(panel)?.preset_name) ??
+    (isCountPanel(panel)
+      ? observation(panel)?.preset_name
+      : contentPanelName(panel)) ??
     "Panel";
   function editPanel(panelId: string) {
     const panel = draft.panels.find((item) => item.id === panelId);
@@ -724,7 +739,16 @@ export function DashboardWorkspace({
                 {canEdit && panelOptions(panel)}
               </>
             );
-            return isHtmlPanel(panel) ? (
+            return isImagePanel(panel) ? (
+              <ImageTile
+                key={panel.id}
+                tenantId={scope.tenant.id}
+                panel={panel}
+                layoutControls={layoutControls}
+                layoutActive={active}
+                layoutStyle={style}
+              />
+            ) : isHtmlPanel(panel) ? (
               <HtmlTile
                 key={panel.id}
                 panel={panel}

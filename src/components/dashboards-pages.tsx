@@ -8,7 +8,7 @@ import { ErrorNotice } from "./ui";
 import { NavLink, Page, personLabel, RelativeTime, SearchInput } from "./page";
 import { DashboardWorkspace } from "./dashboard-workspace";
 import { ConfigurationHistory } from "./configuration-history";
-import { isHtmlPanel, useDashboard, type Panel } from "./dashboard-counts";
+import { isCountPanel, useDashboard, type Panel } from "./dashboard-counts";
 import { useLeave } from "./presets-pages";
 
 /** Routes this area's list, detail, editor and history screens. */
@@ -90,7 +90,7 @@ function miniTones(row: RecordData) {
       : panels?.length;
   const tones = panels
     ? panels.slice(0, 6).map((panel) => {
-        const thresholds = isHtmlPanel(panel) ? [] : (panel.thresholds ?? []);
+        const thresholds = isCountPanel(panel) ? (panel.thresholds ?? []) : [];
         return thresholds.length
           ? thresholds[thresholds.length - 1].color
           : "none";
