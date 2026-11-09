@@ -22,12 +22,15 @@ import {
   DashboardBoard,
   CountTile,
   HtmlTile,
+  isCountPanel,
   isHtmlPanel,
+  isTablePanel,
   type DashboardModel,
   type Panel,
 } from "./dashboard-counts";
 import { DashboardLayout } from "./dashboard-layout";
 import { DashboardPanelDialog } from "./dashboard-panel-dialog";
+import { TableTile } from "./dashboard-table-panel";
 
 function definition(value?: Record<string, unknown>): {
   name: string;
@@ -46,6 +49,13 @@ function definition(value?: Record<string, unknown>): {
               w: panel.w,
               h: panel.h,
             };
+            if (isTablePanel(panel))
+              return {
+                ...layout,
+                type: "table",
+                preset_id: panel.preset_id,
+                rows: panel.rows,
+              };
             return isHtmlPanel(panel)
               ? { ...layout, type: "html", html: panel.html }
               : {
@@ -297,7 +307,7 @@ export function DashboardWorkspace({
     setMessage("Panel updated. Save the dashboard to keep your changes.");
   }
   const observation = (panel: Panel) =>
-    isHtmlPanel(panel)
+    !isCountPanel(panel)
       ? undefined
       : model?.state.batch?.panels.find(
           (item) =>
@@ -305,7 +315,11 @@ export function DashboardWorkspace({
         );
   const panelLabel = (panel: Panel) =>
     panel.title ??
-    (isHtmlPanel(panel) ? "HTML panel" : observation(panel)?.preset_name) ??
+    (isHtmlPanel(panel)
+      ? "HTML panel"
+      : isTablePanel(panel)
+        ? "Alert table"
+        : observation(panel)?.preset_name) ??
     "Panel";
   function editPanel(panelId: string) {
     const panel = draft.panels.find((item) => item.id === panelId);
@@ -724,6 +738,17 @@ export function DashboardWorkspace({
                 {canEdit && panelOptions(panel)}
               </>
             );
+            if (isTablePanel(panel))
+              return (
+                <TableTile
+                  key={panel.id}
+                  scope={scope}
+                  panel={panel}
+                  layoutControls={layoutControls}
+                  layoutActive={active}
+                  layoutStyle={style}
+                />
+              );
             return isHtmlPanel(panel) ? (
               <HtmlTile
                 key={panel.id}
@@ -751,7 +776,7 @@ export function DashboardWorkspace({
           <h2>This dashboard has no panels</h2>
           <p>
             {canEdit
-              ? "Create a panel to count a saved preset or show your own notes."
+              ? "Create a panel to count or list a saved preset's alerts, or show your own notes."
               : "Panels created by editors appear here."}
           </p>
         </div>

@@ -356,3 +356,22 @@
     font-size: 11px;
   }
 }
+/* Alert table settings (REV-63). */
+.dashboard-panel-rows {
+  width: 96px;
+}
+.dashboard-panel-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.dashboard-panel-columns li {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--ink-soft);
+  font-size: 12px;
+}

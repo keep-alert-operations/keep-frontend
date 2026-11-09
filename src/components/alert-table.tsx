@@ -265,7 +265,8 @@ export type RowCommand = (
 ) => Promise<boolean> | void;
 export type AlertCommandKind = "set_status" | "set_assignee" | "set_dismissal";
 
-function AlertField({
+/** One saved-column cell, shared with alert table panels (REV-63). */
+export function AlertField({
   field,
   row,
   scope,
