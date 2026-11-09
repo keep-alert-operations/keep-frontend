@@ -841,3 +841,131 @@
 .pnt-foot a:hover {
   text-decoration: underline;
 }
+/* ServiceNow ticket panels (REV-65): a message in place of the count, the
+   first-load placeholder and the out-of-date footer. */
+/* The space under the title; the message box sizes itself to it. */
+.pn-sn-area {
+  flex: 1 1 0;
+  min-height: 0;
+  margin-top: 4px;
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pn-sn-msg {
+  box-sizing: border-box;
+  width: 100%;
+  max-height: 100%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow: hidden;
+}
+.pn-sn-msg strong {
+  max-width: 100%;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pn-sn-msg span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+@container (max-height: 82px) {
+  .pn-sn-msg span {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+}
+@container (max-height: 64px) {
+  .pn-sn-msg span {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
+}
+/* Too short for the explanation: the heading alone, as in a 3 × 2 panel. */
+@container (max-height: 48px) {
+  .pn-sn-msg span {
+    display: none;
+  }
+}
+.pn-sn-warn {
+  background: var(--warning-bg);
+  border: 1px dashed var(--warning-line);
+  color: var(--warning);
+}
+.pn-sn-quiet {
+  background: var(--surface-2);
+  border: 1px dashed var(--input-border);
+  color: var(--subtle);
+}
+.pn-sn-quiet strong {
+  color: var(--ink-soft);
+}
+.pn-sn-wait {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pn-sn-skel {
+  width: 96px;
+  height: min(64px, 100%);
+  border-radius: 8px;
+  background: var(--fill-strong);
+}
+.pn-sn-status {
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--subtle);
+}
+.pn-sn-foot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: var(--warning);
+}
+/* Wraps to at most two lines; the count above shrinks to make room. */
+.pn-sn-note {
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.pn-sn-foot svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+/* The filter line uses the UI font, not the mono sub-line of count panels. */
+.pn-sn > .sub {
+  flex-shrink: 0;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* An out-of-date ticket count is greyed so it isn't read as current. */
+.pn-sn .pn-value > b.pn-none-value {
+  color: var(--faint);
+}

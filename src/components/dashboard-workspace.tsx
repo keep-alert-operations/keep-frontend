@@ -27,6 +27,7 @@ import {
   isCountPanel,
   isHtmlPanel,
   isImagePanel,
+  isServiceNowPanel,
   isTablePanel,
   type DashboardModel,
   type Panel,
@@ -34,6 +35,12 @@ import {
 import { DashboardLayout } from "./dashboard-layout";
 import { DashboardPanelDialog } from "./dashboard-panel-dialog";
 import { TableTile } from "./dashboard-table-panel";
+import {
+  queryOf,
+  ServiceNowTile,
+  useTicketCounts,
+} from "./dashboard-servicenow-panel";
+import { queryKey } from "@/lib/ticket-counts";
 
 function definition(value?: Record<string, unknown>): {
   name: string;
@@ -60,6 +67,18 @@ function definition(value?: Record<string, unknown>): {
                 url: panel.url ?? null,
                 fit: panel.fit ?? "contain",
                 alt: panel.alt ?? null,
+              };
+            if (isServiceNowPanel(panel))
+              return {
+                ...layout,
+                type: "servicenow",
+                team: panel.team,
+                ticket_state: panel.ticket_state,
+                detection: panel.detection,
+                thresholds: (panel.thresholds ?? []).map((item) => ({
+                  lower_bound: String(item.lower_bound),
+                  color: item.color,
+                })),
               };
             if (isTablePanel(panel))
               return {
@@ -318,6 +337,8 @@ export function DashboardWorkspace({
     setPanelError("");
     setMessage("Panel updated. Save the dashboard to keep your changes.");
   }
+  // A dashboard not saved yet has no count engine; its ServiceNow drafts still count (REV-65).
+  const draftTickets = useTicketCounts(scope, model ? [] : draft.panels);
   const observation = (panel: Panel) =>
     !isCountPanel(panel)
       ? undefined
@@ -748,6 +769,17 @@ export function DashboardWorkspace({
                 {canEdit && panelOptions(panel)}
               </>
             );
+            if (isServiceNowPanel(panel))
+              return (
+                <ServiceNowTile
+                  key={panel.id}
+                  panel={panel}
+                  entry={draftTickets.get(queryKey(queryOf(panel)))}
+                  layoutControls={layoutControls}
+                  layoutActive={active}
+                  layoutStyle={style}
+                />
+              );
             if (isTablePanel(panel))
               return (
                 <TableTile
