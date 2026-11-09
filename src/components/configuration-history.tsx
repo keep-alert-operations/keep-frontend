@@ -17,6 +17,12 @@ import {
   timezoneLabel,
 } from "@/lib/preset-choices";
 import type { Scope } from "./workspace";
+import {
+  defaultTitle,
+  filterLine,
+  type Detection,
+  type TicketState,
+} from "@/lib/ticket-counts";
 import { CelCode, PresetEditor } from "./definition-editor";
 import { groupFieldLabel } from "./alert-groups";
 import { ErrorNotice } from "./ui";
@@ -51,13 +57,16 @@ interface Detail {
 interface HistoryPanel {
   id?: string;
   /** Absent in revisions saved before REV-57, which hold only count panels. */
-  type?: "count" | "html" | "image" | "table";
+  type?: "count" | "html" | "image" | "table" | "servicenow";
   preset_id?: string;
   title?: string | null;
   w?: number;
   h?: number;
   thresholds?: { lower_bound: string; color: string }[];
   rows?: number;
+  team?: string;
+  ticket_state?: TicketState;
+  detection?: Detection;
   /** Absent in revisions saved before REV-66. */
   link?: { url: string; label?: string | null } | null;
 }
@@ -312,20 +321,29 @@ export function ConfigurationHistory({
             <li key={panel.id ?? index}>
               <b>
                 {panel.title ??
+                  (panel.type === "servicenow"
+                    ? defaultTitle(panel.team ?? "")
+                    : undefined) ??
                   (panel.preset_id ? names.get(panel.preset_id) : undefined) ??
                   "Untitled panel"}
               </b>
               <span className="small muted">
                 {" · "}
-                {panel.type === "html"
-                  ? "HTML panel"
-                  : panel.type === "image"
-                    ? "Image panel"
-                    : panel.type === "table" && panel.preset_id
-                      ? `Alert table · latest ${panel.rows ?? 10} of ${names.get(panel.preset_id) ?? panel.preset_id}`
-                      : panel.preset_id
-                        ? `Preset: ${names.get(panel.preset_id) ?? panel.preset_id}`
-                        : "No preset"}
+                {panel.type === "servicenow"
+                  ? `ServiceNow tickets · ${filterLine({
+                      team: panel.team ?? "",
+                      ticket_state: panel.ticket_state ?? "open",
+                      detection: panel.detection ?? "hamal",
+                    })}`
+                  : panel.type === "html"
+                    ? "HTML panel"
+                    : panel.type === "image"
+                      ? "Image panel"
+                      : panel.type === "table" && panel.preset_id
+                        ? `Alert table · latest ${panel.rows ?? 10} of ${names.get(panel.preset_id) ?? panel.preset_id}`
+                        : panel.preset_id
+                          ? `Preset: ${names.get(panel.preset_id) ?? panel.preset_id}`
+                          : "No preset"}
                 {` · ${panel.w ?? "?"} × ${panel.h ?? "?"}`}
                 {panel.thresholds?.length
                   ? ` · ${panel.thresholds

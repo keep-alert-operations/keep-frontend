@@ -24,6 +24,17 @@ import { compactPanels } from "@/lib/dashboard-layout";
 import { sanitizePanelHtml } from "@/lib/panel-html";
 import { thresholdColorCss } from "@/lib/threshold-colors";
 import { TableTile } from "./dashboard-table-panel";
+import {
+  defaultTitle,
+  queryKey,
+  type Detection,
+  type TicketState,
+} from "@/lib/ticket-counts";
+import {
+  queryOf,
+  ServiceNowTile,
+  useTicketCounts,
+} from "./dashboard-servicenow-panel";
 import { PanelLinkButton } from "./dashboard-panel-link";
 import type { PanelLink } from "@/lib/panel-link";
 
@@ -62,13 +73,24 @@ export interface TablePanel extends PanelLayout {
   preset_id: string;
   rows: number;
 }
-export type Panel = CountPanel | HtmlPanel | ImagePanel | TablePanel;
+/** A panel counting a team's ServiceNow incidents through the API (REV-65). */
+export interface ServiceNowPanel extends PanelLayout {
+  type: "servicenow";
+  team: string;
+  ticket_state: TicketState;
+  detection: Detection;
+  thresholds?: { lower_bound: string; color: string }[];
+}
+export type Panel =
+  CountPanel | HtmlPanel | ImagePanel | TablePanel | ServiceNowPanel;
 export const isHtmlPanel = (panel: Panel): panel is HtmlPanel =>
   panel.type === "html";
 export const isImagePanel = (panel: Panel): panel is ImagePanel =>
   panel.type === "image";
 export const isTablePanel = (panel: Panel): panel is TablePanel =>
   panel.type === "table";
+export const isServiceNowPanel = (panel: Panel): panel is ServiceNowPanel =>
+  panel.type === "servicenow";
 export const isCountPanel = (panel: Panel): panel is CountPanel =>
   (panel.type ?? "count") === "count";
 export const countPanels = (panels: Panel[]) => panels.filter(isCountPanel);
@@ -80,7 +102,9 @@ export const contentPanelName = (panel: Panel) =>
       ? "Image panel"
       : isTablePanel(panel)
         ? "Alert table"
-        : "";
+        : isServiceNowPanel(panel)
+          ? defaultTitle(panel.team)
+          : "";
 /** Where an image panel's picture loads from: the tenant's upload or the link. */
 export const imageSource = (tenantId: string, panel: ImagePanel) =>
   panel.image_id
@@ -789,6 +813,8 @@ export function DashboardBoard({
     [definition],
   );
   const panels = draftPanels ?? savedPanels;
+  // ServiceNow panels, drafts included, get their counts in their own batch (REV-65).
+  const tickets = useTicketCounts(scope, panels, model.refreshed, paused);
   const editable = editing && !fullscreen;
   function renderPanel(
     panel: Panel,
@@ -818,6 +844,17 @@ export function DashboardBoard({
           key={panel.id}
           tenantId={scope.tenant.id}
           panel={panel}
+          layoutControls={layoutControls}
+          layoutActive={active}
+          layoutStyle={style}
+        />
+      );
+    if (isServiceNowPanel(panel))
+      return (
+        <ServiceNowTile
+          key={panel.id}
+          panel={panel}
+          entry={tickets.get(queryKey(queryOf(panel)))}
           layoutControls={layoutControls}
           layoutActive={active}
           layoutStyle={style}

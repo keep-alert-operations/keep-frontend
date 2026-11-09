@@ -9,8 +9,10 @@ import {
   type CSSProperties,
   type FormEvent,
   type ReactNode,
+  type RefObject,
 } from "react";
 import {
+  ApiError,
   display,
   message as errorMessage,
   request,
@@ -47,9 +49,21 @@ import {
   type HtmlPanel,
   type ImagePanel,
   type Panel,
+  type ServiceNowPanel,
   type TablePanel,
 } from "./dashboard-counts";
 import { TableTile } from "./dashboard-table-panel";
+import { ServiceNowTile, type TicketEntry } from "./dashboard-servicenow-panel";
+import {
+  DETECTIONS,
+  MAX_TEAM,
+  TICKET_STATES,
+  defaultTitle,
+  fetchTicketCounts,
+  ticketCountStatusPath,
+  type TicketCountStatus,
+} from "@/lib/ticket-counts";
+import { useResource } from "@/lib/hooks";
 import { ThresholdColorPicker } from "./threshold-color-picker";
 import { isThresholdColor } from "@/lib/threshold-colors";
 import { Icon } from "./icons";
@@ -58,7 +72,8 @@ import { ErrorNotice } from "./ui";
 import "../app/styles/dashboard-panel-dialog.css";
 
 const decimal = /^(0|[1-9][0-9]*)$/;
-type Kind = "count" | "html" | "image" | "table";
+type Kind = "count" | "html" | "image" | "table" | "servicenow";
+type Threshold = { lower_bound: string; color: string };
 const MAX_ROWS = 50;
 type Source = "upload" | "link";
 /** The uploaded file an image panel shows: its ID, plus local details once chosen here. */
@@ -128,7 +143,19 @@ const TYPES: {
       "M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM21 16l-5-5-9 8M9 10h.01",
     ),
   },
+  {
+    id: "servicenow",
+    name: "ServiceNow tickets",
+    description:
+      "How many ServiceNow incidents a team has right now, with color thresholds.",
+    icon: glyph(
+      "M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4zM14 6v2M14 11v2M14 16v2",
+    ),
+  },
 ];
+/** Why ServiceNow tickets can't be chosen while the service isn't configured (REV-65). */
+const NOT_CONFIGURED =
+  "Not available yet. An admin sets up the ticket count service.";
 
 const layoutOf = (panel: Panel) => ({
   id: panel.id,
@@ -142,6 +169,16 @@ const layoutOf = (panel: Panel) => ({
 });
 function normalized(panel: Panel): Panel {
   const title = (panel.title ?? "").trim().normalize("NFC") || null;
+  if (panel.type === "servicenow")
+    return {
+      ...layoutOf(panel),
+      title,
+      type: "servicenow",
+      team: panel.team.trim().normalize("NFC"),
+      ticket_state: panel.ticket_state,
+      detection: panel.detection,
+      thresholds: (panel.thresholds ?? []).map((item) => ({ ...item })),
+    };
   if (panel.type === "table")
     return {
       ...layoutOf(panel),
@@ -175,11 +212,14 @@ function TypeField({
   id,
   value,
   locked,
+  unavailable = {},
   onChange,
 }: {
   id: string;
   value: Kind;
   locked: boolean;
+  /** Types that can't be chosen now, with the reason shown instead of their description. */
+  unavailable?: Partial<Record<Kind, string>>;
   onChange: (kind: Kind) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -192,7 +232,10 @@ function TypeField({
   const shown = TYPES.filter((type) =>
     `${type.name} ${type.description}`.toLowerCase().includes(words),
   );
-  const highlighted = Math.min(active, shown.length - 1);
+  const usable = shown.filter((type) => !unavailable[type.id]);
+  // Only types that can be chosen take the highlight; the keys skip the others.
+  const highlighted = Math.max(0, Math.min(active, usable.length - 1));
+  const lit = usable[highlighted];
   useEffect(() => {
     if (open) search.current?.focus();
   }, [open]);
@@ -254,9 +297,7 @@ function TypeField({
             role="combobox"
             aria-expanded="true"
             aria-controls={`${id}-types`}
-            aria-activedescendant={
-              shown.length ? `${id}-type-${shown[highlighted].id}` : undefined
-            }
+            aria-activedescendant={lit ? `${id}-type-${lit.id}` : undefined}
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
@@ -265,17 +306,17 @@ function TypeField({
             onKeyDown={(event) => {
               if (
                 ["ArrowDown", "ArrowUp"].includes(event.key) &&
-                shown.length
+                usable.length
               ) {
                 event.preventDefault();
                 setActive(
                   (highlighted +
-                    (event.key === "ArrowDown" ? 1 : shown.length - 1)) %
-                    shown.length,
+                    (event.key === "ArrowDown" ? 1 : usable.length - 1)) %
+                    usable.length,
                 );
-              } else if (event.key === "Enter" && shown.length) {
+              } else if (event.key === "Enter") {
                 event.preventDefault();
-                choose(shown[highlighted].id);
+                if (lit) choose(lit.id);
               } else if (event.key === "Escape") {
                 // Close the list without closing the dialog.
                 event.preventDefault();
@@ -291,24 +332,35 @@ function TypeField({
               aria-label="Panel types"
               className="dashboard-panel-type-list"
             >
-              {shown.map((type, index) => (
-                <li
-                  key={type.id}
-                  id={`${id}-type-${type.id}`}
-                  role="option"
-                  aria-selected={index === highlighted}
-                  data-current={type.id === value || undefined}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onMouseMove={() => setActive(index)}
-                  onClick={() => choose(type.id)}
-                >
-                  <span className="dashboard-panel-type-icon">{type.icon}</span>
-                  <span className="dashboard-panel-type-text">
-                    <b>{type.name}</b>
-                    <span className="help">{type.description}</span>
-                  </span>
-                </li>
-              ))}
+              {shown.map((type) => {
+                const reason = unavailable[type.id];
+                const index = usable.indexOf(type);
+                return (
+                  <li
+                    key={type.id}
+                    id={`${id}-type-${type.id}`}
+                    role="option"
+                    aria-selected={type === lit}
+                    aria-disabled={reason ? true : undefined}
+                    data-current={type.id === value || undefined}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onMouseMove={() => {
+                      if (!reason) setActive(index);
+                    }}
+                    onClick={() => {
+                      if (!reason) choose(type.id);
+                    }}
+                  >
+                    <span className="dashboard-panel-type-icon">
+                      {type.icon}
+                    </span>
+                    <span className="dashboard-panel-type-text">
+                      <b>{type.name}</b>
+                      <span className="help">{reason ?? type.description}</span>
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <p className="help dashboard-panel-empty">No panel types match.</p>
@@ -317,6 +369,115 @@ function TypeField({
       )}
     </div>
   );
+}
+
+/** Up to three increasing count thresholds, each with a color (REV-64). */
+function ThresholdFields({
+  thresholds,
+  addRef,
+  onChange,
+}: {
+  thresholds: Threshold[];
+  addRef: RefObject<HTMLButtonElement | null>;
+  onChange: (thresholds: Threshold[]) => void;
+}) {
+  return (
+    <fieldset className="dashboard-panel-thresholds">
+      <legend className="lbl">Count thresholds</legend>
+      <p className="help">
+        Up to three increasing bounds. Counts below the first remain neutral.
+      </p>
+      {thresholds.map((threshold, index) => (
+        <div className="dashboard-panel-threshold" key={index}>
+          <label className="f">
+            <span className="lbl">Exact lower bound {index + 1}</span>
+            <input
+              name={`lower-bound-${index + 1}`}
+              className="inp"
+              inputMode="numeric"
+              pattern="0|[1-9][0-9]*"
+              required
+              value={threshold.lower_bound}
+              onChange={(event) =>
+                onChange(
+                  thresholds.map((item, position) =>
+                    position === index
+                      ? { ...item, lower_bound: event.target.value }
+                      : item,
+                  ),
+                )
+              }
+            />
+          </label>
+          <div className="f">
+            <span className="lbl" aria-hidden="true">
+              Color {index + 1}
+            </span>
+            <ThresholdColorPicker
+              name={`color-${index + 1}`}
+              label={`Color ${index + 1}`}
+              value={threshold.color}
+              onChange={(color) =>
+                onChange(
+                  thresholds.map((item, position) =>
+                    position === index ? { ...item, color } : item,
+                  ),
+                )
+              }
+            />
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm"
+            aria-label={`Remove threshold ${index + 1}`}
+            onClick={() => {
+              onChange(thresholds.filter((_, position) => position !== index));
+              requestAnimationFrame(() => addRef.current?.focus());
+            }}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      <button
+        ref={addRef}
+        type="button"
+        className="btn btn-sm"
+        disabled={thresholds.length >= 3}
+        onClick={() => {
+          const last = thresholds.at(-1)?.lower_bound;
+          const next =
+            last && decimal.test(last) ? String(BigInt(last) + 1n) : "0";
+          onChange([...thresholds, { lower_bound: next, color: "blue" }]);
+        }}
+      >
+        Add threshold
+      </button>
+    </fieldset>
+  );
+}
+/** The first problem with `thresholds` and the field to focus, if any. */
+function thresholdProblem(
+  thresholds: Threshold[],
+): [message: string, field: string] | undefined {
+  let previous = -1n;
+  for (const [index, threshold] of thresholds.entries()) {
+    if (!decimal.test(threshold.lower_bound))
+      return [
+        "Enter each threshold as a nonnegative whole number without leading zeros.",
+        `lower-bound-${index + 1}`,
+      ];
+    const bound = BigInt(threshold.lower_bound);
+    if (bound <= previous)
+      return [
+        "Thresholds must increase from the first to the last.",
+        `lower-bound-${index + 1}`,
+      ];
+    if (!isThresholdColor(threshold.color))
+      return ["Select an available threshold color.", `color-${index + 1}`];
+    previous = bound;
+  }
+  return undefined;
 }
 
 /** The preview area: the panel at its current grid size. */
@@ -399,6 +560,35 @@ export function DashboardPanelDialog({
           alt: null,
         },
   );
+  // A ServiceNow panel counts a team's incidents; it starts at 3 × 3 (REV-65).
+  const [snDraft, setSnDraft] = useState<ServiceNowPanel>(
+    panel.type === "servicenow"
+      ? (baseline.current as ServiceNowPanel)
+      : {
+          ...layoutOf(panel),
+          type: "servicenow",
+          team: "",
+          ticket_state: "open",
+          detection: "hamal",
+          thresholds: [],
+        },
+  );
+  const [teamTouched, setTeamTouched] = useState(false);
+  // The preview's count for the settings being edited, fetched shortly after typing stops.
+  const [snPreview, setSnPreview] = useState<{
+    key: string;
+    entry: TicketEntry;
+  }>();
+  const denied = useRef(scope.onDenied);
+  denied.current = scope.onDenied;
+  const ticketStatus = useResource<TicketCountStatus>(
+    creating ? ticketCountStatusPath(scope.tenant.id) : null,
+    scope.onDenied,
+  );
+  const unavailableTypes: Partial<Record<Kind, string>> =
+    ticketStatus.data?.data?.configured === false
+      ? { servicenow: NOT_CONFIGURED }
+      : {};
   const [source, setSource] = useState<Source>(
     panel.type === "image" && panel.url ? "link" : "upload",
   );
@@ -472,6 +662,13 @@ export function DashboardPanelDialog({
           ? panel.rows
           : 10,
   };
+  const servicenowDraft: ServiceNowPanel = {
+    ...snDraft,
+    ...(creating
+      ? { w: Math.max(snDraft.w, 3), h: Math.max(snDraft.h, 3) }
+      : {}),
+    link: shownLink,
+  };
   const current: Panel = {
     ...(kind === "html"
       ? htmlDraft
@@ -479,7 +676,9 @@ export function DashboardPanelDialog({
         ? imagePanel
         : kind === "table"
           ? tableDraft
-          : draft),
+          : kind === "servicenow"
+            ? servicenowDraft
+            : draft),
     link,
   };
   const title = current.title ?? "";
@@ -544,6 +743,62 @@ export function DashboardPanelDialog({
     );
     return () => controller.abort();
   }, [kind, draft.preset_id, selectedCel, scope.tenant.id, csrf]);
+
+  // Ask for the count of the settings being edited, 400 ms after they stop changing.
+  const snTeam = snDraft.team.trim().normalize("NFC");
+  const snKey = JSON.stringify([
+    snTeam,
+    snDraft.ticket_state,
+    snDraft.detection,
+  ]);
+  useEffect(() => {
+    if (kind !== "servicenow" || !snTeam || [...snTeam].length > MAX_TEAM)
+      return;
+    const controller = new AbortController();
+    const query = {
+      team: snTeam,
+      ticket_state: snDraft.ticket_state,
+      detection: snDraft.detection,
+    };
+    const timer = setTimeout(() => {
+      fetchTicketCounts(scope.tenant.id, csrf, [query], controller.signal)
+        .catch((failure) => {
+          if (
+            failure instanceof ApiError &&
+            [401, 403].includes(failure.status)
+          )
+            denied.current();
+          return [undefined];
+        })
+        .then(([result]) => {
+          if (!controller.signal.aborted)
+            setSnPreview({
+              key: snKey,
+              entry: {
+                result: result ?? {
+                  status: "unavailable",
+                  count: null,
+                  checked_at: null,
+                  last_count: null,
+                  last_counted_at: null,
+                },
+              },
+            });
+        });
+    }, 400);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [
+    kind,
+    snKey,
+    snTeam,
+    snDraft.ticket_state,
+    snDraft.detection,
+    scope.tenant.id,
+    csrf,
+  ]);
 
   // The server's sanitizer is the authority on what an HTML panel keeps; ask it
   // shortly after typing stops which parts it would remove.
@@ -637,8 +892,13 @@ export function DashboardPanelDialog({
     setImageDraft((current) => ({ ...current, ...patch }));
     setError("");
   }
+  function updateServiceNow(patch: Partial<ServiceNowPanel>) {
+    setSnDraft((current) => ({ ...current, ...patch }));
+    setError("");
+  }
   function setTitle(value: string) {
-    if (kind === "html") updateHtml({ title: value });
+    if (kind === "servicenow") updateServiceNow({ title: value });
+    else if (kind === "html") updateHtml({ title: value });
     else if (kind === "image") updateImage({ title: value });
     else update({ title: value });
   }
@@ -688,7 +948,9 @@ export function DashboardPanelDialog({
   function switchKind(next: Kind) {
     if (next === kind) return;
     // The title follows the panel across types; type-specific settings stay put.
-    if (next === "html") setHtmlDraft((current) => ({ ...current, title }));
+    if (next === "servicenow") setSnDraft((current) => ({ ...current, title }));
+    else if (next === "html")
+      setHtmlDraft((current) => ({ ...current, title }));
     else if (next === "image")
       setImageDraft((current) => ({ ...current, title }));
     else setDraft((current) => ({ ...current, title }));
@@ -765,6 +1027,32 @@ export function DashboardPanelDialog({
       onApply({ ...imagePanel, title: trimmed || null, alt: alt || null });
       return;
     }
+    if (kind === "servicenow") {
+      const team = snDraft.team.trim().normalize("NFC");
+      if (!team) {
+        setTeamTouched(true);
+        invalid("Choose the team whose tickets to count.", "team");
+        return;
+      }
+      if (
+        [...team].length > MAX_TEAM ||
+        /[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/u.test(team)
+      ) {
+        setTeamTouched(true);
+        invalid(
+          `Use a single-line team name of up to ${MAX_TEAM} characters.`,
+          "team",
+        );
+        return;
+      }
+      const problem = thresholdProblem(snDraft.thresholds ?? []);
+      if (problem) {
+        invalid(...problem);
+        return;
+      }
+      onApply({ ...servicenowDraft, title: trimmed || null, team, link });
+      return;
+    }
     if (kind === "html") {
       if (htmlDraft.html.length > 65_536 || shownHtml.length > MAX_PANEL_HTML) {
         invalid(
@@ -785,31 +1073,13 @@ export function DashboardPanelDialog({
         invalid(`Show from 1 to ${MAX_ROWS} alerts.`, "rows");
         return;
       }
-      onApply({ ...tableDraft, title: trimmed || null, rows: rowsValue });
+      onApply({ ...tableDraft, title: trimmed || null, rows: rowsValue, link });
       return;
     }
-    let previous = -1n;
-    for (const [index, threshold] of thresholds.entries()) {
-      if (!decimal.test(threshold.lower_bound)) {
-        invalid(
-          "Enter each threshold as a nonnegative whole number without leading zeros.",
-          `lower-bound-${index + 1}`,
-        );
-        return;
-      }
-      const bound = BigInt(threshold.lower_bound);
-      if (bound <= previous) {
-        invalid(
-          "Thresholds must increase from the first to the last.",
-          `lower-bound-${index + 1}`,
-        );
-        return;
-      }
-      if (!isThresholdColor(threshold.color)) {
-        invalid("Select an available threshold color.", `color-${index + 1}`);
-        return;
-      }
-      previous = bound;
+    const problem = thresholdProblem(thresholds);
+    if (problem) {
+      invalid(...problem);
+      return;
     }
     onApply({ ...draft, title: trimmed || null, thresholds, link });
   }
@@ -821,15 +1091,20 @@ export function DashboardPanelDialog({
         name="title"
         className="inp"
         value={title}
+        placeholder={
+          kind === "servicenow" ? defaultTitle(snDraft.team) : undefined
+        }
         onChange={(event) => setTitle(event.target.value)}
         aria-describedby={`${id}-title-help`}
       />
       <span className="help" id={`${id}-title-help`}>
-        {kind === "html"
-          ? "Shown above the content. Leave blank for a panel without a header."
-          : kind === "image"
-            ? "Shown above the image. Leave blank to let the image fill the whole panel."
-            : "Leave blank to use the preset name. Up to 120 characters."}
+        {kind === "servicenow"
+          ? 'Leave blank to show the team name with "tickets". Up to 120 characters.'
+          : kind === "html"
+            ? "Shown above the content. Leave blank for a panel without a header."
+            : kind === "image"
+              ? "Shown above the image. Leave blank to let the image fill the whole panel."
+              : "Leave blank to use the preset name. Up to 120 characters."}
       </span>
     </label>
   );
@@ -984,84 +1259,11 @@ export function DashboardPanelDialog({
     <>
       {titleField}
       {presetField}
-      <fieldset className="dashboard-panel-thresholds">
-        <legend className="lbl">Count thresholds</legend>
-        <p className="help">
-          Up to three increasing bounds. Counts below the first remain neutral.
-        </p>
-        {thresholds.map((threshold, index) => (
-          <div className="dashboard-panel-threshold" key={index}>
-            <label className="f">
-              <span className="lbl">Exact lower bound {index + 1}</span>
-              <input
-                name={`lower-bound-${index + 1}`}
-                className="inp"
-                inputMode="numeric"
-                pattern="0|[1-9][0-9]*"
-                required
-                value={threshold.lower_bound}
-                onChange={(event) =>
-                  update({
-                    thresholds: thresholds.map((item, position) =>
-                      position === index
-                        ? { ...item, lower_bound: event.target.value }
-                        : item,
-                    ),
-                  })
-                }
-              />
-            </label>
-            <div className="f">
-              <span className="lbl" aria-hidden="true">
-                Color {index + 1}
-              </span>
-              <ThresholdColorPicker
-                name={`color-${index + 1}`}
-                label={`Color ${index + 1}`}
-                value={threshold.color}
-                onChange={(color) =>
-                  update({
-                    thresholds: thresholds.map((item, position) =>
-                      position === index ? { ...item, color } : item,
-                    ),
-                  })
-                }
-              />
-            </div>
-            <button
-              type="button"
-              className="btn btn-sm"
-              aria-label={`Remove threshold ${index + 1}`}
-              onClick={() => {
-                update({
-                  thresholds: thresholds.filter(
-                    (_, position) => position !== index,
-                  ),
-                });
-                requestAnimationFrame(() => addThreshold.current?.focus());
-              }}
-            >
-              ×
-            </button>
-          </div>
-        ))}
-        <button
-          ref={addThreshold}
-          type="button"
-          className="btn btn-sm"
-          disabled={thresholds.length >= 3}
-          onClick={() => {
-            const last = thresholds.at(-1)?.lower_bound;
-            const next =
-              last && decimal.test(last) ? String(BigInt(last) + 1n) : "0";
-            update({
-              thresholds: [...thresholds, { lower_bound: next, color: "blue" }],
-            });
-          }}
-        >
-          Add threshold
-        </button>
-      </fieldset>
+      <ThresholdFields
+        thresholds={thresholds}
+        addRef={addThreshold}
+        onChange={(next) => update({ thresholds: next })}
+      />
     </>
   );
 
@@ -1177,6 +1379,123 @@ export function DashboardPanelDialog({
         </article>
       )}
     </Preview>
+  );
+
+  const teamError =
+    teamTouched && !snTeam
+      ? "Choose the team whose tickets to count."
+      : teamTouched && [...snTeam].length > MAX_TEAM
+        ? `Use a single-line team name of up to ${MAX_TEAM} characters.`
+        : "";
+  const detectionHelp = DETECTIONS.find(
+    (item) => item.value === snDraft.detection,
+  )?.help;
+  const servicenowSettings = (
+    <>
+      {titleField}
+      <div className="f">
+        <label className="lbl" htmlFor={`${id}-team`}>
+          Team
+        </label>
+        <input
+          id={`${id}-team`}
+          name="team"
+          className="inp"
+          required
+          autoComplete="off"
+          spellCheck={false}
+          value={snDraft.team}
+          aria-invalid={teamError ? true : undefined}
+          aria-describedby={`${id}-team-help${teamError ? ` ${id}-team-error` : ""}`}
+          onChange={(event) => updateServiceNow({ team: event.target.value })}
+          onBlur={() => setTeamTouched(true)}
+        />
+        {teamError && (
+          <span className="dashboard-panel-error" id={`${id}-team-error`}>
+            {teamError}
+          </span>
+        )}
+        <span className="help" id={`${id}-team-help`}>
+          The assignment group in ServiceNow, as the ticket count service knows
+          it.
+        </span>
+      </div>
+      <div className="dashboard-panel-pair">
+        <fieldset className="dashboard-panel-source">
+          <legend className="lbl">Ticket state</legend>
+          <div className="dashboard-panel-segments">
+            {TICKET_STATES.map((item) => (
+              <label
+                key={item.value}
+                data-on={snDraft.ticket_state === item.value || undefined}
+              >
+                <input
+                  type="radio"
+                  name="ticket-state"
+                  value={item.value}
+                  checked={snDraft.ticket_state === item.value}
+                  onChange={() =>
+                    updateServiceNow({ ticket_state: item.value })
+                  }
+                />
+                {item.name}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <fieldset className="dashboard-panel-source">
+          <legend className="lbl">Detection method</legend>
+          <div className="dashboard-panel-segments">
+            {DETECTIONS.map((item) => (
+              <label
+                key={item.value}
+                data-on={snDraft.detection === item.value || undefined}
+              >
+                <input
+                  type="radio"
+                  name="detection"
+                  value={item.value}
+                  checked={snDraft.detection === item.value}
+                  aria-describedby={`${id}-detection-help`}
+                  onChange={() => updateServiceNow({ detection: item.value })}
+                />
+                {item.name}
+              </label>
+            ))}
+          </div>
+          <span className="help" id={`${id}-detection-help`}>
+            {detectionHelp}
+          </span>
+        </fieldset>
+      </div>
+      <ThresholdFields
+        thresholds={snDraft.thresholds ?? []}
+        addRef={addThreshold}
+        onChange={(next) => updateServiceNow({ thresholds: next })}
+      />
+    </>
+  );
+  const snEntry = snPreview?.key === snKey ? snPreview.entry : undefined;
+  const servicenowPreview = (
+    <>
+      <Preview panel={servicenowDraft}>
+        <ServiceNowTile
+          panel={{ ...servicenowDraft, team: snTeam }}
+          title={title.trim() || defaultTitle(snTeam)}
+          entry={snEntry}
+          placeholder={snTeam ? undefined : "Choose a team to see its count."}
+          layoutStyle={previewSize(servicenowDraft)}
+        />
+      </Preview>
+      <div className="f">
+        <span className="lbl">About this count</span>
+        <p className="help">
+          Comes straight from ServiceNow through the ticket count service, about
+          every minute. It isn&apos;t based on Appchi alerts or incidents, and
+          the panel can&apos;t change tickets.
+        </p>
+      </div>
+    </>
   );
 
   const htmlSettings = (
@@ -1640,18 +1959,21 @@ export function DashboardPanelDialog({
             id={id}
             value={kind}
             locked={!creating}
+            unavailable={unavailableTypes}
             onChange={switchKind}
           />
         </div>
         <div className="dashboard-panel-body">
           <div className="dashboard-panel-column">
-            {kind === "html"
-              ? htmlSettings
-              : kind === "image"
-                ? imageSettings
-                : kind === "table"
-                  ? tableSettings
-                  : countSettings}
+            {kind === "servicenow"
+              ? servicenowSettings
+              : kind === "html"
+                ? htmlSettings
+                : kind === "image"
+                  ? imageSettings
+                  : kind === "table"
+                    ? tableSettings
+                    : countSettings}
             {linkSection}
             {(error || placementError) && (
               <div role="alert" className="notice error">
@@ -1660,13 +1982,15 @@ export function DashboardPanelDialog({
             )}
           </div>
           <div className="dashboard-panel-column">
-            {kind === "html"
-              ? htmlPreview
-              : kind === "image"
-                ? imagePreview
-                : kind === "table"
-                  ? tablePreview
-                  : countPreview}
+            {kind === "servicenow"
+              ? servicenowPreview
+              : kind === "html"
+                ? htmlPreview
+                : kind === "image"
+                  ? imagePreview
+                  : kind === "table"
+                    ? tablePreview
+                    : countPreview}
           </div>
         </div>
         <div className="dashboard-panel-foot">
