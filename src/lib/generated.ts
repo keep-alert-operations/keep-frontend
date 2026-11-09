@@ -3201,11 +3201,8 @@ export interface components {
     Threshold: {
       /** Lower Bound */
       lower_bound: string;
-      /**
-       * Color
-       * @enum {string}
-       */
-      color: "blue" | "green" | "amber" | "red";
+      /** Color */
+      color: string;
     };
     /** TimezoneEdit */
     TimezoneEdit: {
