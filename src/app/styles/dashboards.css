@@ -59,17 +59,8 @@
   background: var(--bg);
   box-sizing: border-box;
 }
-.db-minis .mn-red {
-  border-top-color: var(--critical-mark);
-}
-.db-minis .mn-amber {
-  border-top-color: var(--amber-mark);
-}
-.db-minis .mn-green {
-  border-top-color: var(--ok);
-}
-.db-minis .mn-blue {
-  border-top-color: var(--primary);
+.db-minis .mn-toned {
+  border-top-color: var(--pn-tone);
 }
 .db-minis .mn-none {
   border-top-color: var(--input-border);
@@ -282,17 +273,9 @@
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
-.pn-red {
-  border-top-color: var(--critical-mark);
-}
-.pn-amber {
-  border-top-color: var(--amber-mark);
-}
-.pn-green {
-  border-top-color: var(--ok);
-}
-.pn-blue {
-  border-top-color: var(--primary);
+/* The matching threshold's color (REV-64), set as --pn-tone on the panel. */
+.pn-toned {
+  border-top-color: var(--pn-tone);
 }
 .pn-none {
   border-top-color: var(--border);

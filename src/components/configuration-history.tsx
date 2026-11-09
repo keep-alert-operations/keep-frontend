@@ -10,6 +10,7 @@ import {
   timestamp,
 } from "@/lib/api";
 import { useResource } from "@/lib/hooks";
+import { isPaletteColor, thresholdColorLabel } from "@/lib/threshold-colors";
 import {
   columnsSummary,
   sortSentence,
@@ -20,6 +21,10 @@ import { CelCode, PresetEditor } from "./definition-editor";
 import { groupFieldLabel } from "./alert-groups";
 import { ErrorNotice } from "./ui";
 import { NavLink, Page } from "./page";
+
+/** "dark teal" for a palette name; a custom color keeps its hex (REV-64). */
+const historyColor = (color: string) =>
+  isPaletteColor(color) ? thresholdColorLabel(color).toLowerCase() : color;
 
 interface Revision {
   revision: string;
@@ -323,7 +328,8 @@ export function ConfigurationHistory({
                 {panel.thresholds?.length
                   ? ` · ${panel.thresholds
                       .map(
-                        (item) => `at least ${item.lower_bound} ${item.color}`,
+                        (item) =>
+                          `at least ${item.lower_bound} ${historyColor(item.color)}`,
                       )
                       .join(", ")}`
                   : ""}

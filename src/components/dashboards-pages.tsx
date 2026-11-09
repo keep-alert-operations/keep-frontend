@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { usePathname } from "next/navigation";
 import { ApiError, display, RecordData, tenantPath } from "@/lib/api";
 import { useResource } from "@/lib/hooks";
+import { thresholdColorCss } from "@/lib/threshold-colors";
 import type { Scope } from "./workspace";
 import { ErrorNotice } from "./ui";
 import { NavLink, Page, personLabel, RelativeTime, SearchInput } from "./page";
@@ -230,9 +231,21 @@ function DashboardList({
                   )}
                 </span>
                 <span className="db-minis" aria-hidden="true">
-                  {tones.map((tone, index) => (
-                    <span key={index} className={`mn-${tone}`} />
-                  ))}
+                  {tones.map((tone, index) =>
+                    tone === "none" || tone === "empty" ? (
+                      <span key={index} className={`mn-${tone}`} />
+                    ) : (
+                      <span
+                        key={index}
+                        className="mn-toned"
+                        style={
+                          {
+                            "--pn-tone": thresholdColorCss(tone),
+                          } as CSSProperties
+                        }
+                      />
+                    ),
+                  )}
                 </span>
                 <span className="small muted">
                   {isDeleted ? "Deleted" : "Updated"}

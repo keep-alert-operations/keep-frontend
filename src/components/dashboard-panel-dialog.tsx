@@ -42,13 +42,14 @@ import {
   type TablePanel,
 } from "./dashboard-counts";
 import { TableTile } from "./dashboard-table-panel";
+import { ThresholdColorPicker } from "./threshold-color-picker";
+import { isThresholdColor } from "@/lib/threshold-colors";
 import { Icon } from "./icons";
 import type { Scope } from "./workspace";
 import { ErrorNotice } from "./ui";
 import "../app/styles/dashboard-panel-dialog.css";
 
 const decimal = /^(0|[1-9][0-9]*)$/;
-const colors = ["blue", "green", "amber", "red"];
 type Kind = "count" | "html" | "image" | "table";
 const MAX_ROWS = 50;
 type Source = "upload" | "link";
@@ -774,7 +775,7 @@ export function DashboardPanelDialog({
         );
         return;
       }
-      if (!colors.includes(threshold.color)) {
+      if (!isThresholdColor(threshold.color)) {
         invalid("Select an available threshold color.", `color-${index + 1}`);
         return;
       }
@@ -980,29 +981,23 @@ export function DashboardPanelDialog({
                 }
               />
             </label>
-            <label className="f">
-              <span className="lbl">Color {index + 1}</span>
-              <select
+            <div className="f">
+              <span className="lbl" aria-hidden="true">
+                Color {index + 1}
+              </span>
+              <ThresholdColorPicker
                 name={`color-${index + 1}`}
-                className="inp"
+                label={`Color ${index + 1}`}
                 value={threshold.color}
-                onChange={(event) =>
+                onChange={(color) =>
                   update({
                     thresholds: thresholds.map((item, position) =>
-                      position === index
-                        ? { ...item, color: event.target.value }
-                        : item,
+                      position === index ? { ...item, color } : item,
                     ),
                   })
                 }
-              >
-                {colors.map((color) => (
-                  <option key={color} value={color}>
-                    {color[0].toUpperCase() + color.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </label>
+              />
+            </div>
             <button
               type="button"
               className="btn btn-sm"

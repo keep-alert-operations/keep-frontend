@@ -22,6 +22,7 @@ import { NavLink, RelativeTime } from "./page";
 import { DashboardLayout } from "./dashboard-layout";
 import { compactPanels } from "@/lib/dashboard-layout";
 import { sanitizePanelHtml } from "@/lib/panel-html";
+import { thresholdColorCss } from "@/lib/threshold-colors";
 import { TableTile } from "./dashboard-table-panel";
 
 interface PanelLayout {
@@ -453,7 +454,7 @@ export function CountTile({
   layoutStyle?: CSSProperties;
 }) {
   const threshold = thresholdFor(value, panel.thresholds);
-  const tone = threshold?.color ?? "none";
+  const tone = threshold?.color;
   const isStale = Boolean(stale && value !== undefined);
   const shown =
     value !== undefined && decimal.test(value)
@@ -482,14 +483,18 @@ export function CountTile({
     ) : null;
   return (
     <article
-      className={`pn pn-${tone} ${isStale ? "pn-stale" : ""} ${selected ? "pn-selected" : ""} ${layoutControls ? "de-tile" : ""} ${layoutActive ? "de-tile-active" : ""}`}
+      className={`pn ${tone ? "pn-toned" : "pn-none"} ${isStale ? "pn-stale" : ""} ${selected ? "pn-selected" : ""} ${layoutControls ? "de-tile" : ""} ${layoutActive ? "de-tile-active" : ""}`}
       aria-label={`${title} count`}
       data-layout-panel={panel.id}
-      style={{
-        gridColumn: `${panel.x + 1} / span ${panel.w}`,
-        gridRow: `${panel.y + 1} / span ${panel.h}`,
-        ...layoutStyle,
-      }}
+      data-threshold-color={tone}
+      style={
+        {
+          gridColumn: `${panel.x + 1} / span ${panel.w}`,
+          gridRow: `${panel.y + 1} / span ${panel.h}`,
+          ...(tone ? { "--pn-tone": thresholdColorCss(tone) } : {}),
+          ...layoutStyle,
+        } as CSSProperties
+      }
     >
       <span className="pn-head">
         {href ? (

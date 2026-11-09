@@ -1,0 +1,223 @@
+/* Threshold color button and picker (REV-64). The picker is a popover in the top
+   layer, placed beside its button by inline left/top or left/bottom. */
+.tcp-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 34px;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0 10px 0 8px;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.tcp-button:hover {
+  border-color: var(--border-hover);
+}
+.tcp-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -1px;
+}
+.tcp-button > svg {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--subtle);
+}
+.tcp-dot {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(var(--shadow-rgb) / 0.16);
+}
+.tcp-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tcp-hex {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 12px;
+}
+.tcp-popover {
+  inset: auto;
+  margin: 0;
+  width: 264px;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow:
+    0 12px 32px var(--shade-4),
+    0 2px 6px var(--shade-2);
+}
+.tcp-popover:popover-open {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.tcp-popover .help {
+  margin: 0;
+}
+.tcp-popover .help b {
+  color: var(--text);
+  font-weight: 600;
+}
+.tcp-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--fill);
+}
+.tcp-tabs button {
+  flex: 1 1 0;
+  height: 28px;
+  min-height: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.tcp-tabs button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 2px var(--shade-3);
+}
+.tcp-tabs button:focus-visible,
+.tcp-swatch:focus-visible,
+.tcp-area:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.tcp-swatches {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px 4px;
+  justify-items: center;
+  align-items: center;
+}
+.tcp-swatch {
+  width: 22px;
+  height: 22px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgb(var(--shadow-rgb) / 0.12);
+  transition: transform 0.1s;
+}
+.tcp-swatch.tcp-main {
+  width: 26px;
+  height: 26px;
+}
+.tcp-swatch:hover {
+  transform: scale(1.12);
+}
+.tcp-swatch[aria-pressed="true"] {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--text);
+}
+.tcp-area {
+  position: relative;
+  height: 136px;
+  border-radius: 6px;
+  cursor: crosshair;
+  touch-action: none;
+  background-image:
+    linear-gradient(to top, #000000, rgb(0 0 0 / 0)),
+    linear-gradient(to right, #ffffff, rgb(255 255 255 / 0));
+}
+.tcp-area-dot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  box-sizing: border-box;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(11 37 69 / 0.45);
+  pointer-events: none;
+}
+.tcp-hue {
+  appearance: none;
+  width: 100%;
+  height: 12px;
+  margin: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  background: linear-gradient(
+    to right,
+    #f00 0%,
+    #ff0 17%,
+    #0f0 33%,
+    #0ff 50%,
+    #00f 67%,
+    #f0f 83%,
+    #f00 100%
+  );
+}
+.tcp-hue::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgb(11 37 69 / 0.35);
+}
+.tcp-hue::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgb(11 37 69 / 0.35);
+}
+.tcp-hue:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.tcp-hex-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.tcp-hex-row > .f {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.tcp-hex-row .inp {
+  font-family: var(--font-geist-mono), monospace;
+  text-transform: uppercase;
+}
+.tcp-hex-row .inp[aria-invalid="true"] {
+  border-color: var(--critical-mark);
+}
+.tcp-big-dot {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgb(var(--shadow-rgb) / 0.16);
+}
+.tcp-popover .tcp-error {
+  color: var(--error);
+}

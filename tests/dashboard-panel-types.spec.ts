@@ -307,7 +307,8 @@ test("the count preview counts the chosen preset before saving", async ({
   });
   await dialog.getByRole("button", { name: "Add threshold" }).click();
   // The threshold colors the panel without a caption naming its bound.
-  await expect(preview).toHaveClass(/pn-blue/);
+  await expect(preview).toHaveClass(/pn-toned/);
+  await expect(preview).toHaveAttribute("data-threshold-color", "blue");
   await expect(preview).not.toContainText("At least");
   expect(state.saves).toHaveLength(0);
 });
