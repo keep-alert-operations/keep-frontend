@@ -627,6 +627,13 @@
 .db-panel-options:has(.menu-pop) {
   z-index: 5;
 }
+/* Keyboard shortcut hint beside a menu item (REV-61). */
+.db-menu-key {
+  float: right;
+  margin-left: 20px;
+  color: var(--muted);
+  font-weight: 400;
+}
 .db-panel-options .btn {
   padding: 0 4px;
   width: 28px;
