@@ -27,11 +27,13 @@ import {
   isCountPanel,
   isHtmlPanel,
   isImagePanel,
+  isTablePanel,
   type DashboardModel,
   type Panel,
 } from "./dashboard-counts";
 import { DashboardLayout } from "./dashboard-layout";
 import { DashboardPanelDialog } from "./dashboard-panel-dialog";
+import { TableTile } from "./dashboard-table-panel";
 
 function definition(value?: Record<string, unknown>): {
   name: string;
@@ -58,6 +60,13 @@ function definition(value?: Record<string, unknown>): {
                 url: panel.url ?? null,
                 fit: panel.fit ?? "contain",
                 alt: panel.alt ?? null,
+              };
+            if (isTablePanel(panel))
+              return {
+                ...layout,
+                type: "table",
+                preset_id: panel.preset_id,
+                rows: panel.rows,
               };
             return isHtmlPanel(panel)
               ? { ...layout, type: "html", html: panel.html }
@@ -739,6 +748,17 @@ export function DashboardWorkspace({
                 {canEdit && panelOptions(panel)}
               </>
             );
+            if (isTablePanel(panel))
+              return (
+                <TableTile
+                  key={panel.id}
+                  scope={scope}
+                  panel={panel}
+                  layoutControls={layoutControls}
+                  layoutActive={active}
+                  layoutStyle={style}
+                />
+              );
             return isImagePanel(panel) ? (
               <ImageTile
                 key={panel.id}
@@ -775,7 +795,7 @@ export function DashboardWorkspace({
           <h2>This dashboard has no panels</h2>
           <p>
             {canEdit
-              ? "Create a panel to count a saved preset or show your own notes."
+              ? "Create a panel to count or list a saved preset's alerts, or show your own notes."
               : "Panels created by editors appear here."}
           </p>
         </div>

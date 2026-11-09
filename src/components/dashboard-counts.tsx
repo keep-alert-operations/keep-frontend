@@ -22,6 +22,7 @@ import { NavLink, RelativeTime } from "./page";
 import { DashboardLayout } from "./dashboard-layout";
 import { compactPanels } from "@/lib/dashboard-layout";
 import { sanitizePanelHtml } from "@/lib/panel-html";
+import { TableTile } from "./dashboard-table-panel";
 
 interface PanelLayout {
   id: string;
@@ -50,17 +51,31 @@ export interface ImagePanel extends PanelLayout {
   fit?: "contain" | "cover";
   alt?: string | null;
 }
-export type Panel = CountPanel | HtmlPanel | ImagePanel;
+/** A panel listing its preset's latest alerts, newest first (REV-63). */
+export interface TablePanel extends PanelLayout {
+  type: "table";
+  preset_id: string;
+  rows: number;
+}
+export type Panel = CountPanel | HtmlPanel | ImagePanel | TablePanel;
 export const isHtmlPanel = (panel: Panel): panel is HtmlPanel =>
   panel.type === "html";
 export const isImagePanel = (panel: Panel): panel is ImagePanel =>
   panel.type === "image";
+export const isTablePanel = (panel: Panel): panel is TablePanel =>
+  panel.type === "table";
 export const isCountPanel = (panel: Panel): panel is CountPanel =>
   (panel.type ?? "count") === "count";
 export const countPanels = (panels: Panel[]) => panels.filter(isCountPanel);
-/** The name of a panel that has no preset to name it. */
+/** The name of a panel without a counted preset to name it. */
 export const contentPanelName = (panel: Panel) =>
-  isHtmlPanel(panel) ? "HTML panel" : isImagePanel(panel) ? "Image panel" : "";
+  isHtmlPanel(panel)
+    ? "HTML panel"
+    : isImagePanel(panel)
+      ? "Image panel"
+      : isTablePanel(panel)
+        ? "Alert table"
+        : "";
 /** Where an image panel's picture loads from: the tenant's upload or the link. */
 export const imageSource = (tenantId: string, panel: ImagePanel) =>
   panel.image_id
@@ -679,7 +694,13 @@ export function useDashboard(
   const counts = useCounts(scope, dashboard, onDefinitionChanged);
   const [fullscreen, setFullscreen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
-  return { ...counts, fullscreen, setFullscreen, trigger };
+  // Table panels read their own rows; Refresh counts reloads them too (REV-63).
+  const [refreshed, setRefreshed] = useState(0);
+  const refresh = () => {
+    counts.refresh();
+    setRefreshed((value) => value + 1);
+  };
+  return { ...counts, refresh, refreshed, fullscreen, setFullscreen, trigger };
 }
 export type DashboardModel = ReturnType<typeof useDashboard>;
 
@@ -778,6 +799,19 @@ export function DashboardBoard({
           key={panel.id}
           tenantId={scope.tenant.id}
           panel={panel}
+          layoutControls={layoutControls}
+          layoutActive={active}
+          layoutStyle={style}
+        />
+      );
+    if (isTablePanel(panel))
+      return (
+        <TableTile
+          key={panel.id}
+          scope={scope}
+          panel={panel}
+          refreshKey={model.refreshed}
+          paused={paused}
           layoutControls={layoutControls}
           layoutActive={active}
           layoutStyle={style}
@@ -884,7 +918,7 @@ export function DashboardBoard({
           <h2>This dashboard has no panels</h2>
           <p>
             {editing
-              ? "Create a panel to count a saved preset or show your own notes or images."
+              ? "Create a panel to count or list a saved preset's alerts, or show your own notes or images."
               : "Panels created by editors appear here."}
           </p>
         </div>

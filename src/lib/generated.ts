@@ -2211,6 +2211,7 @@ export interface components {
         | components["schemas"]["Panel"]
         | components["schemas"]["HtmlPanel"]
         | components["schemas"]["ImagePanel"]
+        | components["schemas"]["TablePanel"]
       )[];
       /** Command Id */
       command_id: string;
@@ -2224,6 +2225,7 @@ export interface components {
         | components["schemas"]["Panel"]
         | components["schemas"]["HtmlPanel"]
         | components["schemas"]["ImagePanel"]
+        | components["schemas"]["TablePanel"]
       )[];
     };
     /** DashboardPreview */
@@ -2235,6 +2237,7 @@ export interface components {
         | components["schemas"]["Panel"]
         | components["schemas"]["HtmlPanel"]
         | components["schemas"]["ImagePanel"]
+        | components["schemas"]["TablePanel"]
       )[];
       /** Preset Revisions */
       preset_revisions: {
@@ -2250,6 +2253,7 @@ export interface components {
         | components["schemas"]["Panel"]
         | components["schemas"]["HtmlPanel"]
         | components["schemas"]["ImagePanel"]
+        | components["schemas"]["TablePanel"]
       )[];
       /** Command Id */
       command_id: string;
@@ -2738,6 +2742,11 @@ export interface components {
        * @default false
        */
       group_empty: boolean;
+      /**
+       * Newest First
+       * @default false
+       */
+      newest_first: boolean;
     };
     /** PresetReplace */
     PresetReplace: {
@@ -3086,6 +3095,39 @@ export interface components {
        * @enum {string}
        */
       direction: "asc" | "desc";
+    };
+    /**
+     * TablePanel
+     * @description A panel listing its preset's latest alerts, newest first (REV-63).
+     *
+     *     It references a preset like a count panel and shows ``rows`` alerts in the
+     *     preset's saved columns; it has no thresholds and is never counted.
+     */
+    TablePanel: {
+      /** Id */
+      id: string;
+      /** Title */
+      title?: string | null;
+      /** X */
+      x: number;
+      /** Y */
+      y: number;
+      /** W */
+      w: number;
+      /** H */
+      h: number;
+      /**
+       * Type
+       * @constant
+       */
+      type: "table";
+      /** Preset Id */
+      preset_id: string;
+      /**
+       * Rows
+       * @default 10
+       */
+      rows: number;
     };
     /** TenantCreate */
     TenantCreate: {
