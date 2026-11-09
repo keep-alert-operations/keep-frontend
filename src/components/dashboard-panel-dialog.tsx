@@ -414,6 +414,8 @@ export function DashboardPanelDialog({
   const [linkText, setLinkText] = useState(panel.link?.label ?? "");
   const [linkTouched, setLinkTouched] = useState(false);
   const link = panelLink(linkAddress, linkText);
+  // Previews show the button only for an address that can be saved.
+  const shownLink = linkProblem(linkAddress) ? null : link;
   const [linkStatus, setLinkStatus] = useState("loading");
   const [dragging, setDragging] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -450,7 +452,7 @@ export function DashboardPanelDialog({
     ...imageDraft,
     image_id: source === "upload" ? (upload.id ?? null) : null,
     url: source === "link" ? address.trim() || null : null,
-    link,
+    link: shownLink,
   };
   const rowsValue = /^[1-9][0-9]?$/.test(rowsText.trim())
     ? Number(rowsText.trim())
@@ -462,7 +464,7 @@ export function DashboardPanelDialog({
     title: draft.title,
     type: "table",
     preset_id: draft.preset_id,
-    link,
+    link: shownLink,
     rows:
       rowsValue !== undefined && rowsValue <= MAX_ROWS
         ? rowsValue
@@ -1076,7 +1078,7 @@ export function DashboardPanelDialog({
     <Preview panel={draft}>
       <CountTile
         scope={scope}
-        panel={{ ...draft, thresholds, link }}
+        panel={{ ...draft, thresholds, link: shownLink }}
         title={title.trim() || selectedName || "Select a preset"}
         presetName={selected ? display(selected.name) : undefined}
         value={counted}
@@ -1167,7 +1169,7 @@ export function DashboardPanelDialog({
           <span className="pn-head">
             <span className="pn-title">Select a preset</span>
             <span style={{ flexGrow: 1 }} />
-            <PanelLinkButton link={link} />
+            <PanelLinkButton link={shownLink} />
           </span>
           <p className="small muted pnt-state">
             Choose a preset to see its latest alerts
@@ -1238,11 +1240,11 @@ export function DashboardPanelDialog({
         aria-label={`${title.trim() || "HTML panel"} preview`}
         style={previewSize(htmlDraft)}
       >
-        {(title.trim() || link) && (
+        {(title.trim() || shownLink) && (
           <span className="pn-head">
             {title.trim() && <span className="pn-title">{title.trim()}</span>}
             <span style={{ flexGrow: 1 }} />
-            <PanelLinkButton link={link} />
+            <PanelLinkButton link={shownLink} />
           </span>
         )}
         <div

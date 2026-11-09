@@ -422,7 +422,7 @@
 .pn:has(.pn-go) {
   container-type: inline-size;
 }
-@container (max-width: 200px) {
+@container (max-width: 180px) {
   .pn-go:not(.pn-go-float) {
     width: 26px;
     padding: 0;

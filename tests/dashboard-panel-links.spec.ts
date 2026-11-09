@@ -283,6 +283,8 @@ test("the dialog adds, checks, previews and removes a panel link", async ({
     "Enter a full address that starts with https:// or http://.",
   );
   await expect(address).toHaveAttribute("aria-invalid", "true");
+  // The preview shows no button for an address that can't be saved.
+  await expect(preview.getByRole("link", { name: /new tab/ })).toHaveCount(0);
   await dialog.getByRole("button", { name: "Apply changes" }).click();
   await expect(address).toBeFocused();
   await expect(dialog).toBeVisible();
@@ -298,9 +300,12 @@ test("the dialog adds, checks, previews and removes a panel link", async ({
     "Use single-line button text of up to 40 characters.",
   );
   await text.fill("  Runbook ");
-  await expect(
-    preview.getByRole("link", { name: "Runbook (opens in a new tab)" }),
-  ).toBeVisible();
+  const previewButton = preview.getByRole("link", {
+    name: "Runbook (opens in a new tab)",
+  });
+  await expect(previewButton).toBeVisible();
+  // At the panel's real size the preview shows the button text, as the board does.
+  await expect(previewButton.locator(".pn-go-text")).toBeVisible();
   await dialog.getByRole("button", { name: "Apply changes" }).click();
   await expect(dialog).toBeHidden();
   await expect(
