@@ -785,9 +785,7 @@ export function DashboardPanelDialog({
 
   const titleField = (
     <label className="f">
-      <span className="lbl">
-        {kind === "count" ? "Custom title (optional)" : "Title (optional)"}
-      </span>
+      <span className="lbl">Title (optional)</span>
       <input
         name="title"
         className="inp"
@@ -815,7 +813,7 @@ export function DashboardPanelDialog({
       }}
     >
       <label className="lbl" htmlFor={`${id}-preset`}>
-        Saved preset
+        Preset
       </label>
       <div className="dashboard-panel-combo">
         <input
@@ -953,8 +951,8 @@ export function DashboardPanelDialog({
 
   const countSettings = (
     <>
-      {presetField}
       {titleField}
+      {presetField}
       <fieldset className="dashboard-panel-thresholds">
         <legend className="lbl">Count thresholds</legend>
         <p className="help">
@@ -1079,8 +1077,8 @@ export function DashboardPanelDialog({
       : undefined;
   const tableSettings = (
     <>
-      {presetField}
       {titleField}
+      {presetField}
       <div className="f">
         <label className="lbl" htmlFor={`${id}-rows`}>
           Alerts to show

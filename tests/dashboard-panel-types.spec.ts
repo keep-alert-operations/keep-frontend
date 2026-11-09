@@ -288,9 +288,17 @@ test("the count preview counts the chosen preset before saving", async ({
   });
   const preview = dialog.getByRole("article", { name: /count$/ });
   await expect(preview).toContainText("Choose a preset to see its count");
-  await dialog
-    .getByRole("combobox", { name: "Saved preset", exact: true })
-    .click();
+  // Title comes first, then the preset.
+  await expect
+    .poll(() =>
+      dialog
+        .locator('input[name="title"], input[name="preset"]')
+        .evaluateAll((fields) =>
+          fields.map((field) => field.getAttribute("name")),
+        ),
+    )
+    .toEqual(["title", "preset"]);
+  await dialog.getByRole("combobox", { name: "Preset", exact: true }).click();
   await dialog.getByRole("option", { name: "All alerts" }).click();
   await expect(preview).toContainText("42");
   await expect(preview).not.toContainText("Exact logical alerts");

@@ -301,9 +301,17 @@ test("the panel dialog creates an alert table panel", async ({ page }) => {
   await expect(
     dialog.getByRole("article", { name: "Alert table preview" }),
   ).toContainText("Choose a preset to see its latest alerts");
-  await dialog
-    .getByRole("combobox", { name: "Saved preset", exact: true })
-    .click();
+  // Title comes first, then the preset.
+  await expect
+    .poll(() =>
+      dialog
+        .locator('input[name="title"], input[name="preset"]')
+        .evaluateAll((fields) =>
+          fields.map((field) => field.getAttribute("name")),
+        ),
+    )
+    .toEqual(["title", "preset"]);
+  await dialog.getByRole("combobox", { name: "Preset", exact: true }).click();
   await dialog.getByRole("option", { name: "Critical alerts" }).click();
   await expect(
     dialog.getByRole("list", { name: "Preset columns" }).getByRole("listitem"),

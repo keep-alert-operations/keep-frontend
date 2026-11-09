@@ -264,12 +264,12 @@ test("unchanged panel edits, Cancel, and creating then deleting a draft panel ke
     .click();
   await expect(save).toBeDisabled();
   dialog = await editPanel(page, "First");
-  await dialog.getByLabel("Custom title (optional)").fill("Canceled");
+  await dialog.getByLabel("Title (optional)").fill("Canceled");
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(tile(page, "First")).toBeVisible();
   await expect(save).toBeDisabled();
   dialog = await editPanel(page, "First");
-  await dialog.getByLabel("Custom title (optional)").fill("Closed");
+  await dialog.getByLabel("Title (optional)").fill("Closed");
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(tile(page, "First")).toBeVisible();
@@ -279,11 +279,9 @@ test("unchanged panel edits, Cancel, and creating then deleting a draft panel ke
     name: "Create panel",
     exact: true,
   });
-  await create
-    .getByRole("combobox", { name: "Saved preset", exact: true })
-    .click();
+  await create.getByRole("combobox", { name: "Preset", exact: true }).click();
   await create.getByRole("option", { name: "All alerts" }).click();
-  await create.getByLabel("Custom title (optional)").fill("Transient");
+  await create.getByLabel("Title (optional)").fill("Transient");
   await create
     .getByRole("button", { name: "Create panel", exact: true })
     .click();
@@ -636,9 +634,7 @@ test("changing a panel preset never displays another preset's saved count", asyn
   );
   await expect(tile(page, "First")).toContainText("12");
   const dialog = await editPanel(page, "First");
-  await dialog
-    .getByRole("combobox", { name: "Saved preset", exact: true })
-    .click();
+  await dialog.getByRole("combobox", { name: "Preset", exact: true }).click();
   await dialog.getByRole("option", { name: "Other preset" }).click();
   await dialog
     .getByRole("button", { name: "Apply changes", exact: true })
@@ -938,7 +934,7 @@ test("title, threshold, create and delete preserve columns in a compacted layout
     panels: [panel(30, "First", 6, 4), panel(31, "Second", 0, 0)],
   });
   const dialog = await editPanel(page, "First");
-  await dialog.getByLabel("Custom title (optional)").fill("Renamed");
+  await dialog.getByLabel("Title (optional)").fill("Renamed");
   await dialog
     .getByRole("button", { name: "Add threshold", exact: true })
     .click();
@@ -954,11 +950,9 @@ test("title, threshold, create and delete preserve columns in a compacted layout
     name: "Create panel",
     exact: true,
   });
-  await create
-    .getByRole("combobox", { name: "Saved preset", exact: true })
-    .click();
+  await create.getByRole("combobox", { name: "Preset", exact: true }).click();
   await create.getByRole("option", { name: "All alerts" }).click();
-  await create.getByLabel("Custom title (optional)").fill("Added");
+  await create.getByLabel("Title (optional)").fill("Added");
   await create
     .getByRole("button", { name: "Create panel", exact: true })
     .click();
@@ -989,7 +983,7 @@ for (const width of [800, 390]) {
       page.getByRole("button", { name: "Move First", exact: true }),
     ).toBeHidden();
     const dialog = await editPanel(page, "First");
-    await dialog.getByLabel("Custom title (optional)").fill("Edited");
+    await dialog.getByLabel("Title (optional)").fill("Edited");
     await dialog
       .getByRole("button", { name: "Apply changes", exact: true })
       .click();
@@ -1062,7 +1056,7 @@ test("pressing E over a panel opens its Edit panel dialog", async ({
   await tile(page, "Second").hover();
   await page.keyboard.press("e");
   await expect(dialog).toBeVisible();
-  const title = dialog.getByLabel("Custom title (optional)");
+  const title = dialog.getByLabel("Title (optional)");
   await expect(title).toHaveValue("Second");
   // Typing in the dialog never reopens it or loses the letter.
   await title.fill("");
@@ -1137,9 +1131,7 @@ test("opening a panel dialog cancels an active drag without overwriting edits", 
     .getByRole("menuitem", { name: "Edit panel", exact: true })
     .dispatchEvent("click");
   const dialog = page.getByRole("dialog", { name: "Edit panel", exact: true });
-  await dialog
-    .getByLabel("Custom title (optional)")
-    .fill("Updated during drag");
+  await dialog.getByLabel("Title (optional)").fill("Updated during drag");
   await dialog
     .getByRole("button", { name: "Apply changes", exact: true })
     .click();
