@@ -1037,9 +1037,80 @@ test("panel options offer Edit and Delete without Move actions", async ({
     .getByRole("button", { name: "Options for Second", exact: true })
     .click();
   await expect(page.getByRole("menuitem")).toHaveText([
-    "Edit panel",
+    /^Edit panel/,
     "Delete panel",
   ]);
+});
+
+/** Requirements: REV-61; dashboard operations 8. E edits the hovered panel. */
+test("pressing E over a panel opens its Edit panel dialog", async ({
+  page,
+}) => {
+  await setup(page);
+  const dialog = page.getByRole("dialog", { name: "Edit panel", exact: true });
+  await expect(
+    page.getByRole("menuitem", { name: "Edit panel", exact: true }),
+  ).toHaveCount(0);
+  await page.keyboard.press("e");
+  await expect(dialog).toHaveCount(0);
+  await tile(page, "Second").hover();
+  await page.keyboard.press("e");
+  await expect(dialog).toBeVisible();
+  const title = dialog.getByLabel("Custom title (optional)");
+  await expect(title).toHaveValue("Second");
+  // Typing in the dialog never reopens it or loses the letter.
+  await title.fill("");
+  await title.press("e");
+  await expect(title).toHaveValue("e");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  // Modifier chords and an open menu are left to the browser and the menu.
+  await tile(page, "Third").hover();
+  await page.keyboard.press("Control+e");
+  await expect(dialog).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Options for Third", exact: true })
+    .click();
+  await expect(
+    page.getByRole("menuitem", { name: "Edit panel", exact: true }),
+  ).toHaveAttribute("aria-keyshortcuts", "E");
+  await page.keyboard.press("e");
+  await expect(dialog).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  // Keyboard users get the same shortcut from a panel's focused handle.
+  await page.mouse.move(0, 0);
+  await page.getByRole("button", { name: "Move First", exact: true }).focus();
+  await page.keyboard.press("E");
+  await expect(dialog).toBeVisible();
+  await expect(title).toHaveValue("First");
+});
+
+/** Requirements: REV-61; dashboard operations 8. */
+test("E does nothing in fullscreen or while renaming", async ({ page }) => {
+  const dialog = page.getByRole("dialog", { name: "Edit panel", exact: true });
+  await setup(page);
+  await page
+    .getByRole("button", { name: "Edit dashboard name", exact: true })
+    .click();
+  const name = page.getByRole("textbox", { name: "Dashboard name" });
+  await tile(page, "First").hover();
+  await name.press("End");
+  await name.press("e");
+  await expect(name).toHaveValue("Layout teste");
+  await expect(dialog).toHaveCount(0);
+  await name.press("Escape");
+  await page.getByRole("button", { name: "Fullscreen", exact: true }).click();
+  await tile(page, "First").hover();
+  await page.keyboard.press("e");
+  await expect(dialog).toHaveCount(0);
+});
+
+/** Requirements: REV-61; dashboard operations 8. */
+test("E opens nothing for viewers", async ({ page }) => {
+  await setup(page, { role: "view" });
+  await tile(page, "First").hover();
+  await page.keyboard.press("e");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
 test("opening a panel dialog cancels an active drag without overwriting edits", async ({

@@ -307,6 +307,58 @@ export function DashboardWorkspace({
     panel.title ??
     (isHtmlPanel(panel) ? "HTML panel" : observation(panel)?.preset_name) ??
     "Panel";
+  function editPanel(panelId: string) {
+    const panel = draft.panels.find((item) => item.id === panelId);
+    if (!panel) return;
+    setPanelError("");
+    setPanelDialog({ panel, creating: false });
+  }
+  // REV-61: E opens Edit panel for the panel under the pointer, or else the
+  // panel holding keyboard focus, whenever the menu item would be available.
+  const editShortcut = useRef<(event: KeyboardEvent) => void>(() => {});
+  editShortcut.current = (event) => {
+    if (
+      event.key.toLowerCase() !== "e" ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      event.repeat ||
+      event.defaultPrevented ||
+      !canEdit ||
+      locked ||
+      panelDialog ||
+      copying ||
+      renaming ||
+      model?.fullscreen
+    )
+      return;
+    const target = event.target instanceof Element ? event.target : null;
+    if (
+      target?.closest(
+        "input, textarea, select, [contenteditable]:not([contenteditable=false]), [role=textbox], [role=combobox]",
+      ) ||
+      document.querySelector(
+        "dialog[open], [aria-modal=true], .dlg-backdrop, [role=menu], .de-tile-active",
+      )
+    )
+      return;
+    const tile =
+      document.querySelector<HTMLElement>(
+        ".de-tile[data-layout-panel]:hover",
+      ) ??
+      document.activeElement?.closest<HTMLElement>(
+        ".de-tile[data-layout-panel]",
+      );
+    const panelId = tile?.dataset.layoutPanel;
+    if (!panelId || !draft.panels.some((item) => item.id === panelId)) return;
+    event.preventDefault();
+    editPanel(panelId);
+  };
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => editShortcut.current(event);
+    document.addEventListener("keydown", key);
+    return () => document.removeEventListener("keydown", key);
+  }, []);
   function panelOptions(panel: Panel) {
     return (
       <div className="db-panel-options">
@@ -321,17 +373,17 @@ export function DashboardWorkspace({
                 type="button"
                 role="menuitem"
                 className="menu-item"
+                aria-keyshortcuts="E"
                 disabled={locked}
                 onClick={() => {
                   close();
-                  setPanelError("");
-                  setPanelDialog({
-                    panel: draft.panels.find((item) => item.id === panel.id)!,
-                    creating: false,
-                  });
+                  editPanel(panel.id);
                 }}
               >
                 Edit panel
+                <span className="db-menu-key" aria-hidden="true">
+                  E
+                </span>
               </button>
               <button
                 type="button"
