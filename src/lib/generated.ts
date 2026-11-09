@@ -2352,6 +2352,7 @@ export interface components {
       w: number;
       /** H */
       h: number;
+      link?: components["schemas"]["PanelLink"] | null;
       /**
        * Type
        * @constant
@@ -2377,6 +2378,7 @@ export interface components {
       w: number;
       /** H */
       h: number;
+      link?: components["schemas"]["PanelLink"] | null;
       /**
        * Type
        * @constant
@@ -2616,6 +2618,7 @@ export interface components {
       w: number;
       /** H */
       h: number;
+      link?: components["schemas"]["PanelLink"] | null;
       /**
        * Type
        * @default count
@@ -2626,6 +2629,16 @@ export interface components {
       preset_id: string;
       /** Thresholds */
       thresholds?: components["schemas"]["Threshold"][];
+    };
+    /**
+     * PanelLink
+     * @description A panel's link button: an http(s) address and optional button text (REV-66).
+     */
+    PanelLink: {
+      /** Url */
+      url: string;
+      /** Label */
+      label?: string | null;
     };
     /** PresetCreate */
     PresetCreate: {
@@ -3116,6 +3129,7 @@ export interface components {
       w: number;
       /** H */
       h: number;
+      link?: components["schemas"]["PanelLink"] | null;
       /**
        * Type
        * @constant

@@ -557,3 +557,38 @@
   color: var(--ink-soft);
   font-size: 12px;
 }
+
+/* Panel link (REV-66): the last settings section for every panel type. */
+.dashboard-panel-link {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 4px 0 0;
+  padding: 14px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+.dashboard-panel-link legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  font-size: 13.5px;
+  color: var(--text);
+}
+.dashboard-panel-link > .help {
+  margin: 0;
+}
+.dashboard-panel-link-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+  gap: 12px;
+}
+.dashboard-panel-link > button {
+  align-self: flex-start;
+}
+@media (max-width: 767px) {
+  .dashboard-panel-link-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

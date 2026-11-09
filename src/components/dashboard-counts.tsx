@@ -24,6 +24,8 @@ import { compactPanels } from "@/lib/dashboard-layout";
 import { sanitizePanelHtml } from "@/lib/panel-html";
 import { thresholdColorCss } from "@/lib/threshold-colors";
 import { TableTile } from "./dashboard-table-panel";
+import { PanelLinkButton } from "./dashboard-panel-link";
+import type { PanelLink } from "@/lib/panel-link";
 
 interface PanelLayout {
   id: string;
@@ -32,6 +34,8 @@ interface PanelLayout {
   y: number;
   w: number;
   h: number;
+  /** A button that opens this address in a new tab (REV-66). */
+  link?: PanelLink | null;
 }
 /** A preset count panel; a panel without `type` is one (REV-57). */
 export interface CountPanel extends PanelLayout {
@@ -515,6 +519,7 @@ export function CountTile({
         )}
         <span style={{ flexGrow: 1 }} />
         {isStale && <span className="chip b-dash">Stale</span>}
+        <PanelLinkButton link={panel.link} inactive={layoutActive} />
       </span>
       {presetName && (panel.title || panel.h >= 3) && (
         <span className="sub">Preset: {presetName}</span>
@@ -562,9 +567,12 @@ export function HtmlTile({
         ...layoutStyle,
       }}
     >
-      {panel.title && (
+      {/* Without a title, a slim row holds only the link button (REV-66). */}
+      {(panel.title || panel.link) && (
         <span className="pn-head">
-          <span className="pn-title">{panel.title}</span>
+          {panel.title && <span className="pn-title">{panel.title}</span>}
+          <span style={{ flexGrow: 1 }} />
+          <PanelLinkButton link={panel.link} inactive={layoutActive} />
         </span>
       )}
       <div
@@ -675,6 +683,8 @@ export function ImageTile({
       {title && (
         <span className="pn-head">
           <span className="pn-title">{title}</span>
+          <span style={{ flexGrow: 1 }} />
+          <PanelLinkButton link={panel.link} inactive={layoutActive} />
         </span>
       )}
       <PanelImage
@@ -685,6 +695,10 @@ export function ImageTile({
         emptyText={emptyText}
         onStatus={onStatus}
       />
+      {/* Without a title the button floats over the image (REV-66). */}
+      {!title && (
+        <PanelLinkButton link={panel.link} floating inactive={layoutActive} />
+      )}
       {layoutControls}
     </article>
   );

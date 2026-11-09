@@ -358,6 +358,80 @@
   position: relative;
   flex-shrink: 0;
 }
+/* Panel links (REV-66): a small outlined button at the end of the title row that
+   opens the configured address in a new tab. It sits above the count panel's
+   whole-card preset link. */
+.pn-go {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  max-width: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--input-border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.pn-go > svg {
+  flex-shrink: 0;
+}
+.pn-go-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pn-go:hover {
+  background: var(--accent-soft);
+  border-color: var(--border-hover);
+  color: var(--accent);
+  text-decoration: none;
+}
+.pn-go:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+/* While its panel is moved or resized the button shows but does not open. */
+.pn-go[aria-disabled="true"] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+/* Over an untitled image, in its top-right corner. */
+.pn-go-float {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  max-width: calc(100% - 20px);
+  box-shadow: 0 2px 8px rgb(var(--shadow-rgb) / 0.14);
+}
+.de-grid > .de-tile .pn-go-float {
+  right: 44px;
+  max-width: calc(100% - 88px);
+}
+/* In a narrow panel only the icon shows; the name stays for assistive technology
+   and in the hover text. */
+.pn:has(.pn-go) {
+  container-type: inline-size;
+}
+@container (max-width: 200px) {
+  .pn-go:not(.pn-go-float) {
+    width: 26px;
+    padding: 0;
+    justify-content: center;
+  }
+  .pn-go:not(.pn-go-float) .pn-go-text {
+    display: none;
+  }
+}
 .pn > .small {
   white-space: nowrap;
   overflow: hidden;

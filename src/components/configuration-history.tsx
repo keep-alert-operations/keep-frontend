@@ -58,6 +58,8 @@ interface HistoryPanel {
   h?: number;
   thresholds?: { lower_bound: string; color: string }[];
   rows?: number;
+  /** Absent in revisions saved before REV-66. */
+  link?: { url: string; label?: string | null } | null;
 }
 type Kind = "presets" | "dashboards";
 function copyDefinition(definition: Record<string, unknown>, section: Kind) {
@@ -332,6 +334,9 @@ export function ConfigurationHistory({
                           `at least ${item.lower_bound} ${historyColor(item.color)}`,
                       )
                       .join(", ")}`
+                  : ""}
+                {panel.link
+                  ? ` · link ${panel.link.label ? `“${panel.link.label}” to ` : "to "}${panel.link.url}`
                   : ""}
               </span>
             </li>
