@@ -46,7 +46,7 @@ interface Detail {
 interface HistoryPanel {
   id?: string;
   /** Absent in revisions saved before REV-57, which hold only count panels. */
-  type?: "count" | "html";
+  type?: "count" | "html" | "image";
   preset_id?: string;
   title?: string | null;
   w?: number;
@@ -311,9 +311,11 @@ export function ConfigurationHistory({
                 {" · "}
                 {panel.type === "html"
                   ? "HTML panel"
-                  : panel.preset_id
-                    ? `Preset: ${names.get(panel.preset_id) ?? panel.preset_id}`
-                    : "No preset"}
+                  : panel.type === "image"
+                    ? "Image panel"
+                    : panel.preset_id
+                      ? `Preset: ${names.get(panel.preset_id) ?? panel.preset_id}`
+                      : "No preset"}
                 {` · ${panel.w ?? "?"} × ${panel.h ?? "?"}`}
                 {panel.thresholds?.length
                   ? ` · ${panel.thresholds

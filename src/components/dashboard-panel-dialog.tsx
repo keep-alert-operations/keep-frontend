@@ -10,14 +10,29 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { display, request, tenantPath } from "@/lib/api";
+import {
+  display,
+  message as errorMessage,
+  request,
+  tenantPath,
+} from "@/lib/api";
 import { previewTotal, usePresetChoices } from "@/lib/preset-choices";
 import { useDirtyWarning } from "@/lib/hooks";
 import { MAX_PANEL_HTML, sanitizePanelHtml } from "@/lib/panel-html";
 import {
+  IMAGE_TYPES,
+  MAX_IMAGE_DESCRIPTION,
+  addressProblem,
+  fileProblem,
+  fileSize,
+  uploadPanelImage,
+} from "@/lib/panel-image";
+import {
   CountTile,
+  ImageTile,
   type CountPanel,
   type HtmlPanel,
+  type ImagePanel,
   type Panel,
 } from "./dashboard-counts";
 import { Icon } from "./icons";
@@ -27,7 +42,19 @@ import "../app/styles/dashboard-panel-dialog.css";
 
 const decimal = /^(0|[1-9][0-9]*)$/;
 const colors = ["blue", "green", "amber", "red"];
-type Kind = "count" | "html";
+type Kind = "count" | "html" | "image";
+type Source = "upload" | "link";
+/** The uploaded file an image panel shows: its ID, plus local details once chosen here. */
+interface Upload {
+  id?: string;
+  name?: string;
+  size?: number;
+  width?: string;
+  height?: string;
+  preview?: string;
+  uploading?: boolean;
+  problem?: string;
+}
 interface Removal {
   panel_id: string;
   line: number;
@@ -68,6 +95,15 @@ const TYPES: {
     description: "Your own notes, links and tables, written as HTML.",
     icon: glyph("M8 7 3 12l5 5M16 7l5 5-5 5M14 4l-4 16"),
   },
+  {
+    id: "image",
+    name: "Image",
+    description:
+      "A picture you upload or link to, such as a diagram or screenshot.",
+    icon: glyph(
+      "M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM21 16l-5-5-9 8M9 10h.01",
+    ),
+  },
 ];
 
 const layoutOf = (panel: Panel) => ({
@@ -80,6 +116,16 @@ const layoutOf = (panel: Panel) => ({
 });
 function normalized(panel: Panel): Panel {
   const title = (panel.title ?? "").trim().normalize("NFC") || null;
+  if (panel.type === "image")
+    return {
+      ...layoutOf(panel),
+      title,
+      type: "image",
+      image_id: panel.image_id ?? null,
+      url: panel.url ?? null,
+      fit: panel.fit ?? "contain",
+      alt: (panel.alt ?? "").trim().normalize("NFC") || null,
+    };
   return panel.type === "html"
     ? { ...layoutOf(panel), title, type: "html", html: panel.html }
     : {
@@ -287,7 +333,7 @@ export function DashboardPanelDialog({
   const gutter = useRef<HTMLDivElement>(null);
   const baseline = useRef<Panel>(normalized(panel));
   const [kind, setKind] = useState<Kind>(
-    panel.type === "html" ? "html" : "count",
+    panel.type === "html" || panel.type === "image" ? panel.type : "count",
   );
   // Each type keeps its own draft, so switching types while creating loses nothing.
   const [draft, setDraft] = useState<CountPanel>(
@@ -300,6 +346,34 @@ export function DashboardPanelDialog({
       ? (baseline.current as HtmlPanel)
       : { ...layoutOf(panel), type: "html", html: "" },
   );
+  // An image panel keeps its upload and its address apart, so switching the
+  // source back and forth loses neither (REV-62).
+  const [imageDraft, setImageDraft] = useState<ImagePanel>(
+    panel.type === "image"
+      ? (baseline.current as ImagePanel)
+      : {
+          ...layoutOf(panel),
+          type: "image",
+          image_id: null,
+          url: null,
+          fit: "contain",
+          alt: null,
+        },
+  );
+  const [source, setSource] = useState<Source>(
+    panel.type === "image" && panel.url ? "link" : "upload",
+  );
+  const [upload, setUpload] = useState<Upload>(
+    panel.type === "image" && panel.image_id ? { id: panel.image_id } : {},
+  );
+  const [address, setAddress] = useState(
+    panel.type === "image" ? (panel.url ?? "") : "",
+  );
+  const [addressTouched, setAddressTouched] = useState(false);
+  const [linkStatus, setLinkStatus] = useState("loading");
+  const [dragging, setDragging] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const uploads = useRef<AbortController | null>(null);
   // Typed text searches presets; null shows the selected preset's name instead.
   const [search, setSearch] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -328,7 +402,13 @@ export function DashboardPanelDialog({
   const field = useRef<HTMLInputElement>(null);
   const [place, setPlace] = useState<CSSProperties>();
   const thresholds = draft.thresholds ?? [];
-  const current: Panel = kind === "html" ? htmlDraft : draft;
+  const imagePanel: ImagePanel = {
+    ...imageDraft,
+    image_id: source === "upload" ? (upload.id ?? null) : null,
+    url: source === "link" ? address.trim() || null : null,
+  };
+  const current: Panel =
+    kind === "html" ? htmlDraft : kind === "image" ? imagePanel : draft;
   const title = current.title ?? "";
   const dirty =
     JSON.stringify(normalized(current)) !== JSON.stringify(baseline.current);
@@ -345,6 +425,13 @@ export function DashboardPanelDialog({
     dirtyChanged.current?.(dirty);
   }, [dirty]);
   useEffect(() => () => dirtyChanged.current?.(false), []);
+  useEffect(
+    () => () => {
+      if (upload.preview) URL.revokeObjectURL(upload.preview);
+    },
+    [upload.preview],
+  );
+  useEffect(() => () => uploads.current?.abort(), []);
 
   useEffect(() => {
     const element = dialog.current;
@@ -473,14 +560,64 @@ export function DashboardPanelDialog({
     setHtmlDraft((current) => ({ ...current, ...patch }));
     setError("");
   }
+  function updateImage(patch: Partial<ImagePanel>) {
+    setImageDraft((current) => ({ ...current, ...patch }));
+    setError("");
+  }
   function setTitle(value: string) {
     if (kind === "html") updateHtml({ title: value });
+    else if (kind === "image") updateImage({ title: value });
     else update({ title: value });
+  }
+  async function chooseFile(file: File | undefined) {
+    if (!file) return;
+    setError("");
+    const problem = fileProblem(file);
+    if (problem) {
+      setUpload((current) => ({ ...current, problem }));
+      return;
+    }
+    uploads.current?.abort();
+    const controller = new AbortController();
+    uploads.current = controller;
+    const preview = URL.createObjectURL(file);
+    setUpload({ name: file.name, size: file.size, preview, uploading: true });
+    try {
+      const stored = await uploadPanelImage(
+        scope.tenant.id,
+        csrf,
+        file,
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
+      setUpload({
+        id: stored.id,
+        name: file.name,
+        size: file.size,
+        width: stored.width,
+        height: stored.height,
+        preview,
+      });
+    } catch (failure) {
+      if (controller.signal.aborted) return;
+      setUpload({
+        problem: `${file.name} wasn't uploaded. ${errorMessage(failure)}`,
+      });
+    }
+  }
+  function removeFile() {
+    uploads.current?.abort();
+    setUpload({});
+    requestAnimationFrame(() =>
+      document.getElementById(`${id}-choose-file`)?.focus(),
+    );
   }
   function switchKind(next: Kind) {
     if (next === kind) return;
     // The title follows the panel across types; type-specific settings stay put.
     if (next === "html") setHtmlDraft((current) => ({ ...current, title }));
+    else if (next === "image")
+      setImageDraft((current) => ({ ...current, title }));
     else setDraft((current) => ({ ...current, title }));
     setKind(next);
     setError("");
@@ -515,6 +652,35 @@ export function DashboardPanelDialog({
       /[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/u.test(trimmed)
     ) {
       invalid("Use a single-line title of up to 120 characters.", "title");
+      return;
+    }
+    if (kind === "image") {
+      if (source === "upload" && !upload.id) {
+        invalid(
+          upload.uploading
+            ? "Wait for the image to finish uploading."
+            : "Upload an image or switch to a link.",
+          "image-file",
+        );
+        return;
+      }
+      if (source === "link" && addressProblem(address)) {
+        setAddressTouched(true);
+        invalid(addressProblem(address), "url");
+        return;
+      }
+      const alt = (imageDraft.alt ?? "").trim().normalize("NFC");
+      if (
+        [...alt].length > MAX_IMAGE_DESCRIPTION ||
+        /[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/u.test(alt)
+      ) {
+        invalid(
+          `Use a single-line description of up to ${MAX_IMAGE_DESCRIPTION} characters.`,
+          "alt",
+        );
+        return;
+      }
+      onApply({ ...imagePanel, title: trimmed || null, alt: alt || null });
       return;
     }
     if (kind === "html") {
@@ -561,7 +727,7 @@ export function DashboardPanelDialog({
   const titleField = (
     <label className="f">
       <span className="lbl">
-        {kind === "html" ? "Title (optional)" : "Custom title (optional)"}
+        {kind === "count" ? "Custom title (optional)" : "Title (optional)"}
       </span>
       <input
         name="title"
@@ -573,7 +739,9 @@ export function DashboardPanelDialog({
       <span className="help" id={`${id}-title-help`}>
         {kind === "html"
           ? "Shown above the content. Leave blank for a panel without a header."
-          : "Leave blank to use the preset name. Up to 120 characters."}
+          : kind === "image"
+            ? "Shown above the image. Leave blank to let the image fill the whole panel."
+            : "Leave blank to use the preset name. Up to 120 characters."}
       </span>
     </label>
   );
@@ -820,7 +988,8 @@ export function DashboardPanelDialog({
     previewCount?.preset === draft.preset_id ? previewCount : undefined;
   const counted =
     live?.value ??
-    (panel.type !== "html" && draft.preset_id === panel.preset_id
+    ((panel.type ?? "count") === "count" &&
+    draft.preset_id === (panel as CountPanel).preset_id
       ? latestCount
       : undefined);
   const countPreview = (
@@ -919,6 +1088,241 @@ export function DashboardPanelDialog({
     </Preview>
   );
 
+  const linkError =
+    addressTouched && source === "link" ? addressProblem(address) : "";
+  const fitChoices: {
+    value: "contain" | "cover";
+    name: string;
+    help: string;
+  }[] = [
+    {
+      value: "contain",
+      name: "Show whole image",
+      help: "Empty space may show around it.",
+    },
+    { value: "cover", name: "Fill the panel", help: "Edges may be cropped." },
+  ];
+  const imageSettings = (
+    <>
+      {titleField}
+      <fieldset className="dashboard-panel-source">
+        <legend className="lbl">Image source</legend>
+        <div className="dashboard-panel-segments">
+          {(
+            [
+              ["upload", "Upload a file"],
+              ["link", "Link to an image"],
+            ] as const
+          ).map(([value, label]) => (
+            <label key={value} data-on={source === value || undefined}>
+              <input
+                type="radio"
+                name="image-source"
+                value={value}
+                checked={source === value}
+                onChange={() => {
+                  setSource(value);
+                  setError("");
+                }}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      {source === "upload" ? (
+        <div className="f">
+          <input
+            ref={fileInput}
+            type="file"
+            hidden
+            accept={IMAGE_TYPES.join(",")}
+            onChange={(event) => {
+              void chooseFile(event.target.files?.[0]);
+              event.target.value = "";
+            }}
+          />
+          {upload.id || upload.uploading ? (
+            <div className="dashboard-panel-file">
+              <span className="dashboard-panel-file-text">
+                <b>{upload.name ?? "Uploaded image"}</b>
+                <span className="help" role="status">
+                  {upload.uploading
+                    ? "Uploading…"
+                    : [
+                        upload.size !== undefined
+                          ? fileSize(upload.size)
+                          : undefined,
+                        upload.width && upload.height
+                          ? `${upload.width} × ${upload.height} px`
+                          : undefined,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ") || "Stored with the dashboard"}
+                </span>
+              </span>
+              <button
+                type="button"
+                name="image-file"
+                className="btn btn-sm"
+                onClick={() => fileInput.current?.click()}
+              >
+                Replace
+              </button>
+              <button type="button" className="btn btn-sm" onClick={removeFile}>
+                Remove
+              </button>
+            </div>
+          ) : (
+            <div
+              className="dashboard-panel-drop"
+              data-dragging={dragging || undefined}
+              data-problem={upload.problem ? true : undefined}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDragging(true);
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(event) => {
+                event.preventDefault();
+                setDragging(false);
+                void chooseFile(event.dataTransfer.files?.[0]);
+              }}
+            >
+              {upload.problem ? (
+                <span role="alert">{upload.problem}</span>
+              ) : (
+                <span>Drag an image here, or</span>
+              )}
+              <button
+                type="button"
+                id={`${id}-choose-file`}
+                name="image-file"
+                className="btn btn-sm"
+                onClick={() => fileInput.current?.click()}
+              >
+                {upload.problem ? "Choose another file" : "Choose file"}
+              </button>
+            </div>
+          )}
+          <span className="help">
+            PNG, JPEG, GIF or WebP, up to 5 MB. The file is stored with the
+            dashboard, so everyone who can open the dashboard can see it.
+          </span>
+        </div>
+      ) : (
+        <div className="f">
+          <label className="lbl" htmlFor={`${id}-url`}>
+            Image address
+          </label>
+          <input
+            id={`${id}-url`}
+            name="url"
+            type="url"
+            inputMode="url"
+            className="inp"
+            spellCheck={false}
+            autoComplete="off"
+            placeholder="https://"
+            value={address}
+            aria-invalid={linkError ? true : undefined}
+            aria-describedby={`${id}-url-help${linkError ? ` ${id}-url-error` : ""}`}
+            onChange={(event) => {
+              setAddress(event.target.value);
+              setError("");
+            }}
+            onBlur={() => setAddressTouched(true)}
+          />
+          {linkError && (
+            <span className="dashboard-panel-error" id={`${id}-url-error`}>
+              {linkError}
+            </span>
+          )}
+          <span className="help" id={`${id}-url-help`}>
+            The image loads from this address each time the dashboard opens, so
+            it changes when the source changes. Everyone who opens the dashboard
+            needs access to it.
+          </span>
+          {!linkError && address.trim() && linkStatus === "failed" && (
+            <div className="banner bn-warn" role="status">
+              No image loaded from this address. Check that the link points to
+              an image you can open, or upload the file instead. You can still
+              create the panel.
+            </div>
+          )}
+        </div>
+      )}
+      <label className="f">
+        <span className="lbl">Image description</span>
+        <input
+          name="alt"
+          className="inp"
+          value={imageDraft.alt ?? ""}
+          maxLength={MAX_IMAGE_DESCRIPTION}
+          onChange={(event) => updateImage({ alt: event.target.value })}
+          aria-describedby={`${id}-alt-help`}
+        />
+        <span className="help" id={`${id}-alt-help`}>
+          Read aloud by screen readers. Describe what the image shows.
+        </span>
+      </label>
+      <fieldset className="dashboard-panel-fit">
+        <legend className="lbl">Fit</legend>
+        <div className="dashboard-panel-fits">
+          {fitChoices.map((choice) => (
+            <label
+              key={choice.value}
+              data-on={
+                (imageDraft.fit ?? "contain") === choice.value || undefined
+              }
+            >
+              <input
+                type="radio"
+                name="fit"
+                value={choice.value}
+                checked={(imageDraft.fit ?? "contain") === choice.value}
+                onChange={() => updateImage({ fit: choice.value })}
+              />
+              <span
+                className={`dashboard-panel-fit-pic dashboard-panel-fit-${choice.value}`}
+                aria-hidden="true"
+              >
+                <span />
+              </span>
+              <span className="dashboard-panel-type-text">
+                <b>{choice.name}</b>
+                <span className="help">{choice.help}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    </>
+  );
+  const imagePreview = (
+    <Preview panel={imagePanel}>
+      <ImageTile
+        tenantId={scope.tenant.id}
+        panel={imagePanel}
+        src={source === "upload" ? upload.preview : undefined}
+        emptyText={
+          source === "upload"
+            ? upload.uploading
+              ? undefined
+              : "Upload an image to see it here."
+            : linkError
+              ? "Only https addresses are shown."
+              : "Paste an image address to see it here."
+        }
+        onStatus={source === "link" ? setLinkStatus : undefined}
+        layoutStyle={previewSize(imagePanel)}
+      />
+    </Preview>
+  );
+  const blocked =
+    (kind === "count" && !selected) ||
+    (kind === "image" && (source === "upload" ? !upload.id : !address.trim()));
+
   return (
     <dialog
       ref={dialog}
@@ -977,7 +1381,11 @@ export function DashboardPanelDialog({
         </div>
         <div className="dashboard-panel-body">
           <div className="dashboard-panel-column">
-            {kind === "html" ? htmlSettings : countSettings}
+            {kind === "html"
+              ? htmlSettings
+              : kind === "image"
+                ? imageSettings
+                : countSettings}
             {(error || placementError) && (
               <div role="alert" className="notice error">
                 {error || placementError}
@@ -985,7 +1393,11 @@ export function DashboardPanelDialog({
             )}
           </div>
           <div className="dashboard-panel-column">
-            {kind === "html" ? htmlPreview : countPreview}
+            {kind === "html"
+              ? htmlPreview
+              : kind === "image"
+                ? imagePreview
+                : countPreview}
           </div>
         </div>
         <div className="dashboard-panel-foot">
@@ -995,11 +1407,7 @@ export function DashboardPanelDialog({
           <button type="button" className="btn" onClick={onClose}>
             Cancel
           </button>
-          <button
-            type="submit"
-            className="btn btn-p"
-            disabled={kind === "count" && !selected}
-          >
+          <button type="submit" className="btn btn-p" disabled={blocked}>
             {creating ? "Create panel" : "Apply changes"}
           </button>
         </div>
