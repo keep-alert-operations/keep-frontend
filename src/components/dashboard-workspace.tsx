@@ -58,6 +58,10 @@ function definition(value?: Record<string, unknown>): {
               y: panel.y,
               w: panel.w,
               h: panel.h,
+              // Panels saved before REV-66 have no link.
+              link: panel.link
+                ? { url: panel.link.url, label: panel.link.label ?? null }
+                : null,
             };
             if (isImagePanel(panel))
               return {

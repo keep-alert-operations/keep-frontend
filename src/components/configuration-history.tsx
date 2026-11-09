@@ -67,6 +67,8 @@ interface HistoryPanel {
   team?: string;
   ticket_state?: TicketState;
   detection?: Detection;
+  /** Absent in revisions saved before REV-66. */
+  link?: { url: string; label?: string | null } | null;
 }
 type Kind = "presets" | "dashboards";
 function copyDefinition(definition: Record<string, unknown>, section: Kind) {
@@ -350,6 +352,9 @@ export function ConfigurationHistory({
                           `at least ${item.lower_bound} ${historyColor(item.color)}`,
                       )
                       .join(", ")}`
+                  : ""}
+                {panel.link
+                  ? ` · link ${panel.link.label ? `“${panel.link.label}” to ` : "to "}${panel.link.url}`
                   : ""}
               </span>
             </li>

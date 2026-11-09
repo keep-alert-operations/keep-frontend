@@ -27,6 +27,14 @@ import {
 import { useDirtyWarning } from "@/lib/hooks";
 import { MAX_PANEL_HTML, sanitizePanelHtml } from "@/lib/panel-html";
 import {
+  DEFAULT_LINK_LABEL,
+  MAX_LINK_LABEL,
+  labelProblem,
+  linkProblem,
+  panelLink,
+} from "@/lib/panel-link";
+import { PanelLinkButton } from "./dashboard-panel-link";
+import {
   IMAGE_TYPES,
   MAX_IMAGE_DESCRIPTION,
   addressProblem,
@@ -156,6 +164,8 @@ const layoutOf = (panel: Panel) => ({
   y: panel.y,
   w: panel.w,
   h: panel.h,
+  // Every panel type may have a link (REV-66).
+  link: panel.link ? panelLink(panel.link.url, panel.link.label ?? "") : null,
 });
 function normalized(panel: Panel): Panel {
   const title = (panel.title ?? "").trim().normalize("NFC") || null;
@@ -589,6 +599,13 @@ export function DashboardPanelDialog({
     panel.type === "image" ? (panel.url ?? "") : "",
   );
   const [addressTouched, setAddressTouched] = useState(false);
+  // The panel link follows the panel across types, like the title (REV-66).
+  const [linkAddress, setLinkAddress] = useState(panel.link?.url ?? "");
+  const [linkText, setLinkText] = useState(panel.link?.label ?? "");
+  const [linkTouched, setLinkTouched] = useState(false);
+  const link = panelLink(linkAddress, linkText);
+  // Previews show the button only for an address that can be saved.
+  const shownLink = linkProblem(linkAddress) ? null : link;
   const [linkStatus, setLinkStatus] = useState("loading");
   const [dragging, setDragging] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -625,6 +642,7 @@ export function DashboardPanelDialog({
     ...imageDraft,
     image_id: source === "upload" ? (upload.id ?? null) : null,
     url: source === "link" ? address.trim() || null : null,
+    link: shownLink,
   };
   const rowsValue = /^[1-9][0-9]?$/.test(rowsText.trim())
     ? Number(rowsText.trim())
@@ -636,6 +654,7 @@ export function DashboardPanelDialog({
     title: draft.title,
     type: "table",
     preset_id: draft.preset_id,
+    link: shownLink,
     rows:
       rowsValue !== undefined && rowsValue <= MAX_ROWS
         ? rowsValue
@@ -648,9 +667,10 @@ export function DashboardPanelDialog({
     ...(creating
       ? { w: Math.max(snDraft.w, 3), h: Math.max(snDraft.h, 3) }
       : {}),
+    link: shownLink,
   };
-  const current: Panel =
-    kind === "html"
+  const current: Panel = {
+    ...(kind === "html"
       ? htmlDraft
       : kind === "image"
         ? imagePanel
@@ -658,7 +678,9 @@ export function DashboardPanelDialog({
           ? tableDraft
           : kind === "servicenow"
             ? servicenowDraft
-            : draft;
+            : draft),
+    link,
+  };
   const title = current.title ?? "";
   const dirty =
     JSON.stringify(normalized(current)) !== JSON.stringify(baseline.current);
@@ -967,6 +989,15 @@ export function DashboardPanelDialog({
       invalid("Use a single-line title of up to 120 characters.", "title");
       return;
     }
+    if (linkProblem(linkAddress)) {
+      setLinkTouched(true);
+      invalid(linkProblem(linkAddress), "link-url");
+      return;
+    }
+    if (link && labelProblem(linkText)) {
+      invalid(labelProblem(linkText), "link-label");
+      return;
+    }
     if (kind === "image") {
       if (source === "upload" && !upload.id) {
         invalid(
@@ -1019,7 +1050,7 @@ export function DashboardPanelDialog({
         invalid(...problem);
         return;
       }
-      onApply({ ...servicenowDraft, title: trimmed || null, team });
+      onApply({ ...servicenowDraft, title: trimmed || null, team, link });
       return;
     }
     if (kind === "html") {
@@ -1030,7 +1061,7 @@ export function DashboardPanelDialog({
         );
         return;
       }
-      onApply({ ...htmlDraft, title: trimmed || null });
+      onApply({ ...htmlDraft, title: trimmed || null, link });
       return;
     }
     if (!selected) {
@@ -1042,7 +1073,7 @@ export function DashboardPanelDialog({
         invalid(`Show from 1 to ${MAX_ROWS} alerts.`, "rows");
         return;
       }
-      onApply({ ...tableDraft, title: trimmed || null, rows: rowsValue });
+      onApply({ ...tableDraft, title: trimmed || null, rows: rowsValue, link });
       return;
     }
     const problem = thresholdProblem(thresholds);
@@ -1050,7 +1081,7 @@ export function DashboardPanelDialog({
       invalid(...problem);
       return;
     }
-    onApply({ ...draft, title: trimmed || null, thresholds });
+    onApply({ ...draft, title: trimmed || null, thresholds, link });
   }
 
   const titleField = (
@@ -1249,7 +1280,7 @@ export function DashboardPanelDialog({
     <Preview panel={draft}>
       <CountTile
         scope={scope}
-        panel={{ ...draft, thresholds }}
+        panel={{ ...draft, thresholds, link: shownLink }}
         title={title.trim() || selectedName || "Select a preset"}
         presetName={selected ? display(selected.name) : undefined}
         value={counted}
@@ -1339,6 +1370,8 @@ export function DashboardPanelDialog({
         >
           <span className="pn-head">
             <span className="pn-title">Select a preset</span>
+            <span style={{ flexGrow: 1 }} />
+            <PanelLinkButton link={shownLink} />
           </span>
           <p className="small muted pnt-state">
             Choose a preset to see its latest alerts
@@ -1526,9 +1559,11 @@ export function DashboardPanelDialog({
         aria-label={`${title.trim() || "HTML panel"} preview`}
         style={previewSize(htmlDraft)}
       >
-        {title.trim() && (
+        {(title.trim() || shownLink) && (
           <span className="pn-head">
-            <span className="pn-title">{title.trim()}</span>
+            {title.trim() && <span className="pn-title">{title.trim()}</span>}
+            <span style={{ flexGrow: 1 }} />
+            <PanelLinkButton link={shownLink} />
           </span>
         )}
         <div
@@ -1770,6 +1805,82 @@ export function DashboardPanelDialog({
       />
     </Preview>
   );
+  const shownLinkProblem = linkTouched ? linkProblem(linkAddress) : "";
+  const linkSection = (
+    <fieldset className="dashboard-panel-link">
+      <legend className="lbl">Panel link</legend>
+      <p className="help">
+        Adds a button to the panel that opens this address in a new tab.
+      </p>
+      <div className="dashboard-panel-link-fields">
+        <div className="f">
+          <label className="lbl" htmlFor={`${id}-link-url`}>
+            Link (optional)
+          </label>
+          <input
+            id={`${id}-link-url`}
+            name="link-url"
+            type="url"
+            inputMode="url"
+            className="inp"
+            spellCheck={false}
+            autoComplete="off"
+            placeholder="https://"
+            value={linkAddress}
+            aria-invalid={shownLinkProblem ? true : undefined}
+            aria-describedby={`${id}-link-url-help${shownLinkProblem ? ` ${id}-link-url-error` : ""}`}
+            onChange={(event) => {
+              setLinkAddress(event.target.value);
+              setError("");
+            }}
+            onBlur={() => setLinkTouched(true)}
+          />
+          {shownLinkProblem && (
+            <span className="dashboard-panel-error" id={`${id}-link-url-error`}>
+              {shownLinkProblem}
+            </span>
+          )}
+          <span className="help" id={`${id}-link-url-help`}>
+            Starts with https:// or http://. Leave blank for no button.
+          </span>
+        </div>
+        <label className="f">
+          <span className="lbl">Button text (optional)</span>
+          <input
+            name="link-label"
+            className="inp"
+            placeholder={DEFAULT_LINK_LABEL}
+            value={linkText}
+            disabled={!linkAddress.trim()}
+            onChange={(event) => {
+              setLinkText(event.target.value);
+              setError("");
+            }}
+            aria-describedby={`${id}-link-label-help`}
+          />
+          <span className="help" id={`${id}-link-label-help`}>
+            Up to {MAX_LINK_LABEL} characters. Blank shows “{DEFAULT_LINK_LABEL}
+            ”.
+          </span>
+        </label>
+      </div>
+      {(linkAddress || linkText) && (
+        <button
+          type="button"
+          className="btn btn-sm"
+          onClick={() => {
+            setLinkAddress("");
+            setLinkText("");
+            setLinkTouched(false);
+            setError("");
+            document.getElementById(`${id}-link-url`)?.focus();
+          }}
+        >
+          Remove link
+        </button>
+      )}
+    </fieldset>
+  );
   const blocked =
     ((kind === "count" || kind === "table") && !selected) ||
     (kind === "image" && (source === "upload" ? !upload.id : !address.trim()));
@@ -1863,6 +1974,7 @@ export function DashboardPanelDialog({
                   : kind === "table"
                     ? tableSettings
                     : countSettings}
+            {linkSection}
             {(error || placementError) && (
               <div role="alert" className="notice error">
                 {error || placementError}

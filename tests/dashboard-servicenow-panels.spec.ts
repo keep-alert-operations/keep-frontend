@@ -715,3 +715,29 @@ test("other users don't see Integrations", async ({ page }) => {
     page.getByRole("button", { name: "Test connection" }),
   ).toHaveCount(0);
 });
+
+test("a ServiceNow panel shows its panel link like every panel type", async ({
+  page,
+}) => {
+  // Requirements: REV-66 (with REV-65); dashboard operations 3 and 16.
+  await setup(page, [
+    sn(0, "NOC", {
+      title: "Night shift",
+      link: { url: "https://servicenow.example/queue/noc", label: "Queue" },
+    }),
+    sn(1, "Network"),
+  ]);
+  const tile = page.getByRole("article", { name: /^Night shift: 27/ });
+  const button = tile.getByRole("link", { name: "Queue (opens in a new tab)" });
+  await expect(button).toHaveAttribute(
+    "href",
+    "https://servicenow.example/queue/noc",
+  );
+  await expect(button).toHaveAttribute("target", "_blank");
+  await expect(button).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(
+    page
+      .getByRole("article", { name: /^Network tickets/ })
+      .getByRole("link", { name: /opens in a new tab/ }),
+  ).toHaveCount(0);
+});

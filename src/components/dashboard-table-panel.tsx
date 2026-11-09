@@ -21,6 +21,7 @@ import { SuppressedChip } from "./dismiss-dialog";
 import { NavLink } from "./page";
 import type { Scope } from "./workspace";
 import type { TablePanel } from "./dashboard-counts";
+import { PanelLinkButton } from "./dashboard-panel-link";
 
 /** What a table panel shows: its preset's latest alerts (REV-63). */
 interface Latest {
@@ -343,6 +344,7 @@ export function TableTile({
         <span className="pnt-meta">
           Latest {panel.rows.toLocaleString()} · newest first
         </span>
+        <PanelLinkButton link={panel.link} inactive={layoutActive} />
       </span>
       {/* The preset line only adds something under a custom title, and needs room. */}
       {presetName && title !== presetName && panel.h >= 4 && (

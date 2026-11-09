@@ -19,6 +19,7 @@ import {
   type TicketResult,
 } from "@/lib/ticket-counts";
 import type { Scope } from "./workspace";
+import { PanelLinkButton } from "./dashboard-panel-link";
 import {
   isServiceNowPanel,
   thresholdFor,
@@ -161,7 +162,8 @@ const minutesSince = (value: string) =>
 /**
  * One ServiceNow panel (REV-65): the title, the "Team · State · Detection" line
  * and the team's count, centered, with the top bar colored by the highest
- * threshold reached. It has no link; tickets are only counted, never changed.
+ * threshold reached. Tickets are only counted, never changed; like every panel it
+ * may carry a panel link (REV-66).
  */
 export function ServiceNowTile({
   panel,
@@ -285,6 +287,8 @@ export function ServiceNowTile({
     >
       <span className="pn-head">
         <span className="pn-title">{title}</span>
+        <span style={{ flexGrow: 1 }} />
+        <PanelLinkButton link={panel.link} inactive={layoutActive} />
       </span>
       <span className="sub">{filterLine(queryOf(panel))}</span>
       {shown !== undefined ? (
