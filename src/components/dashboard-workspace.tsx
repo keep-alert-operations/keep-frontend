@@ -22,8 +22,11 @@ import {
   DashboardBoard,
   CountTile,
   HtmlTile,
+  ImageTile,
+  contentPanelName,
   isCountPanel,
   isHtmlPanel,
+  isImagePanel,
   isTablePanel,
   type DashboardModel,
   type Panel,
@@ -49,6 +52,15 @@ function definition(value?: Record<string, unknown>): {
               w: panel.w,
               h: panel.h,
             };
+            if (isImagePanel(panel))
+              return {
+                ...layout,
+                type: "image",
+                image_id: panel.image_id ?? null,
+                url: panel.url ?? null,
+                fit: panel.fit ?? "contain",
+                alt: panel.alt ?? null,
+              };
             if (isTablePanel(panel))
               return {
                 ...layout,
@@ -315,11 +327,9 @@ export function DashboardWorkspace({
         );
   const panelLabel = (panel: Panel) =>
     panel.title ??
-    (isHtmlPanel(panel)
-      ? "HTML panel"
-      : isTablePanel(panel)
-        ? "Alert table"
-        : observation(panel)?.preset_name) ??
+    (isCountPanel(panel)
+      ? observation(panel)?.preset_name
+      : contentPanelName(panel)) ??
     "Panel";
   function editPanel(panelId: string) {
     const panel = draft.panels.find((item) => item.id === panelId);
@@ -749,7 +759,16 @@ export function DashboardWorkspace({
                   layoutStyle={style}
                 />
               );
-            return isHtmlPanel(panel) ? (
+            return isImagePanel(panel) ? (
+              <ImageTile
+                key={panel.id}
+                tenantId={scope.tenant.id}
+                panel={panel}
+                layoutControls={layoutControls}
+                layoutActive={active}
+                layoutStyle={style}
+              />
+            ) : isHtmlPanel(panel) ? (
               <HtmlTile
                 key={panel.id}
                 panel={panel}

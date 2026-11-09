@@ -420,6 +420,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/tenants/{tenant_id}/dashboard-images": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Upload Image
+     * @description Store a PNG, JPEG, GIF or WebP file of at most 5 MiB for image panels.
+     */
+    post: operations["upload_image_api_tenants__tenant_id__dashboard_images_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/tenants/{tenant_id}/dashboard-images/{image_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Read Image
+     * @description Serve an uploaded image to anyone who can read the tenant.
+     */
+    get: operations["read_image_api_tenants__tenant_id__dashboard_images__image_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/tenants/{tenant_id}/presets/{resource_id}/history": {
     parameters: {
       query?: never;
@@ -2170,6 +2210,7 @@ export interface components {
       panels: (
         | components["schemas"]["Panel"]
         | components["schemas"]["HtmlPanel"]
+        | components["schemas"]["ImagePanel"]
         | components["schemas"]["TablePanel"]
       )[];
       /** Command Id */
@@ -2183,6 +2224,7 @@ export interface components {
       panels: (
         | components["schemas"]["Panel"]
         | components["schemas"]["HtmlPanel"]
+        | components["schemas"]["ImagePanel"]
         | components["schemas"]["TablePanel"]
       )[];
     };
@@ -2194,6 +2236,7 @@ export interface components {
       panels: (
         | components["schemas"]["Panel"]
         | components["schemas"]["HtmlPanel"]
+        | components["schemas"]["ImagePanel"]
         | components["schemas"]["TablePanel"]
       )[];
       /** Preset Revisions */
@@ -2209,6 +2252,7 @@ export interface components {
       panels: (
         | components["schemas"]["Panel"]
         | components["schemas"]["HtmlPanel"]
+        | components["schemas"]["ImagePanel"]
         | components["schemas"]["TablePanel"]
       )[];
       /** Command Id */
@@ -2315,6 +2359,41 @@ export interface components {
       type: "html";
       /** Html */
       html: string;
+    };
+    /**
+     * ImagePanel
+     * @description A panel showing an uploaded image or an https image address (REV-62).
+     */
+    ImagePanel: {
+      /** Id */
+      id: string;
+      /** Title */
+      title?: string | null;
+      /** X */
+      x: number;
+      /** Y */
+      y: number;
+      /** W */
+      w: number;
+      /** H */
+      h: number;
+      /**
+       * Type
+       * @constant
+       */
+      type: "image";
+      /** Image Id */
+      image_id?: string | null;
+      /** Url */
+      url?: string | null;
+      /**
+       * Fit
+       * @default contain
+       * @enum {string}
+       */
+      fit: "contain" | "cover";
+      /** Alt */
+      alt?: string | null;
     };
     /** IncidentAssignment */
     IncidentAssignment: {
@@ -4315,6 +4394,88 @@ export interface operations {
         content: {
           "application/json": unknown;
         };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  upload_image_api_tenants__tenant_id__dashboard_images_post: {
+    parameters: {
+      query?: never;
+      header: {
+        "Idempotency-Key": string;
+      };
+      path: {
+        tenant_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "image/png": string;
+        "image/jpeg": string;
+        "image/gif": string;
+        "image/webp": string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  read_image_api_tenants__tenant_id__dashboard_images__image_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        tenant_id: string;
+        image_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/png": string;
+          "image/jpeg": string;
+          "image/gif": string;
+          "image/webp": string;
+        };
+      };
+      /** @description The cached image is current. */
+      304: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description Validation Error */
       422: {

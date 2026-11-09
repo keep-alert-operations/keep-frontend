@@ -169,6 +169,70 @@
   font-size: 13.5px;
   font-weight: 600;
 }
+
+/* Image panels (REV-62): the picture fills the card below the optional title;
+   without a title it fills the whole card. */
+.pn-img {
+  border-top-width: 1px;
+  padding: 14px 16px;
+  gap: 10px;
+}
+.pn-img-bare {
+  padding: 0;
+}
+.pn-img-box {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.pn-img-bare .pn-img-box {
+  border-radius: 0;
+}
+.pn-img-box img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+}
+.pn-img-box[data-image-state="loading"] img {
+  visibility: hidden;
+}
+.pn-img-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--subtle);
+}
+.pn-img-failed {
+  background: var(--warning-bg);
+  border: 1px dashed var(--warning-line);
+  border-radius: inherit;
+  color: var(--warning);
+}
+.pn-img-failed b {
+  font-weight: 600;
+}
+.pn-img-failed a {
+  color: var(--warning);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.pn-img-failed a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
 .pn-html-body strong,
 .pn-html-body b {
   color: var(--text);
