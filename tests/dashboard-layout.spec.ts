@@ -268,6 +268,12 @@ test("unchanged panel edits, Cancel, and creating then deleting a draft panel ke
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(tile(page, "First")).toBeVisible();
   await expect(save).toBeDisabled();
+  dialog = await editPanel(page, "First");
+  await dialog.getByLabel("Custom title (optional)").fill("Closed");
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(tile(page, "First")).toBeVisible();
+  await expect(save).toBeDisabled();
   await page.getByRole("button", { name: "Create panel", exact: true }).click();
   const create = page.getByRole("dialog", {
     name: "Create panel",

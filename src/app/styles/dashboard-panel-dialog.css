@@ -30,6 +30,16 @@
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
 }
+.dashboard-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dashboard-panel-close {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 0 8px;
+}
 .dashboard-panel-body {
   flex: 1 1 auto;
   min-height: 0;
