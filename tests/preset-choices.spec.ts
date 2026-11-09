@@ -108,10 +108,7 @@ test("dashboard preset choices page and search without losing selected reference
 }) => {
   const state = await setup(page);
   const dialog = page.getByRole("dialog");
-  const picker = dialog.getByRole("combobox", {
-    name: "Saved preset",
-    exact: true,
-  });
+  const picker = dialog.getByRole("combobox", { name: "Preset", exact: true });
   // One input both searches and selects; there is no separate search box.
   await expect(dialog.getByRole("searchbox")).toHaveCount(0);
   await picker.click();
@@ -161,22 +158,16 @@ test("changed preset collection preserves the dashboard draft and can restart", 
   page,
 }) => {
   const state = await setup(page);
-  await page
-    .getByLabel("Custom title (optional)")
-    .fill("Preserved panel draft");
-  await page
-    .getByRole("combobox", { name: "Saved preset", exact: true })
-    .click();
+  await page.getByLabel("Title (optional)").fill("Preserved panel draft");
+  await page.getByRole("combobox", { name: "Preset", exact: true }).click();
   await page.getByRole("option", { name: "First preset" }).click();
   state.expired = true;
-  await page
-    .getByRole("combobox", { name: "Saved preset", exact: true })
-    .click();
+  await page.getByRole("combobox", { name: "Preset", exact: true }).click();
   await page.getByRole("button", { name: "Next page" }).click();
   await expect(
     page.getByText("Configuration changed; restart the list."),
   ).toBeVisible();
-  await expect(page.getByLabel("Custom title (optional)")).toHaveValue(
+  await expect(page.getByLabel("Title (optional)")).toHaveValue(
     "Preserved panel draft",
   );
   await page.getByRole("button", { name: "Retry loading presets" }).click();
@@ -184,7 +175,7 @@ test("changed preset collection preserves the dashboard draft and can restart", 
     page.getByText("Configuration changed; restart the list."),
   ).toHaveCount(0);
   await expect(
-    page.getByRole("combobox", { name: "Saved preset", exact: true }),
+    page.getByRole("combobox", { name: "Preset", exact: true }),
   ).toHaveValue("First preset");
 });
 
@@ -193,10 +184,7 @@ test("dashboard preset field keeps the dialog open while closing its list", asyn
 }) => {
   await setup(page);
   const dialog = page.getByRole("dialog");
-  const picker = dialog.getByRole("combobox", {
-    name: "Saved preset",
-    exact: true,
-  });
+  const picker = dialog.getByRole("combobox", { name: "Preset", exact: true });
   const closed = await dialog.boundingBox();
   await picker.press("ArrowDown");
   await expect(picker).toHaveAttribute("aria-expanded", "true");
@@ -214,7 +202,7 @@ test("dashboard preset field keeps the dialog open while closing its list", asyn
   await expect(picker).toHaveValue("First preset");
   // Leaving the field without choosing keeps the selection.
   await picker.fill("Lat");
-  await dialog.getByLabel("Custom title (optional)").focus();
+  await dialog.getByLabel("Title (optional)").focus();
   await expect(picker).toHaveValue("First preset");
   await expect(
     dialog.getByRole("button", { name: "Create panel", exact: true }),
