@@ -526,6 +526,7 @@
   .dashboard-panel-fits {
     grid-template-columns: minmax(0, 1fr);
   }
+}
 
 /* Alert table settings (REV-63). */
 .dashboard-panel-rows {
