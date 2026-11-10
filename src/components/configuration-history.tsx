@@ -25,6 +25,11 @@ import {
 } from "@/lib/ticket-counts";
 import { CelCode, PresetEditor } from "./definition-editor";
 import { groupFieldLabel } from "./alert-groups";
+import {
+  defaultIncidentTitle,
+  statusLine,
+  type IncidentStatus,
+} from "@/lib/incident-counts";
 import { ErrorNotice } from "./ui";
 import { NavLink, Page } from "./page";
 
@@ -57,13 +62,21 @@ interface Detail {
 interface HistoryPanel {
   id?: string;
   /** Absent in revisions saved before REV-57, which hold only count panels. */
-  type?: "count" | "html" | "image" | "table" | "servicenow" | "grafana";
+  type?:
+    | "count"
+    | "html"
+    | "image"
+    | "table"
+    | "servicenow"
+    | "grafana"
+    | "incident_count";
   preset_id?: string;
   title?: string | null;
   w?: number;
   h?: number;
   thresholds?: { lower_bound: string; color: string }[];
   rows?: number;
+  incident_status?: IncidentStatus;
   team?: string;
   ticket_state?: TicketState;
   detection?: Detection;
@@ -323,7 +336,11 @@ export function ConfigurationHistory({
                 {panel.title ??
                   (panel.type === "servicenow"
                     ? defaultTitle(panel.team ?? "")
-                    : undefined) ??
+                    : panel.type === "incident_count" && panel.preset_id
+                      ? defaultIncidentTitle(
+                          names.get(panel.preset_id) ?? panel.preset_id,
+                        )
+                      : undefined) ??
                   (panel.preset_id ? names.get(panel.preset_id) : undefined) ??
                   "Untitled panel"}
               </b>
@@ -343,9 +360,11 @@ export function ConfigurationHistory({
                         ? "Grafana panel"
                         : panel.type === "table" && panel.preset_id
                           ? `Alert table · latest ${panel.rows ?? 10} of ${names.get(panel.preset_id) ?? panel.preset_id}`
-                          : panel.preset_id
-                            ? `Preset: ${names.get(panel.preset_id) ?? panel.preset_id}`
-                            : "No preset"}
+                          : panel.type === "incident_count" && panel.preset_id
+                            ? `Incident count · ${names.get(panel.preset_id) ?? panel.preset_id} · ${statusLine(panel.incident_status ?? "both")}`
+                            : panel.preset_id
+                              ? `Preset: ${names.get(panel.preset_id) ?? panel.preset_id}`
+                              : "No preset"}
                 {` · ${panel.w ?? "?"} × ${panel.h ?? "?"}`}
                 {panel.thresholds?.length
                   ? ` · ${panel.thresholds

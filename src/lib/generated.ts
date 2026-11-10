@@ -2334,6 +2334,7 @@ export interface components {
         | components["schemas"]["TablePanel"]
         | components["schemas"]["ServiceNowPanel"]
         | components["schemas"]["GrafanaPanel"]
+        | components["schemas"]["IncidentCountPanel"]
       )[];
       /** Command Id */
       command_id: string;
@@ -2350,6 +2351,7 @@ export interface components {
         | components["schemas"]["TablePanel"]
         | components["schemas"]["ServiceNowPanel"]
         | components["schemas"]["GrafanaPanel"]
+        | components["schemas"]["IncidentCountPanel"]
       )[];
     };
     /** DashboardPreview */
@@ -2364,6 +2366,7 @@ export interface components {
         | components["schemas"]["TablePanel"]
         | components["schemas"]["ServiceNowPanel"]
         | components["schemas"]["GrafanaPanel"]
+        | components["schemas"]["IncidentCountPanel"]
       )[];
       /** Preset Revisions */
       preset_revisions: {
@@ -2382,6 +2385,7 @@ export interface components {
         | components["schemas"]["TablePanel"]
         | components["schemas"]["ServiceNowPanel"]
         | components["schemas"]["GrafanaPanel"]
+        | components["schemas"]["IncidentCountPanel"]
       )[];
       /** Command Id */
       command_id: string;
@@ -2648,6 +2652,46 @@ export interface components {
       title: string;
       /** Description */
       description: string;
+    };
+    /**
+     * IncidentCountPanel
+     * @description A panel counting the incidents its preset's alerts are in (REV-69).
+     *
+     *     It references a preset like a count panel and counts the distinct incidents that
+     *     actively own at least one alert the preset counts and whose status is
+     *     ``incident_status`` (``open``, shown as Firing, ``investigating``, or ``both``);
+     *     resolved incidents never count. ``thresholds`` color the count like a count
+     *     panel's.
+     */
+    IncidentCountPanel: {
+      /** Id */
+      id: string;
+      /** Title */
+      title?: string | null;
+      /** X */
+      x: number;
+      /** Y */
+      y: number;
+      /** W */
+      w: number;
+      /** H */
+      h: number;
+      link?: components["schemas"]["PanelLink"] | null;
+      /**
+       * Type
+       * @constant
+       */
+      type: "incident_count";
+      /** Preset Id */
+      preset_id: string;
+      /**
+       * Incident Status
+       * @default both
+       * @enum {string}
+       */
+      incident_status: "open" | "investigating" | "both";
+      /** Thresholds */
+      thresholds?: components["schemas"]["Threshold"][];
     };
     /** IncidentCreate */
     IncidentCreate: {
@@ -3066,6 +3110,8 @@ export interface components {
        * @default false
        */
       include_suppressed: boolean;
+      /** Incident Status */
+      incident_status?: ("open" | "investigating" | "both") | null;
     };
     /** QuickCountRequest */
     QuickCountRequest: {

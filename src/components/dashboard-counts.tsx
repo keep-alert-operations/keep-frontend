@@ -38,6 +38,11 @@ import {
 import { PanelLinkButton } from "./dashboard-panel-link";
 import { GrafanaTile, useGrafanaStatus } from "./dashboard-grafana-panel";
 import type { PanelLink } from "@/lib/panel-link";
+import {
+  defaultIncidentTitle,
+  statusLine,
+  type IncidentStatus,
+} from "@/lib/incident-counts";
 
 interface PanelLayout {
   id: string;
@@ -87,13 +92,21 @@ export interface GrafanaPanel extends PanelLayout {
   type: "grafana";
   url: string;
 }
+/** A panel counting the incidents its preset's alerts are in (REV-69). */
+export interface IncidentCountPanel extends PanelLayout {
+  type: "incident_count";
+  preset_id: string;
+  incident_status: IncidentStatus;
+  thresholds?: { lower_bound: string; color: string }[];
+}
 export type Panel =
   | CountPanel
   | HtmlPanel
   | ImagePanel
   | TablePanel
   | ServiceNowPanel
-  | GrafanaPanel;
+  | GrafanaPanel
+  | IncidentCountPanel;
 export const isHtmlPanel = (panel: Panel): panel is HtmlPanel =>
   panel.type === "html";
 export const isImagePanel = (panel: Panel): panel is ImagePanel =>
@@ -106,7 +119,21 @@ export const isGrafanaPanel = (panel: Panel): panel is GrafanaPanel =>
   panel.type === "grafana";
 export const isCountPanel = (panel: Panel): panel is CountPanel =>
   (panel.type ?? "count") === "count";
-export const countPanels = (panels: Panel[]) => panels.filter(isCountPanel);
+export const isIncidentCountPanel = (
+  panel: Panel,
+): panel is IncidentCountPanel => panel.type === "incident_count";
+/** Panels the dashboard's count batch counts: alert and incident counts (REV-69). */
+export type CountedPanel = CountPanel | IncidentCountPanel;
+export const isCountedPanel = (panel: Panel): panel is CountedPanel =>
+  isCountPanel(panel) || isIncidentCountPanel(panel);
+export const countPanels = (panels: Panel[]) => panels.filter(isCountedPanel);
+/** A counted panel's title when it has none, from its preset's name. */
+export const countedTitle = (panel: CountedPanel, presetName?: string) =>
+  presetName === undefined
+    ? undefined
+    : isIncidentCountPanel(panel)
+      ? defaultIncidentTitle(presetName)
+      : presetName;
 /** The name of a panel without a counted preset to name it. */
 export const contentPanelName = (panel: Panel) =>
   isHtmlPanel(panel)
@@ -130,6 +157,9 @@ interface PanelCount {
   preset_id: string;
   preset_name?: string;
   count?: string;
+  /** Incident count panels: matching alerts and those in a counted incident (REV-69). */
+  alerts?: string;
+  linked_alerts?: string;
   error?: unknown;
 }
 interface Batch {
@@ -480,7 +510,7 @@ export function CountTile({
   layoutStyle,
 }: {
   scope: Scope;
-  panel: CountPanel;
+  panel: CountedPanel;
   title: string;
   presetName?: string;
   value?: string;
@@ -528,6 +558,9 @@ export function CountTile({
     <article
       className={`pn ${tone ? "pn-toned" : "pn-none"} ${isStale ? "pn-stale" : ""} ${selected ? "pn-selected" : ""} ${layoutControls ? "de-tile" : ""} ${layoutActive ? "de-tile-active" : ""}`}
       aria-label={`${title} count`}
+      data-panel-type={
+        isIncidentCountPanel(panel) ? "incident_count" : undefined
+      }
       data-layout-panel={panel.id}
       data-threshold-color={tone}
       style={
@@ -560,8 +593,17 @@ export function CountTile({
         {isStale && <span className="chip b-dash">Stale</span>}
         <PanelLinkButton link={panel.link} inactive={layoutActive} />
       </span>
-      {presetName && (panel.title || panel.h >= 3) && (
-        <span className="sub">Preset: {presetName}</span>
+      {isIncidentCountPanel(panel) ? (
+        // An incident count always says what it counts (REV-69).
+        <span className="sub">
+          {presetName ? `${presetName} · ` : ""}
+          {statusLine(panel.incident_status)}
+        </span>
+      ) : (
+        presetName &&
+        (panel.title || panel.h >= 3) && (
+          <span className="sub">Preset: {presetName}</span>
+        )
       )}
       {/* The number is centered in the space left and scales with the panel. */}
       <span className="pn-value">
@@ -923,7 +965,7 @@ export function DashboardBoard({
     const presetName = observation?.preset_name;
     const title =
       panel.title ??
-      presetName ??
+      countedTitle(panel, presetName) ??
       (code === "preset_unavailable" ? "Preset unavailable" : "Open preset");
     return (
       <CountTile
@@ -937,7 +979,9 @@ export function DashboardBoard({
           failed
             ? code === "preset_unavailable"
               ? "Unavailable · the preset was deleted"
-              : "Unavailable"
+              : code === "incident_count_too_large"
+                ? "Too many incidents to count"
+                : "Unavailable"
             : undefined
         }
         placeholder={
@@ -989,8 +1033,8 @@ export function DashboardBoard({
             disabled={editing.disabled}
             label={(panel) =>
               panel.title ??
-              (isCountPanel(panel)
-                ? names.get(panel.preset_id)
+              (isCountedPanel(panel)
+                ? countedTitle(panel, names.get(panel.preset_id))
                 : contentPanelName(panel)) ??
               "Panel"
             }
