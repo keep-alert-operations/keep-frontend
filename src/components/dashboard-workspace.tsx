@@ -24,9 +24,11 @@ import {
   HtmlTile,
   ImageTile,
   contentPanelName,
-  isCountPanel,
+  countedTitle,
+  isCountedPanel,
   isGrafanaPanel,
   isHtmlPanel,
+  isIncidentCountPanel,
   isImagePanel,
   isServiceNowPanel,
   isTablePanel,
@@ -94,6 +96,17 @@ function definition(value?: Record<string, unknown>): {
                 type: "table",
                 preset_id: panel.preset_id,
                 rows: panel.rows,
+              };
+            if (isIncidentCountPanel(panel))
+              return {
+                ...layout,
+                type: "incident_count",
+                preset_id: panel.preset_id,
+                incident_status: panel.incident_status,
+                thresholds: (panel.thresholds ?? []).map((item) => ({
+                  lower_bound: String(item.lower_bound),
+                  color: item.color,
+                })),
               };
             return isHtmlPanel(panel)
               ? { ...layout, type: "html", html: panel.html }
@@ -352,7 +365,7 @@ export function DashboardWorkspace({
     !model && draft.panels.some(isGrafanaPanel),
   );
   const observation = (panel: Panel) =>
-    !isCountPanel(panel)
+    !isCountedPanel(panel)
       ? undefined
       : model?.state.batch?.panels.find(
           (item) =>
@@ -360,8 +373,8 @@ export function DashboardWorkspace({
         );
   const panelLabel = (panel: Panel) =>
     panel.title ??
-    (isCountPanel(panel)
-      ? observation(panel)?.preset_name
+    (isCountedPanel(panel)
+      ? countedTitle(panel, observation(panel)?.preset_name)
       : contentPanelName(panel)) ??
     "Panel";
   function editPanel(panelId: string) {

@@ -318,6 +318,8 @@ test("the dialog reports the first broken address rule", async ({ page }) => {
   await setup(page, [count]);
   const { dialog, address } = await chooseGrafana(page);
   const error = dialog.getByRole("alert");
+  // Keep's own origin is wherever the test server runs.
+  const own = new URL(page.url()).origin;
   const cases: [string, string][] = [
     [
       "<p>No frame here</p>",
@@ -333,7 +335,7 @@ test("the dialog reports the first broken address rule", async ({ page }) => {
       "The address must start with https://.",
     ],
     [
-      "http://127.0.0.1:3447/d-solo/a/b",
+      `${own}/d-solo/a/b`,
       "Keep's own pages can't be shown in a Grafana panel.",
     ],
     [
@@ -664,6 +666,7 @@ test("super admins see the allowed Grafana and the settings for Grafana admins",
     },
   });
   const card = page.getByRole("region", { name: "Grafana panels" });
+  const own = new URL(page.url()).origin;
   await expect(card).toContainText("On");
   const rows = card.getByRole("row");
   await expect(rows).toHaveCount(3);
@@ -677,12 +680,12 @@ test("super admins see the allowed Grafana and the settings for Grafana admins",
   );
   await expect(card).toContainText("KEEP_GRAFANA_PANEL_ORIGINS");
   await expect(card).toContainText("allow_embedding = true");
-  await expect(card).toContainText("frame-ancestors http://127.0.0.1:3447;");
+  await expect(card).toContainText(`frame-ancestors ${own};`);
   await card.getByRole("button", { name: "Copy for Grafana admins" }).click();
   await expect(card.getByText(/^Copied\./)).toBeVisible();
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toContain("allow_embedding = true");
-  expect(copied).toContain("frame-ancestors http://127.0.0.1:3447;");
+  expect(copied).toContain(`frame-ancestors ${own};`);
   // Read-only: nothing to type or save.
   await expect(card.getByRole("textbox")).toHaveCount(0);
 });

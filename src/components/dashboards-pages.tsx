@@ -10,7 +10,7 @@ import { NavLink, Page, personLabel, RelativeTime, SearchInput } from "./page";
 import { DashboardWorkspace } from "./dashboard-workspace";
 import { ConfigurationHistory } from "./configuration-history";
 import {
-  isCountPanel,
+  isCountedPanel,
   isServiceNowPanel,
   useDashboard,
   type Panel,
@@ -97,7 +97,7 @@ function miniTones(row: RecordData) {
   const tones = panels
     ? panels.slice(0, 6).map((panel) => {
         const thresholds =
-          isCountPanel(panel) || isServiceNowPanel(panel)
+          isCountedPanel(panel) || isServiceNowPanel(panel)
             ? (panel.thresholds ?? [])
             : [];
         return thresholds.length

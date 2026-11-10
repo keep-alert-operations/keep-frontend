@@ -742,3 +742,57 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+/* Incident count settings (REV-69): two plain status checkboxes and the preview's
+   numbers behind the count. */
+.dashboard-panel-statuses {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dashboard-panel-statuses legend {
+  padding: 0;
+  margin-bottom: 2px;
+}
+.dashboard-panel-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+}
+.dashboard-panel-checks label {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+.dashboard-panel-checks input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.dashboard-panel-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.dashboard-panel-facts dt {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  text-align: right;
+}
+.dashboard-panel-facts dd {
+  margin: 0;
+}

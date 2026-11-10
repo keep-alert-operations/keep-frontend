@@ -49,10 +49,19 @@ import {
   type GrafanaPanel,
   type HtmlPanel,
   type ImagePanel,
+  type IncidentCountPanel,
   type Panel,
   type ServiceNowPanel,
   type TablePanel,
 } from "./dashboard-counts";
+import {
+  INCIDENT_STATUSES,
+  counts as countsStatus,
+  defaultIncidentTitle,
+  incidentStatus,
+  previewIncidents,
+  type IncidentNumbers,
+} from "@/lib/incident-counts";
 import { TableTile } from "./dashboard-table-panel";
 import { ServiceNowTile, type TicketEntry } from "./dashboard-servicenow-panel";
 import {
@@ -89,7 +98,14 @@ import { ErrorNotice } from "./ui";
 import "../app/styles/dashboard-panel-dialog.css";
 
 const decimal = /^(0|[1-9][0-9]*)$/;
-type Kind = "count" | "html" | "image" | "table" | "servicenow" | "grafana";
+type Kind =
+  | "count"
+  | "html"
+  | "image"
+  | "table"
+  | "servicenow"
+  | "grafana"
+  | "incident_count";
 type Threshold = { lower_bound: string; color: string };
 const MAX_ROWS = 50;
 type Source = "upload" | "link";
@@ -137,6 +153,13 @@ const TYPES: {
     name: "Alert count",
     description: "Exact count from a saved preset, with color thresholds.",
     icon: glyph("M9 4 7 20M17 4l-2 16M4 9h17M3 15h17"),
+  },
+  {
+    id: "incident_count",
+    name: "Incident count",
+    description:
+      "How many incidents the alerts in a saved preset are in, with color thresholds.",
+    icon: glyph("M12 3 2 8l10 5 10-5-10-5zM2 16l10 5 10-5M2 12l10 5 10-5"),
   },
   {
     id: "table",
@@ -227,6 +250,15 @@ function normalized(panel: Panel): Panel {
       type: "table",
       preset_id: panel.preset_id,
       rows: panel.rows,
+    };
+  if (panel.type === "incident_count")
+    return {
+      ...layoutOf(panel),
+      title,
+      type: "incident_count",
+      preset_id: panel.preset_id,
+      incident_status: panel.incident_status,
+      thresholds: (panel.thresholds ?? []).map((item) => ({ ...item })),
     };
   if (panel.type === "image")
     return {
@@ -570,14 +602,31 @@ export function DashboardPanelDialog({
   const baseline = useRef<Panel>(normalized(panel));
   const [kind, setKind] = useState<Kind>(panel.type ?? "count");
   // Each type keeps its own draft, so switching types while creating loses nothing.
-  // Count and table panels share the preset choice and title (REV-63).
+  // Count, incident count and table panels share the preset choice and title
+  // (REV-63, REV-69); count and incident count panels share thresholds.
   const [draft, setDraft] = useState<CountPanel>(
     panel.type === "table"
       ? { ...layoutOf(panel), preset_id: panel.preset_id, thresholds: [] }
-      : (panel.type ?? "count") === "count"
-        ? (baseline.current as CountPanel)
-        : { ...layoutOf(panel), preset_id: "", thresholds: [] },
+      : panel.type === "incident_count"
+        ? {
+            ...layoutOf(panel),
+            preset_id: panel.preset_id,
+            thresholds: (panel.thresholds ?? []).map((item) => ({ ...item })),
+          }
+        : (panel.type ?? "count") === "count"
+          ? (baseline.current as CountPanel)
+          : { ...layoutOf(panel), preset_id: "", thresholds: [] },
   );
+  // Which incident statuses an incident count panel counts; both by default (REV-69).
+  const [statuses, setStatuses] = useState(() =>
+    panel.type === "incident_count"
+      ? {
+          firing: countsStatus(panel.incident_status, "open"),
+          investigating: countsStatus(panel.incident_status, "investigating"),
+        }
+      : { firing: true, investigating: true },
+  );
+  const chosenStatus = incidentStatus(statuses.firing, statuses.investigating);
   // The typed text of "Alerts to show"; it is checked when applying.
   const [rowsText, setRowsText] = useState(
     String(panel.type === "table" ? panel.rows : 10),
@@ -686,6 +735,11 @@ export function DashboardPanelDialog({
     value?: string;
     failed?: boolean;
   }>();
+  const [incidentPreview, setIncidentPreview] = useState<{
+    key: string;
+    numbers?: IncidentNumbers;
+    failed?: boolean;
+  }>();
   const presets = usePresetChoices(
     `${tenantPath(scope.tenant.id)}/presets`,
     [draft.preset_id],
@@ -727,6 +781,19 @@ export function DashboardPanelDialog({
           ? panel.rows
           : 10,
   };
+  const incidentDraft: IncidentCountPanel = {
+    ...layoutOf(draft),
+    // A new incident count panel starts at 3 × 3, room for its status line (REV-69).
+    ...(creating ? { w: Math.max(draft.w, 3), h: Math.max(draft.h, 3) } : {}),
+    title: draft.title,
+    type: "incident_count",
+    preset_id: draft.preset_id,
+    incident_status:
+      chosenStatus ??
+      (panel.type === "incident_count" ? panel.incident_status : "both"),
+    thresholds: draft.thresholds ?? [],
+    link: shownLink,
+  };
   const servicenowDraft: ServiceNowPanel = {
     ...snDraft,
     ...(creating
@@ -767,7 +834,9 @@ export function DashboardPanelDialog({
             ? tableDraft
             : kind === "servicenow"
               ? servicenowDraft
-              : draft),
+              : kind === "incident_count"
+                ? incidentDraft
+                : draft),
     link,
   };
   const title = current.title ?? "";
@@ -832,6 +901,40 @@ export function DashboardPanelDialog({
     );
     return () => controller.abort();
   }, [kind, draft.preset_id, selectedCel, scope.tenant.id, csrf]);
+
+  // Count the incidents the chosen preset's alerts are in, for the chosen statuses.
+  const incidentKey = JSON.stringify([draft.preset_id, chosenStatus]);
+  useEffect(() => {
+    if (
+      kind !== "incident_count" ||
+      !draft.preset_id ||
+      !chosenStatus ||
+      selectedCel === undefined
+    )
+      return;
+    const key = JSON.stringify([draft.preset_id, chosenStatus]);
+    const controller = new AbortController();
+    setIncidentPreview({ key });
+    previewIncidents(
+      scope.tenant.id,
+      csrf,
+      selectedCel,
+      chosenStatus,
+      controller.signal,
+    ).then(
+      (numbers) => {
+        if (!controller.signal.aborted)
+          setIncidentPreview({ key, numbers, failed: numbers === undefined });
+      },
+      (failure) => {
+        if (controller.signal.aborted) return;
+        if (failure instanceof ApiError && [401, 403].includes(failure.status))
+          denied.current();
+        setIncidentPreview({ key, failed: true });
+      },
+    );
+    return () => controller.abort();
+  }, [kind, draft.preset_id, chosenStatus, selectedCel, scope.tenant.id, csrf]);
 
   // Ask for the count of the settings being edited, 400 ms after they stop changing.
   const snTeam = snDraft.team.trim().normalize("NFC");
@@ -1177,6 +1280,22 @@ export function DashboardPanelDialog({
       invalid("Select an available shared preset.", "preset");
       return;
     }
+    if (kind === "incident_count") {
+      if (!chosenStatus) {
+        invalid(
+          "Choose Firing, Investigating or both.",
+          "incident-status-open",
+        );
+        return;
+      }
+      const problem = thresholdProblem(thresholds);
+      if (problem) {
+        invalid(...problem);
+        return;
+      }
+      onApply({ ...incidentDraft, title: trimmed || null, link });
+      return;
+    }
     if (kind === "table") {
       if (rowsValue === undefined || rowsValue > MAX_ROWS) {
         invalid(`Show from 1 to ${MAX_ROWS} alerts.`, "rows");
@@ -1201,7 +1320,11 @@ export function DashboardPanelDialog({
         className="inp"
         value={title}
         placeholder={
-          kind === "servicenow" ? defaultTitle(snDraft.team) : undefined
+          kind === "servicenow"
+            ? defaultTitle(snDraft.team)
+            : kind === "incident_count" && selected
+              ? defaultIncidentTitle(display(selected.name))
+              : undefined
         }
         onChange={(event) => setTitle(event.target.value)}
         aria-describedby={`${id}-title-help`}
@@ -1215,7 +1338,9 @@ export function DashboardPanelDialog({
               ? "Shown above the content. Leave blank for a panel without a header."
               : kind === "image"
                 ? "Shown above the image. Leave blank to let the image fill the whole panel."
-                : "Leave blank to use the preset name. Up to 120 characters."}
+                : kind === "incident_count"
+                  ? 'Leave blank to show the preset name with "incidents". Up to 120 characters.'
+                  : "Leave blank to use the preset name. Up to 120 characters."}
       </span>
     </label>
   );
@@ -1407,6 +1532,124 @@ export function DashboardPanelDialog({
         layoutStyle={previewSize(draft)}
       />
     </Preview>
+  );
+
+  const noStatus = !chosenStatus;
+  const incidentSettings = (
+    <>
+      {titleField}
+      {presetField}
+      <fieldset className="dashboard-panel-statuses">
+        <legend className="lbl">Incidents to count</legend>
+        <div className="dashboard-panel-checks">
+          {INCIDENT_STATUSES.map((item) => (
+            <label key={item.value}>
+              <input
+                type="checkbox"
+                name={`incident-status-${item.value}`}
+                checked={
+                  item.value === "open"
+                    ? statuses.firing
+                    : statuses.investigating
+                }
+                aria-describedby={noStatus ? `${id}-status-error` : undefined}
+                onChange={(event) => {
+                  const checked = event.target.checked;
+                  setStatuses((current) =>
+                    item.value === "open"
+                      ? { ...current, firing: checked }
+                      : { ...current, investigating: checked },
+                  );
+                  setError("");
+                }}
+              />
+              {item.name}
+            </label>
+          ))}
+        </div>
+        {noStatus && (
+          <span className="dashboard-panel-error" id={`${id}-status-error`}>
+            Choose at least one status to count.
+          </span>
+        )}
+      </fieldset>
+      <ThresholdFields
+        thresholds={thresholds}
+        addRef={addThreshold}
+        onChange={(next) => update({ thresholds: next })}
+      />
+    </>
+  );
+  const liveIncidents =
+    incidentPreview?.key === incidentKey ? incidentPreview : undefined;
+  const incidentValue =
+    liveIncidents?.numbers?.count ??
+    (panel.type === "incident_count" &&
+    draft.preset_id === panel.preset_id &&
+    chosenStatus === panel.incident_status
+      ? latestCount
+      : undefined);
+  const numbers = liveIncidents?.numbers;
+  const presetLabel = selected ? display(selected.name) : "";
+  const incidentPreviewArea = (
+    <>
+      <Preview panel={incidentDraft}>
+        <CountTile
+          scope={scope}
+          panel={incidentDraft}
+          title={
+            title.trim() ||
+            (selected ? defaultIncidentTitle(presetLabel) : "Select a preset")
+          }
+          presetName={selected ? presetLabel : undefined}
+          value={noStatus ? undefined : incidentValue}
+          placeholder={
+            incidentValue !== undefined && !noStatus
+              ? undefined
+              : !selected
+                ? "Choose a preset to see its count"
+                : noStatus
+                  ? "Choose Firing, Investigating or both to see a count"
+                  : liveIncidents?.failed
+                    ? "Count unavailable"
+                    : "Counting…"
+          }
+          layoutStyle={previewSize(incidentDraft)}
+        />
+      </Preview>
+      {numbers && !noStatus && (
+        <div className="f">
+          <span className="lbl">Behind this number, right now</span>
+          <dl className="dashboard-panel-facts">
+            <dt>{BigInt(numbers.alerts).toLocaleString()}</dt>
+            <dd>alerts match {presetLabel}</dd>
+            <dt>{BigInt(numbers.linked_alerts).toLocaleString()}</dt>
+            <dd>
+              of them are in{" "}
+              {chosenStatus === "open"
+                ? "a firing incident"
+                : chosenStatus === "investigating"
+                  ? "an investigating incident"
+                  : "a firing or investigating incident"}
+            </dd>
+            <dt>{BigInt(numbers.count).toLocaleString()}</dt>
+            <dd>
+              {numbers.count === "1" ? "incident" : "incidents"}, each counted
+              once
+            </dd>
+          </dl>
+        </div>
+      )}
+      <div className="f">
+        <span className="lbl">About this count</span>
+        <p className="help">
+          Each incident counts once, however many of the preset&apos;s alerts it
+          holds. Alerts that aren&apos;t in an incident don&apos;t add to the
+          count, and resolved incidents never count. Suppressed alerts are left
+          out, as in an alert count.
+        </p>
+      </div>
+    </>
   );
 
   const columns =
@@ -2219,7 +2462,9 @@ export function DashboardPanelDialog({
   );
   const blocked =
     (kind === "grafana" && !gfGood && !gfKept) ||
-    ((kind === "count" || kind === "table") && !selected) ||
+    ((kind === "count" || kind === "table" || kind === "incident_count") &&
+      !selected) ||
+    (kind === "incident_count" && !chosenStatus) ||
     (kind === "image" && (source === "upload" ? !upload.id : !address.trim()));
 
   return (
@@ -2312,7 +2557,9 @@ export function DashboardPanelDialog({
                     ? imageSettings
                     : kind === "table"
                       ? tableSettings
-                      : countSettings}
+                      : kind === "incident_count"
+                        ? incidentSettings
+                        : countSettings}
             {linkSection}
             {(error || placementError) && (
               <div role="alert" className="notice error">
@@ -2331,7 +2578,9 @@ export function DashboardPanelDialog({
                     ? imagePreview
                     : kind === "table"
                       ? tablePreview
-                      : countPreview}
+                      : kind === "incident_count"
+                        ? incidentPreviewArea
+                        : countPreview}
           </div>
         </div>
         <div className="dashboard-panel-foot">
