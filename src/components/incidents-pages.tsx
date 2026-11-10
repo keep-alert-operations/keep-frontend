@@ -16,6 +16,19 @@ import { DirectoryPicker } from "./directory-picker";
 import { IncidentList, INCIDENT_STATUS } from "./incident-list";
 import { IncidentMembership } from "./incident-membership";
 import { IncidentNotes, type NotesSummary } from "./incident-notes";
+import {
+  describeTicketActivity,
+  openableUrl,
+  serviceNowBase,
+  servicenowStatusPath,
+  type ServiceNowStatus,
+} from "@/lib/incident-ticket";
+import {
+  LinkIcon,
+  TicketCreateDialog,
+  TicketLinkDialog,
+  TicketPill,
+} from "./incident-ticket";
 
 /** Routes the incident list, creation form and incident detail. */
 export function IncidentPages(scope: Scope & { section: string; id?: string }) {
@@ -299,6 +312,11 @@ function IncidentDetail({ scope, id }: { scope: Scope; id: string }) {
   const [memberDirty, setMemberDirty] = useState(false);
   const [noteDirty, setNoteDirty] = useState(false);
   const [editDirty, setEditDirty] = useState(false);
+  const [ticketDirty, setTicketDirty] = useState(false);
+  const [ticketDialog, setTicketDialog] = useState<
+    "link" | "replace" | "create" | null
+  >(null);
+  const [ticketMenu, setTicketMenu] = useState(false);
   const [tab, setTab] = useState<Tab>("activity");
   const [membership, setMembership] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -341,7 +359,16 @@ function IncidentDetail({ scope, id }: { scope: Scope; id: string }) {
   );
   const ruleName = recordedName ?? str(rule.data?.data?.name);
   const group = groupText(origin?.group);
-  const dirty = memberDirty || noteDirty || editDirty;
+  // REV-70: whether this deployment names a ServiceNow, and its address.
+  const servicenow = useResource<ServiceNowStatus>(
+    servicenowStatusPath(prefix),
+    scope.onDenied,
+  );
+  const servicenowBase =
+    servicenow.data?.data?.configured === true
+      ? serviceNowBase(servicenow.data.data.base_url)
+      : null;
+  const dirty = memberDirty || noteDirty || editDirty || ticketDirty;
   useDirtyWarning(dirty);
   useEffect(() => {
     scope.setDirty(dirty);
@@ -368,6 +395,11 @@ function IncidentDetail({ scope, id }: { scope: Scope; id: string }) {
   async function retry() {
     if (await command.execute(path, {})) reloadAll();
   }
+  function closeTicketDialog(saved: boolean) {
+    setTicketDialog(null);
+    setTicketDirty(false);
+    if (saved) reloadAll();
+  }
   const listHref = `/tenants/${scope.tenant.id}/incidents`;
   const crumbs = [{ label: "Incidents", href: listHref }];
   if (!incident)
@@ -391,6 +423,10 @@ function IncidentDetail({ scope, id }: { scope: Scope; id: string }) {
     incident.assignee_id ?? incident.assignee_display_name,
   );
   const mine = incident.assignee_id === scope.session.principal.id;
+  const ticketUrl = str(incident.ticket_url);
+  const ticketNumber = str(incident.ticket_number) ?? null;
+  const ticketRow = Boolean(ticketUrl) || Boolean(servicenowBase);
+  const unlinkTicket = () => void action("ticket", { url: null, number: null });
 
   const linkedRows = Array.isArray(linked.data?.data) ? linked.data.data : [];
   const linkedComplete =
@@ -623,6 +659,135 @@ function IncidentDetail({ scope, id }: { scope: Scope; id: string }) {
             <div className="inc-control-feedback">
               <IncidentFeedback command={command} retry={() => void retry()} />
             </div>
+            {ticketRow && (
+              <div
+                className="inc-ticket-row"
+                role="group"
+                aria-labelledby="inc-ticket-label"
+              >
+                <span className="lbl inc-ticket-row-lbl" id="inc-ticket-label">
+                  ServiceNow ticket
+                </span>
+                {ticketUrl ? (
+                  <>
+                    <TicketPill
+                      number={ticketNumber}
+                      href={openableUrl(ticketUrl) ? ticketUrl : undefined}
+                    />
+                    <span className="small muted">
+                      {incident.ticket_linked_by ||
+                      incident.ticket_linked_by_display_name
+                        ? `Linked by ${who(scope, incident.ticket_linked_by, incident.ticket_linked_by_display_name, "")} · `
+                        : "Linked "}
+                      {timestamp(incident.ticket_linked_at)}
+                    </span>
+                  </>
+                ) : (
+                  <span className="inc-ticket-none">No ticket</span>
+                )}
+                <span className="grow" />
+                {editable && ticketUrl && servicenowBase && (
+                  <div className="inc-ticket-change">
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      aria-expanded={ticketMenu}
+                      aria-controls="incident-ticket-options"
+                      disabled={locked}
+                      onClick={() => setTicketMenu((value) => !value)}
+                    >
+                      Change…
+                    </button>
+                    {ticketMenu && (
+                      <Popover
+                        id="incident-ticket-options"
+                        className="inc-ticket-menu"
+                        onClose={() => setTicketMenu(false)}
+                      >
+                        <button
+                          type="button"
+                          disabled={locked}
+                          onClick={() => {
+                            setTicketMenu(false);
+                            setTicketDialog("replace");
+                          }}
+                        >
+                          <LinkIcon size={15} />
+                          Link a different ticket…
+                        </button>
+                        <hr />
+                        <button
+                          type="button"
+                          className="inc-ticket-danger"
+                          disabled={locked}
+                          onClick={() => {
+                            setTicketMenu(false);
+                            unlinkTicket();
+                          }}
+                        >
+                          <svg
+                            width="15"
+                            height="15"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.9"
+                            strokeLinecap="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M18 6 6 18M6 6l12 12" />
+                          </svg>
+                          Unlink ticket
+                        </button>
+                      </Popover>
+                    )}
+                  </div>
+                )}
+                {editable && ticketUrl && !servicenowBase && (
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    disabled={locked}
+                    onClick={unlinkTicket}
+                  >
+                    Unlink
+                  </button>
+                )}
+                {editable && !ticketUrl && servicenowBase && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      disabled={locked}
+                      onClick={() => setTicketDialog("create")}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 5v14M5 12h14" />
+                      </svg>
+                      Create in ServiceNow…
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      disabled={locked}
+                      onClick={() => setTicketDialog("link")}
+                    >
+                      <LinkIcon />
+                      Link existing ticket…
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </section>
           <section className="panel inc-desc" aria-labelledby="inc-desc-label">
             <span className="lbl" id="inc-desc-label">
@@ -869,6 +1034,32 @@ function IncidentDetail({ scope, id }: { scope: Scope; id: string }) {
           onClose={() => setMembership(null)}
         />
       )}
+      {ticketDialog === "create" && editable && servicenowBase && (
+        <TicketCreateDialog
+          scope={scope}
+          path={path}
+          incident={incident}
+          base={servicenowBase}
+          severity={cap(incident.severity)}
+          reload={reloadAll}
+          onDirty={setTicketDirty}
+          onClose={closeTicketDialog}
+        />
+      )}
+      {(ticketDialog === "link" || ticketDialog === "replace") &&
+        editable &&
+        servicenowBase && (
+          <TicketLinkDialog
+            scope={scope}
+            path={path}
+            incident={incident}
+            base={servicenowBase}
+            replacing={ticketDialog === "replace"}
+            reload={reloadAll}
+            onDirty={setTicketDirty}
+            onClose={closeTicketDialog}
+          />
+        )}
       {editing && editable && (
         <ContentDialog
           scope={scope}
@@ -1019,9 +1210,13 @@ function LinkedAlerts({
 
 /** Small anchored surface that closes on Escape or an outside click. */
 function Popover({
+  id = "incident-assignment-options",
+  className,
   onClose,
   children,
 }: {
+  id?: string;
+  className?: string;
   onClose: () => void;
   children: React.ReactNode;
 }) {
@@ -1029,7 +1224,10 @@ function Popover({
   const close = useRef(onClose);
   close.current = onClose;
   useEffect(() => {
-    ref.current?.querySelector<HTMLElement>("input")?.focus();
+    (
+      ref.current?.querySelector<HTMLElement>("input") ??
+      ref.current?.querySelector<HTMLElement>("button")
+    )?.focus();
     const key = (event: KeyboardEvent) => {
       if (event.key === "Escape") close.current();
     };
@@ -1046,11 +1244,7 @@ function Popover({
     };
   }, []);
   return (
-    <div
-      id="incident-assignment-options"
-      className="panel inc-popover"
-      ref={ref}
-    >
+    <div id={id} className={`panel inc-popover ${className ?? ""}`} ref={ref}>
       {children}
     </div>
   );
@@ -1216,7 +1410,7 @@ interface Describe {
 function describe(
   row: RecordData,
   context: Describe,
-): { what: string; detail: string; dot: string; who: string } {
+): { what: string; detail: React.ReactNode; dot: string; who: string } {
   const { scope, incident, alertNames, noteTexts, ruleName } = context;
   const kind = String(row.kind ?? "");
   const evidence =
@@ -1244,7 +1438,7 @@ function describe(
   };
   const plural = (ids: unknown) => Array.isArray(ids) && ids.length !== 1;
   let what = "";
-  let detail = "";
+  let detail: React.ReactNode = "";
   let dot = ruleActor ? "tl-inc" : system ? "tl-src" : "tl-user";
   switch (kind) {
     case "created":
@@ -1308,6 +1502,26 @@ function describe(
             : "Note deleted.";
       const text = noteTexts.get(String(evidence?.note_id));
       detail = text && kind !== "note-deleted" ? `“${text}”` : "";
+      break;
+    }
+    case "ticket": {
+      // REV-70: ServiceNow ticket linked, changed or unlinked.
+      const line = describeTicketActivity(evidence);
+      const mono = (text?: string) =>
+        text && text !== "ServiceNow ticket" ? (
+          <span className="mono">{text}</span>
+        ) : (
+          text
+        );
+      what = line.what;
+      detail =
+        line.from && line.to ? (
+          <>
+            {mono(line.from)} → {mono(line.to)}
+          </>
+        ) : (
+          mono(line.to ?? line.from)
+        );
       break;
     }
     case "eligibility_lost":

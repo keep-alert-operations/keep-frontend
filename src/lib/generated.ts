@@ -770,6 +770,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/tenants/{tenant_id}/servicenow/status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Servicenow Status
+     * @description Whether ServiceNow tickets are on, and the ServiceNow address links must use.
+     */
+    get: operations["servicenow_status_api_tenants__tenant_id__servicenow_status_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/tenants/{tenant_id}/maintenance": {
     parameters: {
       query?: never;
@@ -1392,6 +1412,26 @@ export interface paths {
     put?: never;
     /** Assignment */
     post: operations["assignment_api_tenants__tenant_id__incidents__incident_id__assignment_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/tenants/{tenant_id}/incidents/{incident_id}/ticket": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Ticket
+     * @description Link, change or unlink the incident's ServiceNow ticket (REV-70).
+     */
+    post: operations["ticket_api_tenants__tenant_id__incidents__incident_id__ticket_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -2744,6 +2784,31 @@ export interface components {
        * @description Current linked references whose alert is no longer retained.
        */
       unavailable?: string | null;
+      /**
+       * Ticket Url
+       * @description Link to the incident's ServiceNow ticket (REV-70); null when none is linked.
+       */
+      ticket_url?: string | null;
+      /**
+       * Ticket Number
+       * @description The linked ticket's number, upper case; null when not given.
+       */
+      ticket_number?: string | null;
+      /**
+       * Ticket Linked At
+       * @description When the current ticket link was saved; null without a ticket.
+       */
+      ticket_linked_at?: string | null;
+      /**
+       * Ticket Linked By
+       * @description Principal who saved the current ticket link.
+       */
+      ticket_linked_by?: string | null;
+      /**
+       * Ticket Linked By Display Name
+       * @description Stored directory name of ticket_linked_by.
+       */
+      ticket_linked_by_display_name?: string | null;
     } & {
       [key: string]: unknown;
     };
@@ -2822,6 +2887,23 @@ export interface components {
        * @enum {string}
        */
       status: "open" | "investigating" | "resolved";
+    };
+    /**
+     * IncidentTicket
+     * @description Link, change or unlink the incident's ServiceNow ticket (REV-70).
+     *
+     *     ``url`` null unlinks; a number needs a link. Whether the link points into the
+     *     configured ServiceNow is checked by the command against ``KEEP_SERVICENOW_URL``.
+     */
+    IncidentTicket: {
+      /** Command Id */
+      command_id: string;
+      /** Expected Revision */
+      expected_revision: string;
+      /** Url */
+      url?: string | null;
+      /** Number */
+      number?: string | null;
     };
     /** Limits */
     Limits: {
@@ -3416,6 +3498,27 @@ export interface components {
       detection: "hamal" | "direct" | "all";
       /** Thresholds */
       thresholds?: components["schemas"]["Threshold"][];
+    };
+    /** ServiceNowStatus */
+    ServiceNowStatus: {
+      /**
+       * Configured
+       * @description Whether incidents can be linked to tickets in this deployment's ServiceNow.
+       */
+      configured: boolean;
+      /**
+       * Base Url
+       * @description The configured ServiceNow address without a trailing slash; null when off.
+       */
+      base_url: string | null;
+    };
+    /** ServiceNowStatusRead */
+    ServiceNowStatusRead: {
+      data: components["schemas"]["ServiceNowStatus"];
+      /** Meta */
+      meta: {
+        [key: string]: unknown;
+      };
     };
     /** SnapshotClose */
     SnapshotClose: {
@@ -5514,6 +5617,37 @@ export interface operations {
       };
     };
   };
+  servicenow_status_api_tenants__tenant_id__servicenow_status_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        tenant_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceNowStatusRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   listing_api_tenants__tenant_id__maintenance_get: {
     parameters: {
       query?: {
@@ -7124,6 +7258,42 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["IncidentAssignment"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  ticket_api_tenants__tenant_id__incidents__incident_id__ticket_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        tenant_id: string;
+        incident_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IncidentTicket"];
       };
     };
     responses: {
