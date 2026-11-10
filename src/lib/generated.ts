@@ -730,6 +730,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/tenants/{tenant_id}/grafana-panels/status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Grafana Panel Status
+     * @description Whether Grafana panels are on and which Grafana addresses they may show.
+     */
+    get: operations["grafana_panel_status_api_tenants__tenant_id__grafana_panels_status_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/integrations/grafana-panels": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Grafana Panel Integration
+     * @description The allowed Grafana list and any ignored entries, for super admins.
+     */
+    get: operations["grafana_panel_integration_api_admin_integrations_grafana_panels_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/tenants/{tenant_id}/maintenance": {
     parameters: {
       query?: never;
@@ -2293,6 +2333,7 @@ export interface components {
         | components["schemas"]["ImagePanel"]
         | components["schemas"]["TablePanel"]
         | components["schemas"]["ServiceNowPanel"]
+        | components["schemas"]["GrafanaPanel"]
       )[];
       /** Command Id */
       command_id: string;
@@ -2308,6 +2349,7 @@ export interface components {
         | components["schemas"]["ImagePanel"]
         | components["schemas"]["TablePanel"]
         | components["schemas"]["ServiceNowPanel"]
+        | components["schemas"]["GrafanaPanel"]
       )[];
     };
     /** DashboardPreview */
@@ -2321,6 +2363,7 @@ export interface components {
         | components["schemas"]["ImagePanel"]
         | components["schemas"]["TablePanel"]
         | components["schemas"]["ServiceNowPanel"]
+        | components["schemas"]["GrafanaPanel"]
       )[];
       /** Preset Revisions */
       preset_revisions: {
@@ -2338,6 +2381,7 @@ export interface components {
         | components["schemas"]["ImagePanel"]
         | components["schemas"]["TablePanel"]
         | components["schemas"]["ServiceNowPanel"]
+        | components["schemas"]["GrafanaPanel"]
       )[];
       /** Command Id */
       command_id: string;
@@ -2379,6 +2423,110 @@ export interface components {
       description: string;
       /** Insert Text */
       insert_text: string;
+    };
+    /** GrafanaIgnoredEntry */
+    GrafanaIgnoredEntry: {
+      /**
+       * Entry
+       * @description A configured entry that was not usable.
+       */
+      entry: string;
+      /**
+       * Reason
+       * @description Why the entry was ignored.
+       */
+      reason: string;
+    };
+    /** GrafanaOrigin */
+    GrafanaOrigin: {
+      /**
+       * Origin
+       * @description An allowed Grafana's scheme, host and non-default port, as a browser reports URL.origin.
+       */
+      origin: string;
+      /**
+       * Path Prefix
+       * @description The Grafana's base path without a trailing slash, or empty when it is served at the root; panel addresses must start with <path_prefix>/d-solo/.
+       */
+      path_prefix: string;
+    };
+    /**
+     * GrafanaPanel
+     * @description A panel framing one live Grafana panel in the browser (REV-68).
+     *
+     *     The model checks only the address's form. Whether this deployment allows its
+     *     Grafana is checked by ``keep.configuration.grafana.grafana_url_problem`` when the
+     *     address is new or changed, and again by the browser before every render. It
+     *     references no preset and is never part of a count batch.
+     */
+    GrafanaPanel: {
+      /** Id */
+      id: string;
+      /** Title */
+      title?: string | null;
+      /** X */
+      x: number;
+      /** Y */
+      y: number;
+      /** W */
+      w: number;
+      /** H */
+      h: number;
+      link?: components["schemas"]["PanelLink"] | null;
+      /**
+       * Type
+       * @constant
+       */
+      type: "grafana";
+      /** Url */
+      url: string;
+    };
+    /** GrafanaPanelIntegration */
+    GrafanaPanelIntegration: {
+      /**
+       * Enabled
+       * @description Whether at least one Grafana is allowed.
+       */
+      enabled: boolean;
+      /**
+       * Origins
+       * @description The allowed Grafana instances.
+       */
+      origins: components["schemas"]["GrafanaOrigin"][];
+      /**
+       * Ignored
+       * @description Configured entries that were ignored at start-up, with the reason.
+       */
+      ignored: components["schemas"]["GrafanaIgnoredEntry"][];
+    };
+    /** GrafanaPanelIntegrationRead */
+    GrafanaPanelIntegrationRead: {
+      data: components["schemas"]["GrafanaPanelIntegration"];
+      /** Meta */
+      meta: {
+        [key: string]: unknown;
+      };
+    };
+    /** GrafanaPanelStatus */
+    GrafanaPanelStatus: {
+      /**
+       * Enabled
+       * @description Whether at least one Grafana is allowed.
+       */
+      enabled: boolean;
+      /**
+       * Origins
+       * @description The allowed Grafana instances.
+       */
+      origins: components["schemas"]["GrafanaOrigin"][];
+    };
+    /** GrafanaPanelStatusRead */
+    GrafanaPanelStatusRead: {
+      data: components["schemas"]["GrafanaPanelStatus"];
+      /** Meta */
+      meta: {
+        [key: string]: unknown;
+      };
     };
     /** Grant */
     Grant: {
@@ -5265,6 +5413,57 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  grafana_panel_status_api_tenants__tenant_id__grafana_panels_status_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        tenant_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GrafanaPanelStatusRead"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  grafana_panel_integration_api_admin_integrations_grafana_panels_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GrafanaPanelIntegrationRead"];
         };
       };
     };

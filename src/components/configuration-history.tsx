@@ -57,7 +57,7 @@ interface Detail {
 interface HistoryPanel {
   id?: string;
   /** Absent in revisions saved before REV-57, which hold only count panels. */
-  type?: "count" | "html" | "image" | "table" | "servicenow";
+  type?: "count" | "html" | "image" | "table" | "servicenow" | "grafana";
   preset_id?: string;
   title?: string | null;
   w?: number;
@@ -339,11 +339,13 @@ export function ConfigurationHistory({
                     ? "HTML panel"
                     : panel.type === "image"
                       ? "Image panel"
-                      : panel.type === "table" && panel.preset_id
-                        ? `Alert table · latest ${panel.rows ?? 10} of ${names.get(panel.preset_id) ?? panel.preset_id}`
-                        : panel.preset_id
-                          ? `Preset: ${names.get(panel.preset_id) ?? panel.preset_id}`
-                          : "No preset"}
+                      : panel.type === "grafana"
+                        ? "Grafana panel"
+                        : panel.type === "table" && panel.preset_id
+                          ? `Alert table · latest ${panel.rows ?? 10} of ${names.get(panel.preset_id) ?? panel.preset_id}`
+                          : panel.preset_id
+                            ? `Preset: ${names.get(panel.preset_id) ?? panel.preset_id}`
+                            : "No preset"}
                 {` · ${panel.w ?? "?"} × ${panel.h ?? "?"}`}
                 {panel.thresholds?.length
                   ? ` · ${panel.thresholds
