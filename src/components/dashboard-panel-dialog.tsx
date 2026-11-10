@@ -2134,10 +2134,6 @@ export function DashboardPanelDialog({
             <li>
               Sign in to this Grafana in another tab, then reopen the dialog.
             </li>
-            <li>
-              Grafana must allow embedding. Admin › Integrations has the
-              settings to send to your Grafana admins.
-            </li>
           </ul>
         </div>
       </div>
@@ -2146,8 +2142,7 @@ export function DashboardPanelDialog({
         <p className="help">
           Keep shows the panel straight from Grafana and never reads its data.
           Each viewer sees what their own Grafana access allows, and the panel
-          refreshes on Grafana&apos;s schedule. It always uses the viewer&apos;s
-          Keep theme, light or dark.
+          refreshes on Grafana&apos;s schedule.
         </p>
       </div>
     </>
