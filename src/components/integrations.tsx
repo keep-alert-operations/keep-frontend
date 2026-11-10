@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { ApiError, request } from "@/lib/api";
+import { ApiError, request, tenantPath } from "@/lib/api";
 import { useResource } from "@/lib/hooks";
 import {
   integrationPath,
@@ -13,6 +13,11 @@ import {
   grafanaIntegrationPath,
   type GrafanaPanelIntegration,
 } from "@/lib/grafana-panel";
+import {
+  serviceNowBase,
+  servicenowStatusPath,
+  type ServiceNowStatus,
+} from "@/lib/incident-ticket";
 import type { Scope } from "./workspace";
 import { ErrorNotice } from "./ui";
 import { Page, RelativeTime } from "./page";
@@ -192,6 +197,7 @@ function TicketCountIntegrationPage({ scope }: { scope: Scope }) {
         </p>
       </section>
       <GrafanaPanelsCard scope={scope} />
+      <ServiceNowTicketsCard scope={scope} />
     </Page>
   );
 }
@@ -439,6 +445,87 @@ function GrafanaPanelsCard({ scope }: { scope: Scope }) {
           </span>
         </div>
       </div>
+    </section>
+  );
+}
+
+/**
+ * ServiceNow tickets on incidents (REV-70): read-only, since the address is
+ * deployment configuration (`KEEP_SERVICENOW_URL`).
+ */
+function ServiceNowTicketsCard({ scope }: { scope: Scope }) {
+  const status = useResource<ServiceNowStatus>(
+    servicenowStatusPath(tenantPath(scope.tenant.id)),
+    scope.onDenied,
+    scope.version,
+  );
+  const data = status.data?.data;
+  const base = data?.configured === true ? serviceNowBase(data.base_url) : null;
+  return (
+    <section className="panel int-card" aria-labelledby="int-servicenow">
+      <div className="int-head">
+        <span className="int-icon" aria-hidden="true">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.9"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4zM14 6v2M14 11v2M14 16v2" />
+          </svg>
+        </span>
+        <div className="int-title">
+          <h2 id="int-servicenow">ServiceNow tickets on incidents</h2>
+          <p className="help">
+            Lets incident editors link a ServiceNow ticket to an incident, or
+            open ServiceNow&apos;s new incident form filled in from it.
+            Keep&apos;s server never contacts ServiceNow; people&apos;s browsers
+            open it.
+          </p>
+        </div>
+        {data && (
+          <span className={`chip ${base ? "b-green" : "b-neutral"}`}>
+            {base ? "On" : "Off"}
+          </span>
+        )}
+      </div>
+      {status.error ? <ErrorNotice error={status.error} /> : null}
+      {status.loading && !data && (
+        <p className="help" role="status">
+          Checking the ServiceNow address…
+        </p>
+      )}
+      {data && base && (
+        <dl className="int-facts int-facts-2">
+          <div>
+            <dt>ServiceNow address</dt>
+            <dd className="mono">{data.base_url}</dd>
+          </div>
+          <div>
+            <dt>New tickets open</dt>
+            <dd>
+              The new incident form, with Ticket Title and Description filled in
+            </dd>
+          </div>
+        </dl>
+      )}
+      {data && !base && (
+        <p className="help">
+          No ServiceNow address is set, so incidents don&apos;t show the
+          ServiceNow ticket row. Tickets linked earlier still show and can be
+          unlinked.
+        </p>
+      )}
+      <p className="help int-note">
+        Set in deployment configuration as{" "}
+        <span className="mono">KEEP_SERVICENOW_URL</span> (https only). Keep
+        can&apos;t change it here. Only links to this address can be saved on
+        incidents.
+      </p>
     </section>
   );
 }
