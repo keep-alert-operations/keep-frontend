@@ -36,6 +36,7 @@ import {
   useTicketCounts,
 } from "./dashboard-servicenow-panel";
 import { PanelLinkButton } from "./dashboard-panel-link";
+import { GrafanaTile, useGrafanaStatus } from "./dashboard-grafana-panel";
 import type { PanelLink } from "@/lib/panel-link";
 
 interface PanelLayout {
@@ -81,8 +82,18 @@ export interface ServiceNowPanel extends PanelLayout {
   detection: Detection;
   thresholds?: { lower_bound: string; color: string }[];
 }
+/** One live panel framed from an allowed Grafana (REV-68). */
+export interface GrafanaPanel extends PanelLayout {
+  type: "grafana";
+  url: string;
+}
 export type Panel =
-  CountPanel | HtmlPanel | ImagePanel | TablePanel | ServiceNowPanel;
+  | CountPanel
+  | HtmlPanel
+  | ImagePanel
+  | TablePanel
+  | ServiceNowPanel
+  | GrafanaPanel;
 export const isHtmlPanel = (panel: Panel): panel is HtmlPanel =>
   panel.type === "html";
 export const isImagePanel = (panel: Panel): panel is ImagePanel =>
@@ -91,6 +102,8 @@ export const isTablePanel = (panel: Panel): panel is TablePanel =>
   panel.type === "table";
 export const isServiceNowPanel = (panel: Panel): panel is ServiceNowPanel =>
   panel.type === "servicenow";
+export const isGrafanaPanel = (panel: Panel): panel is GrafanaPanel =>
+  panel.type === "grafana";
 export const isCountPanel = (panel: Panel): panel is CountPanel =>
   (panel.type ?? "count") === "count";
 export const countPanels = (panels: Panel[]) => panels.filter(isCountPanel);
@@ -104,7 +117,9 @@ export const contentPanelName = (panel: Panel) =>
         ? "Alert table"
         : isServiceNowPanel(panel)
           ? defaultTitle(panel.team)
-          : "";
+          : isGrafanaPanel(panel)
+            ? "Grafana panel"
+            : "";
 /** Where an image panel's picture loads from: the tenant's upload or the link. */
 export const imageSource = (tenantId: string, panel: ImagePanel) =>
   panel.image_id
@@ -781,6 +796,8 @@ export function DashboardBoard({
     disabled: boolean;
     onChange: (panels: Panel[]) => void;
     options: (panel: Panel) => ReactNode;
+    /** Opens Edit panel, as a blocked Grafana panel offers (REV-68). */
+    edit?: (panelId: string) => void;
   };
 }) {
   const { state, paused, refresh, fullscreen, setFullscreen, trigger } = model;
@@ -815,6 +832,9 @@ export function DashboardBoard({
   const panels = draftPanels ?? savedPanels;
   // ServiceNow panels, drafts included, get their counts in their own batch (REV-65).
   const tickets = useTicketCounts(scope, panels, model.refreshed, paused);
+  // Grafana panels are framed, never counted; the allowed Grafana is read once
+  // per dashboard view (REV-68).
+  const grafana = useGrafanaStatus(scope, panels.some(isGrafanaPanel));
   const editable = editing && !fullscreen;
   function renderPanel(
     panel: Panel,
@@ -849,6 +869,20 @@ export function DashboardBoard({
           layoutStyle={style}
         />
       );
+    if (isGrafanaPanel(panel)) {
+      const edit = editable ? editing.edit : undefined;
+      return (
+        <GrafanaTile
+          key={panel.id}
+          panel={panel}
+          status={grafana}
+          onEdit={edit ? () => edit(panel.id) : undefined}
+          layoutControls={layoutControls}
+          layoutActive={active}
+          layoutStyle={style}
+        />
+      );
+    }
     if (isServiceNowPanel(panel))
       return (
         <ServiceNowTile

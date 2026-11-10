@@ -46,6 +46,7 @@ import {
   CountTile,
   ImageTile,
   type CountPanel,
+  type GrafanaPanel,
   type HtmlPanel,
   type ImagePanel,
   type Panel,
@@ -65,6 +66,22 @@ import {
 } from "@/lib/ticket-counts";
 import { useResource } from "@/lib/hooks";
 import { ThresholdColorPicker } from "./threshold-color-picker";
+import {
+  GRAFANA_ICON_PATH,
+  GRAFANA_STATUS_FAILED,
+  GrafanaTile,
+  useGrafanaStatus,
+} from "./dashboard-grafana-panel";
+import {
+  GRAFANA_NOT_AVAILABLE,
+  OPEN_IN_GRAFANA,
+  checkGrafanaAddress,
+  grafanaFacts,
+  iframeSource,
+  openInGrafana,
+  originLabel,
+  type GrafanaCheck,
+} from "@/lib/grafana-panel";
 import { isThresholdColor } from "@/lib/threshold-colors";
 import { Icon } from "./icons";
 import type { Scope } from "./workspace";
@@ -72,7 +89,7 @@ import { ErrorNotice } from "./ui";
 import "../app/styles/dashboard-panel-dialog.css";
 
 const decimal = /^(0|[1-9][0-9]*)$/;
-type Kind = "count" | "html" | "image" | "table" | "servicenow";
+type Kind = "count" | "html" | "image" | "table" | "servicenow" | "grafana";
 type Threshold = { lower_bound: string; color: string };
 const MAX_ROWS = 50;
 type Source = "upload" | "link";
@@ -152,7 +169,29 @@ const TYPES: {
       "M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4zM14 6v2M14 11v2M14 16v2",
     ),
   },
+  // Listed last (REV-68).
+  {
+    id: "grafana",
+    name: "Grafana panel",
+    description: "One live panel from a Grafana dashboard.",
+    icon: glyph(GRAFANA_ICON_PATH),
+  },
 ];
+const tick = (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="m5 12 5 5 9-10" />
+  </svg>
+);
 /** Why ServiceNow tickets can't be chosen while the service isn't configured (REV-65). */
 const NOT_CONFIGURED =
   "Not available yet. An admin sets up the ticket count service.";
@@ -169,6 +208,8 @@ const layoutOf = (panel: Panel) => ({
 });
 function normalized(panel: Panel): Panel {
   const title = (panel.title ?? "").trim().normalize("NFC") || null;
+  if (panel.type === "grafana")
+    return { ...layoutOf(panel), title, type: "grafana", url: panel.url };
   if (panel.type === "servicenow")
     return {
       ...layoutOf(panel),
@@ -574,6 +615,20 @@ export function DashboardPanelDialog({
         },
   );
   const [teamTouched, setTeamTouched] = useState(false);
+  // A Grafana panel frames one panel from an allowed Grafana; it starts at 6 × 6
+  // (REV-68). The address field takes a URL or Grafana's Share › Embed code.
+  const [gfDraft, setGfDraft] = useState<GrafanaPanel>(
+    panel.type === "grafana"
+      ? (baseline.current as GrafanaPanel)
+      : { ...layoutOf(panel), type: "grafana", url: "" },
+  );
+  const [gfAddress, setGfAddress] = useState(
+    panel.type === "grafana" ? panel.url : "",
+  );
+  const grafanaStatus = useGrafanaStatus(
+    scope,
+    creating || panel.type === "grafana",
+  );
   // The preview's count for the settings being edited, fetched shortly after typing stops.
   const [snPreview, setSnPreview] = useState<{
     key: string;
@@ -585,10 +640,20 @@ export function DashboardPanelDialog({
     creating ? ticketCountStatusPath(scope.tenant.id) : null,
     scope.onDenied,
   );
-  const unavailableTypes: Partial<Record<Kind, string>> =
-    ticketStatus.data?.data?.configured === false
+  const unavailableTypes: Partial<Record<Kind, string>> = {
+    ...(ticketStatus.data?.data?.configured === false
       ? { servicenow: NOT_CONFIGURED }
-      : {};
+      : {}),
+    ...(typeof grafanaStatus === "object" &&
+    (!grafanaStatus.enabled || !grafanaStatus.origins.length)
+      ? { grafana: GRAFANA_NOT_AVAILABLE }
+      : grafanaStatus === "failed"
+        ? {
+            grafana:
+              "Not available right now. Keep couldn't check which Grafana is allowed.",
+          }
+        : {}),
+  };
   const [source, setSource] = useState<Source>(
     panel.type === "image" && panel.url ? "link" : "upload",
   );
@@ -669,16 +734,40 @@ export function DashboardPanelDialog({
       : {}),
     link: shownLink,
   };
+  const checked = checkGrafanaAddress(
+    gfAddress,
+    typeof grafanaStatus === "object" ? grafanaStatus : undefined,
+  );
+  const gfCheck: GrafanaCheck =
+    grafanaStatus === "failed" && checked.state === "pending"
+      ? { state: "problem", problem: GRAFANA_STATUS_FAILED, snippet: false }
+      : checked;
+  const gfGood = gfCheck.state === "ok";
+  // A saved address that is no longer allowed may stay while other settings
+  // change; the API checks only new or changed addresses.
+  const gfKept =
+    panel.type === "grafana" && gfAddress.trim() === panel.url && !!panel.url;
+  const grafanaDraft: GrafanaPanel = {
+    ...gfDraft,
+    ...(creating
+      ? { w: Math.max(gfDraft.w, 6), h: Math.max(gfDraft.h, 6) }
+      : {}),
+    // The parsed address is stored, not the pasted text.
+    url: gfGood ? gfCheck.url.href : gfAddress.trim(),
+    link: shownLink,
+  };
   const current: Panel = {
-    ...(kind === "html"
-      ? htmlDraft
-      : kind === "image"
-        ? imagePanel
-        : kind === "table"
-          ? tableDraft
-          : kind === "servicenow"
-            ? servicenowDraft
-            : draft),
+    ...(kind === "grafana"
+      ? grafanaDraft
+      : kind === "html"
+        ? htmlDraft
+        : kind === "image"
+          ? imagePanel
+          : kind === "table"
+            ? tableDraft
+            : kind === "servicenow"
+              ? servicenowDraft
+              : draft),
     link,
   };
   const title = current.title ?? "";
@@ -897,7 +986,10 @@ export function DashboardPanelDialog({
     setError("");
   }
   function setTitle(value: string) {
-    if (kind === "servicenow") updateServiceNow({ title: value });
+    if (kind === "grafana") {
+      setGfDraft((current) => ({ ...current, title: value }));
+      setError("");
+    } else if (kind === "servicenow") updateServiceNow({ title: value });
     else if (kind === "html") updateHtml({ title: value });
     else if (kind === "image") updateImage({ title: value });
     else update({ title: value });
@@ -948,7 +1040,9 @@ export function DashboardPanelDialog({
   function switchKind(next: Kind) {
     if (next === kind) return;
     // The title follows the panel across types; type-specific settings stay put.
-    if (next === "servicenow") setSnDraft((current) => ({ ...current, title }));
+    if (next === "grafana") setGfDraft((current) => ({ ...current, title }));
+    else if (next === "servicenow")
+      setSnDraft((current) => ({ ...current, title }));
     else if (next === "html")
       setHtmlDraft((current) => ({ ...current, title }));
     else if (next === "image")
@@ -1027,6 +1121,21 @@ export function DashboardPanelDialog({
       onApply({ ...imagePanel, title: trimmed || null, alt: alt || null });
       return;
     }
+    if (kind === "grafana") {
+      if (!gfGood && !gfKept) {
+        invalid(
+          gfCheck.state === "problem"
+            ? gfCheck.problem
+            : gfCheck.state === "pending"
+              ? "Wait while Keep checks which Grafana is allowed."
+              : "Paste a Grafana panel address or its embed code.",
+          "grafana-url",
+        );
+        return;
+      }
+      onApply({ ...grafanaDraft, title: trimmed || null, link });
+      return;
+    }
     if (kind === "servicenow") {
       const team = snDraft.team.trim().normalize("NFC");
       if (!team) {
@@ -1100,11 +1209,13 @@ export function DashboardPanelDialog({
       <span className="help" id={`${id}-title-help`}>
         {kind === "servicenow"
           ? 'Leave blank to show the team name with "tickets". Up to 120 characters.'
-          : kind === "html"
-            ? "Shown above the content. Leave blank for a panel without a header."
-            : kind === "image"
-              ? "Shown above the image. Leave blank to let the image fill the whole panel."
-              : "Leave blank to use the preset name. Up to 120 characters."}
+          : kind === "grafana"
+            ? "Grafana already shows the panel's own title. Leave this blank so it isn't shown twice."
+            : kind === "html"
+              ? "Shown above the content. Leave blank for a panel without a header."
+              : kind === "image"
+                ? "Shown above the image. Leave blank to let the image fill the whole panel."
+                : "Leave blank to use the preset name. Up to 120 characters."}
       </span>
     </label>
   );
@@ -1529,6 +1640,36 @@ export function DashboardPanelDialog({
             }}
           />
         </div>
+        {creating &&
+          !unavailableTypes.grafana &&
+          /<iframe/i.test(htmlDraft.html) && (
+            <div
+              className="banner bn-info dashboard-panel-gf-hint"
+              role="status"
+            >
+              {glyph(GRAFANA_ICON_PATH)}
+              <div>
+                <span>
+                  <strong>Showing a Grafana panel?</strong> HTML panels remove
+                  iframes. A Grafana panel shows it live, and keeps this
+                  address.
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-p"
+                  onClick={() => {
+                    setGfAddress(iframeSource(htmlDraft.html));
+                    switchKind("grafana");
+                    requestAnimationFrame(() =>
+                      document.getElementById(`${id}-grafana-url`)?.focus(),
+                    );
+                  }}
+                >
+                  Use a Grafana panel instead
+                </button>
+              </div>
+            </div>
+          )}
         <div className="dashboard-panel-code-help">
           <p className="help" id={`${id}-html-help`}>
             Text, headings, lists, tables, links and inline styles render.
@@ -1572,6 +1713,201 @@ export function DashboardPanelDialog({
         />
       </article>
     </Preview>
+  );
+
+  const gfLink = gfGood ? openInGrafana(gfCheck.url.href) : "";
+  const gfLinked = gfGood && linkAddress.trim() === gfLink;
+  const gfProblem = gfCheck.state === "problem" ? gfCheck.problem : "";
+  const gfOrigins =
+    typeof grafanaStatus === "object" ? grafanaStatus.origins : [];
+  const gfFacts = gfGood ? grafanaFacts(gfCheck.url, gfCheck.origin) : null;
+  const grafanaSettings = (
+    <>
+      {titleField}
+      <div className="f">
+        <label className="lbl" htmlFor={`${id}-grafana-url`}>
+          Panel address
+        </label>
+        <textarea
+          id={`${id}-grafana-url`}
+          name="grafana-url"
+          className={`inp dashboard-panel-gf-address ${gfProblem ? "dashboard-panel-gf-bad" : ""}`}
+          spellCheck={false}
+          autoComplete="off"
+          placeholder={'https://grafana…/d-solo/…  or  <iframe src="…">'}
+          value={gfAddress}
+          aria-invalid={gfProblem ? true : undefined}
+          aria-describedby={`${id}-grafana-help${gfProblem ? ` ${id}-grafana-error` : ""}`}
+          onChange={(event) => {
+            setGfAddress(event.target.value);
+            setError("");
+          }}
+        />
+        <div className="dashboard-panel-gf-bar">
+          <span className="help">
+            Opens this panel&apos;s dashboard in Grafana, same time range and
+            variables.
+          </span>
+          {gfLinked ? (
+            <span className="dashboard-panel-gf-ok" role="status">
+              {tick}
+              Link added to Panel link
+            </span>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={!gfGood}
+              onClick={() => {
+                setLinkAddress(gfLink);
+                setLinkText(OPEN_IN_GRAFANA);
+                setLinkTouched(false);
+                setError("");
+                requestAnimationFrame(() =>
+                  document.getElementById(`${id}-link-url`)?.focus(),
+                );
+              }}
+            >
+              <Icon name="external" size={13} />
+              Add &quot;{OPEN_IN_GRAFANA}&quot; link
+            </button>
+          )}
+        </div>
+        {gfGood && gfCheck.snippet && (
+          <p className="dashboard-panel-gf-ok" role="status">
+            {tick}
+            <span>
+              Using <span className="mono">{gfCheck.url.href}</span>
+            </span>
+          </p>
+        )}
+        {gfProblem && (
+          <p
+            className="dashboard-panel-gf-error"
+            id={`${id}-grafana-error`}
+            role="alert"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 8v5M12 16h.01" />
+            </svg>
+            <span>{gfProblem}</span>
+          </p>
+        )}
+        <p className="help" id={`${id}-grafana-help`}>
+          Paste the panel&apos;s address, or the code from Grafana&apos;s{" "}
+          <b>Share › Embed</b>.
+          {gfOrigins.length > 0 && (
+            <>
+              {" "}
+              Allowed Grafana:{" "}
+              {gfOrigins.map((entry, index) => (
+                <span key={`${entry.origin}${entry.path_prefix}`}>
+                  {index > 0 && ", "}
+                  <span className="mono">{originLabel(entry)}</span>
+                </span>
+              ))}
+              .
+            </>
+          )}
+        </p>
+      </div>
+      {gfFacts && (
+        <div className="f">
+          <span className="lbl">From this address</span>
+          <dl className="dashboard-panel-gf-facts">
+            {(
+              [
+                ["Grafana", gfFacts.grafana],
+                ["Dashboard", gfFacts.dashboard],
+                ["Panel", gfFacts.panel],
+                ["Time range", gfFacts.range],
+                ["Refresh", gfFacts.refresh],
+                ["Variables", gfFacts.variables],
+              ] as const
+            ).map(([term, value]) => (
+              <div key={term}>
+                <dt>{term}</dt>
+                <dd title={value}>{value}</dd>
+              </div>
+            ))}
+          </dl>
+          <span className="help">
+            To change these, change them in Grafana and copy the address again.
+          </span>
+        </div>
+      )}
+    </>
+  );
+  const gfSize = `${creating ? "the new panel size" : "the panel's current size"}, ${grafanaDraft.w} × ${grafanaDraft.h}`;
+  const grafanaPreview = (
+    <>
+      <div className="f">
+        <span className="lbl">Preview</span>
+        <div className="dashboard-panel-preview">
+          <GrafanaTile
+            panel={grafanaDraft}
+            status={grafanaStatus}
+            check={gfCheck}
+            preview
+            emptyText="Paste a panel address to see it here."
+            layoutStyle={previewSize(grafanaDraft)}
+          />
+        </div>
+        <p className="help">
+          {gfGood
+            ? `Live from Grafana, shown at ${gfSize}.`
+            : `Shown at ${gfSize}.`}
+        </p>
+      </div>
+      <div className="banner bn-info dashboard-panel-gf-note">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 11v5M12 8h.01" />
+        </svg>
+        <div>
+          <strong>Blank or asking to sign in?</strong>
+          <ul>
+            <li>
+              Sign in to this Grafana in another tab, then reopen the dialog.
+            </li>
+            <li>
+              Grafana must allow embedding. Admin › Integrations has the
+              settings to send to your Grafana admins.
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div className="f">
+        <span className="lbl">About this panel</span>
+        <p className="help">
+          Keep shows the panel straight from Grafana and never reads its data.
+          Each viewer sees what their own Grafana access allows, and the panel
+          refreshes on Grafana&apos;s schedule. It always uses the viewer&apos;s
+          Keep theme, light or dark.
+        </p>
+      </div>
+    </>
   );
 
   const linkError =
@@ -1882,6 +2218,7 @@ export function DashboardPanelDialog({
     </fieldset>
   );
   const blocked =
+    (kind === "grafana" && !gfGood && !gfKept) ||
     ((kind === "count" || kind === "table") && !selected) ||
     (kind === "image" && (source === "upload" ? !upload.id : !address.trim()));
 
@@ -1965,15 +2302,17 @@ export function DashboardPanelDialog({
         </div>
         <div className="dashboard-panel-body">
           <div className="dashboard-panel-column">
-            {kind === "servicenow"
-              ? servicenowSettings
-              : kind === "html"
-                ? htmlSettings
-                : kind === "image"
-                  ? imageSettings
-                  : kind === "table"
-                    ? tableSettings
-                    : countSettings}
+            {kind === "grafana"
+              ? grafanaSettings
+              : kind === "servicenow"
+                ? servicenowSettings
+                : kind === "html"
+                  ? htmlSettings
+                  : kind === "image"
+                    ? imageSettings
+                    : kind === "table"
+                      ? tableSettings
+                      : countSettings}
             {linkSection}
             {(error || placementError) && (
               <div role="alert" className="notice error">
@@ -1982,15 +2321,17 @@ export function DashboardPanelDialog({
             )}
           </div>
           <div className="dashboard-panel-column">
-            {kind === "servicenow"
-              ? servicenowPreview
-              : kind === "html"
-                ? htmlPreview
-                : kind === "image"
-                  ? imagePreview
-                  : kind === "table"
-                    ? tablePreview
-                    : countPreview}
+            {kind === "grafana"
+              ? grafanaPreview
+              : kind === "servicenow"
+                ? servicenowPreview
+                : kind === "html"
+                  ? htmlPreview
+                  : kind === "image"
+                    ? imagePreview
+                    : kind === "table"
+                      ? tablePreview
+                      : countPreview}
           </div>
         </div>
         <div className="dashboard-panel-foot">

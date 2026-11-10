@@ -30,6 +30,6 @@
     "openapi-typescript": "7.13.0",
     "prettier": "3.9.8",
     "typescript": "5.9.3",
-    "@keep/contracts": "git+https://github.com/keep-alert-operations/keep-contracts.git#4ba0682dce4da0c4bd2860d99b28a8528a007816"
+    "@keep/contracts": "git+https://github.com/keep-alert-operations/keep-contracts.git#dd5fff2a396c67dc9a6f6b10db0ad88ec6c8d49e"
   }
 }

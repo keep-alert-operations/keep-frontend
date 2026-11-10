@@ -615,3 +615,130 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Grafana panel settings (REV-68): the address box with its attached link strip,
+   the found address, the inline problem and what the address frames. */
+.dashboard-panel-gf-address {
+  height: 76px;
+  min-height: 76px;
+  padding: 8px 12px;
+  resize: vertical;
+  border-radius: 8px 8px 0 0;
+  font:
+    12px/1.5 var(--font-geist-mono),
+    ui-monospace,
+    monospace;
+  word-break: break-all;
+}
+.dashboard-panel-form .dashboard-panel-gf-bad,
+.dashboard-panel-form .dashboard-panel-gf-bad:focus {
+  border-color: var(--critical-mark);
+}
+.dashboard-panel-gf-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: -7px;
+  padding: 6px 8px 6px 12px;
+  border: 1px solid var(--input-border);
+  border-top: 1px dashed var(--border);
+  border-radius: 0 0 8px 8px;
+  background: var(--bg);
+}
+.dashboard-panel-gf-bar > .help {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.dashboard-panel-dialog .dashboard-panel-gf-ok,
+.dashboard-panel-dialog .dashboard-panel-gf-error {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.dashboard-panel-dialog .dashboard-panel-gf-ok {
+  color: var(--ok-ink);
+  word-break: break-all;
+}
+.dashboard-panel-gf-bar > .dashboard-panel-gf-ok {
+  white-space: nowrap;
+  word-break: normal;
+}
+.dashboard-panel-dialog .dashboard-panel-gf-error {
+  color: var(--error);
+}
+.dashboard-panel-dialog .dashboard-panel-gf-ok svg,
+.dashboard-panel-dialog .dashboard-panel-gf-error svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.dashboard-panel-dialog .dashboard-panel-gf-ok .mono {
+  font-size: 11.5px;
+}
+.dashboard-panel-gf-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.dashboard-panel-gf-facts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.dashboard-panel-gf-facts dt {
+  font-size: 11px;
+  color: var(--subtle);
+  text-transform: none;
+}
+.dashboard-panel-gf-facts dd {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dashboard-panel-preview > .pn-gf {
+  min-height: 160px;
+}
+.dashboard-panel-gf-note,
+.dashboard-panel-gf-hint {
+  align-items: flex-start;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.dashboard-panel-gf-note svg,
+.dashboard-panel-gf-hint svg {
+  margin-top: 1px;
+}
+.dashboard-panel-gf-note strong,
+.dashboard-panel-gf-hint strong {
+  font-weight: 600;
+}
+.dashboard-panel-gf-note ul {
+  margin: 4px 0 0;
+  padding-left: 16px;
+}
+.dashboard-panel-gf-hint > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.dashboard-panel-dialog .dashboard-panel-gf-hint .btn {
+  margin-left: 0;
+}
+@media (max-width: 479px) {
+  .dashboard-panel-gf-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

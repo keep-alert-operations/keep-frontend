@@ -1043,3 +1043,134 @@
 .pn-sn .pn-value > b.pn-none-value {
   color: var(--faint);
 }
+
+/* Grafana panels (REV-68): Grafana's own panel in a sandboxed frame. Untitled
+   panels give the frame the whole card; titled ones put it under the title row. */
+.pn-gf {
+  border-top-width: 1px;
+  padding: 0;
+  gap: 0;
+}
+.pn-gf > .pn-head {
+  padding: 12px 16px 8px;
+}
+.pn-gf-box {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  background: var(--surface);
+}
+.pn-gf:not(.pn-gf-bare) .pn-gf-box {
+  border-top: 1px solid var(--line);
+}
+.pn-gf-box iframe {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+}
+.pn-gf-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 18px;
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.45;
+  overflow: hidden;
+}
+.pn-gf-msg strong {
+  font-weight: 600;
+}
+.pn-gf-msg .btn {
+  margin-top: 4px;
+}
+.pn-gf-quiet {
+  background: var(--bg);
+  color: var(--subtle);
+}
+.pn-gf-quiet > svg {
+  color: var(--faint);
+}
+.pn-gf-quiet strong {
+  color: var(--ink-soft);
+}
+.pn-gf-blocked {
+  background: var(--error-bg);
+  color: var(--error);
+}
+.pn-gf-reason {
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+/* Loading: a skeleton keeps the card's size until the frame has loaded. */
+.pn-gf-loading {
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 12px 14px 40px;
+  background: var(--surface);
+}
+.pn-gf-skel {
+  display: block;
+  border-radius: 6px;
+  background: var(--fill-strong);
+}
+.pn-gf-status {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 14px;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--subtle);
+}
+/* A cover over every frame while any panel is moved or resized, so a frame
+   can't swallow the drag. */
+.pn-gf-cover {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  align-items: center;
+  justify-content: center;
+  background: rgb(var(--shadow-rgb) / 0.06);
+}
+.pn-gf-cover > span {
+  padding: 6px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 500;
+}
+.de-grid[data-moving] .pn-gf-cover {
+  display: flex;
+}
+.de-grid[data-moving] .pn-gf-box iframe {
+  pointer-events: none;
+}
+.pn-gf-bare > .pn-go-float {
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+}
+.de-grid > .de-tile.pn-gf-bare > .pn-go-float {
+  right: 44px;
+}
+/* Narrow layouts: a graph needs room, so a Grafana panel takes the full width
+   and six rows, as in the approved mock. */
+@media (max-width: 1023px) {
+  .pg > .pn-gf {
+    grid-column: 1 / -1 !important;
+    grid-row: auto / span 6 !important;
+  }
+}

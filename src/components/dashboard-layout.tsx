@@ -414,7 +414,13 @@ export function DashboardLayout<T extends GridPanel>({
         Drag the grip to move a panel; drag its lower-right corner to resize.
         Arrow keys also work on either handle. Save to keep the layout.
       </p>
-      <div className="pg de-grid" ref={grid}>
+      {/* While a panel moves or resizes, covers keep framed panels (REV-68)
+          from swallowing the pointer. */}
+      <div
+        className="pg de-grid"
+        ref={grid}
+        data-moving={preview !== null || undefined}
+      >
         {preview &&
           visual &&
           (() => {

@@ -25,6 +25,7 @@ import {
   ImageTile,
   contentPanelName,
   isCountPanel,
+  isGrafanaPanel,
   isHtmlPanel,
   isImagePanel,
   isServiceNowPanel,
@@ -41,6 +42,7 @@ import {
   useTicketCounts,
 } from "./dashboard-servicenow-panel";
 import { queryKey } from "@/lib/ticket-counts";
+import { GrafanaTile, useGrafanaStatus } from "./dashboard-grafana-panel";
 
 function definition(value?: Record<string, unknown>): {
   name: string;
@@ -72,6 +74,8 @@ function definition(value?: Record<string, unknown>): {
                 fit: panel.fit ?? "contain",
                 alt: panel.alt ?? null,
               };
+            if (isGrafanaPanel(panel))
+              return { ...layout, type: "grafana", url: panel.url };
             if (isServiceNowPanel(panel))
               return {
                 ...layout,
@@ -343,6 +347,10 @@ export function DashboardWorkspace({
   }
   // A dashboard not saved yet has no count engine; its ServiceNow drafts still count (REV-65).
   const draftTickets = useTicketCounts(scope, model ? [] : draft.panels);
+  const draftGrafana = useGrafanaStatus(
+    scope,
+    !model && draft.panels.some(isGrafanaPanel),
+  );
   const observation = (panel: Panel) =>
     !isCountPanel(panel)
       ? undefined
@@ -750,6 +758,7 @@ export function DashboardWorkspace({
                       panels: compactPanels(panels),
                     })),
                   options: panelOptions,
+                  edit: locked ? undefined : editPanel,
                 }
               : undefined
           }
@@ -773,6 +782,20 @@ export function DashboardWorkspace({
                 {canEdit && panelOptions(panel)}
               </>
             );
+            if (isGrafanaPanel(panel))
+              return (
+                <GrafanaTile
+                  key={panel.id}
+                  panel={panel}
+                  status={draftGrafana}
+                  onEdit={
+                    canEdit && !locked ? () => editPanel(panel.id) : undefined
+                  }
+                  layoutControls={layoutControls}
+                  layoutActive={active}
+                  layoutStyle={style}
+                />
+              );
             if (isServiceNowPanel(panel))
               return (
                 <ServiceNowTile
