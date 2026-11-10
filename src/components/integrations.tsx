@@ -104,8 +104,8 @@ function TicketCountIntegrationPage({ scope }: { scope: Scope }) {
             <h2 id="int-ticket-count">ServiceNow ticket count</h2>
             <p className="help">
               Lets dashboards show how many ServiceNow incidents each team has.
-              Appchi only asks the service for counts; it never creates or
-              changes tickets.
+              Keep only asks the service for counts; it never creates or changes
+              tickets.
             </p>
           </div>
           {data && (
@@ -177,10 +177,10 @@ function TicketCountIntegrationPage({ scope }: { scope: Scope }) {
           {test.error ? <ErrorNotice error={test.error} /> : null}
         </div>
         <p className="help int-note">
-          The service address is set in Appchi&apos;s deployment configuration (
-          <span className="mono">APPCHI_TICKET_COUNT_URL</span>), so it
-          can&apos;t be changed here. Appchi&apos;s server calls the service;
-          browsers never do.
+          The service address is set in Keep&apos;s deployment configuration (
+          <span className="mono">KEEP_TICKET_COUNT_URL</span>), so it can&apos;t
+          be changed here. Keep&apos;s server calls the service; browsers never
+          do.
           {data && !configured
             ? " Until it is set, editors can't add ServiceNow panels and existing ones show that ServiceNow isn't connected."
             : ""}

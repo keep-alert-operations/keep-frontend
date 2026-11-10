@@ -1,6 +1,6 @@
-# Appchi login theme
+# Keep login theme
 
-User-approved password form, installed for the `appchi-web` client only.
+User-approved password form, installed for the `keep-web` client only.
 Other templates inherit `keycloak`; no authentication provider is replaced.
 
 `login/login.ftl` uses the installed Keycloak 26.7.4 form contract, generated
@@ -13,6 +13,6 @@ light and is the only value saved in localStorage.
 The Geist Latin font is copied from the frontend's pinned Next.js package and
 distributed under `login/resources/fonts/OFL.txt`.
 
-See [local setup](https://github.com/appchi-alert-operations/appchi-delivery/blob/main/docs/local-keycloak.md#appchi-login-theme) for
+See [local setup](https://github.com/keep-alert-operations/keep-delivery/blob/main/docs/local-keycloak.md#keep-login-theme) for
 installation and upgrade notes. Review the form and inherited resources whenever
 the pinned Keycloak version changes.

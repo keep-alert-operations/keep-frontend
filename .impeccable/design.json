@@ -1,10 +1,10 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-10-26T10:40:49+00:00",
-  "title": "Design System: Appchi",
+  "title": "Design System: Keep",
   "extensions": {
     "themes": {
-      "mechanism": "Light default; dark stored as appchi-theme in localStorage and applied as data-theme on <html> before first paint. Dark values are the *-dark colour tokens.",
+      "mechanism": "Light default; dark stored as keep-theme in localStorage and applied as data-theme on <html> before first paint. Dark values are the *-dark colour tokens.",
       "source": "src/app/theme.css (:root and :root[data-theme=\"dark\"])",
       "browserSurfaces": {
         "accent-color": "primary",
@@ -15,7 +15,7 @@
         "focus": "2px solid focus outline",
         "color-scheme": "light / dark per theme"
       },
-      "keycloak": "keycloak/themes/appchi/login/resources/css/appchi.css mirrors the palette through light-dark() --ap-* tokens."
+      "keycloak": "keycloak/themes/keep/login/resources/css/keep.css mirrors the palette through light-dark() --ap-* tokens."
     },
     "contrast": {
       "floor": "4.5:1 for every text role on its surfaces, both themes, placeholders included",
@@ -2519,7 +2519,7 @@
   ],
   "narrative": {
     "northStar": "The Calm Ocean Workspace",
-    "overview": "Appchi is an Operate surface: operators work it at desk monitors through a shift, and dashboards also run fullscreen on NOC wall displays read from across the room. The system as built is the incumbent Appchi workspace (structure of commit `f58c7d0`) recoloured with the user-chosen Ocean palette on 2026-10-26. Nothing moved: the same 76px icon rail, crumb-and-title page header, CEL bar, quick views, white table panels, Geist and Geist Mono, 8px controls and 12px panels. What changed is temperature. The shell reads as a cool blue tint instead of warm grey, and the blue marks exactly two things: where to act and where you are.\n\nDensity is moderate and even. Body text is 13.5px, rows are 48–52px, panels are flat white cards with a hairline border on a faintly blue canvas. Colour is semantic, not decorative: every colour in the feature styles resolves to one role in `src/app/theme.css`, defined once for light (the default) and once for dark. Status and severity keep their red, orange, amber and green meanings, tuned to sit inside the palette, and every severity and status colour sits beside its text label. Dense Feed and preset rows show the coloured label alone; detail headers and other lists add the shape-coded mark. Since REV-43 the header shows update status only when something is wrong, and no revision numbers appear on the alert, preset or dashboard screens.\n\nThe confirmed rejections come from the user: no black-and-white or grayscale palette, no black primary buttons, no generic SaaS admin look, no neon hacker console, no playful consumer styling, and nothing structural from the Ocean prototype (no 228px labelled sidebar, no Mulish or IBM Plex Mono, no halo on firing dots, none of its spacing or size changes).",
+    "overview": "Keep is an Operate surface: operators work it at desk monitors through a shift, and dashboards also run fullscreen on NOC wall displays read from across the room. The system as built is the incumbent Keep workspace (structure of commit `f58c7d0`) recoloured with the user-chosen Ocean palette on 2026-10-26. Nothing moved: the same 76px icon rail, crumb-and-title page header, CEL bar, quick views, white table panels, Geist and Geist Mono, 8px controls and 12px panels. What changed is temperature. The shell reads as a cool blue tint instead of warm grey, and the blue marks exactly two things: where to act and where you are.\n\nDensity is moderate and even. Body text is 13.5px, rows are 48–52px, panels are flat white cards with a hairline border on a faintly blue canvas. Colour is semantic, not decorative: every colour in the feature styles resolves to one role in `src/app/theme.css`, defined once for light (the default) and once for dark. Status and severity keep their red, orange, amber and green meanings, tuned to sit inside the palette, and every severity and status colour sits beside its text label. Dense Feed and preset rows show the coloured label alone; detail headers and other lists add the shape-coded mark. Since REV-43 the header shows update status only when something is wrong, and no revision numbers appear on the alert, preset or dashboard screens.\n\nThe confirmed rejections come from the user: no black-and-white or grayscale palette, no black primary buttons, no generic SaaS admin look, no neon hacker console, no playful consumer styling, and nothing structural from the Ocean prototype (no 228px labelled sidebar, no Mulish or IBM Plex Mono, no halo on firing dots, none of its spacing or size changes).",
     "keyCharacteristics": [
       "Incumbent structure, Ocean colour: cool blue-tinted rail and canvas, white panels, navy ink.",
       "One solid blue for primary actions, Run, the active rail tile, the brand mark and the selected tab underline; a soft blue pill for the selected quick view.",

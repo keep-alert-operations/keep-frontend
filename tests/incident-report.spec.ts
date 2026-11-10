@@ -176,7 +176,7 @@ async function setup(page: Page, options: { theme?: "dark" } = {}) {
   };
   await page.clock.setFixedTime(now);
   await page.addInitScript((theme) => {
-    if (theme) localStorage.setItem("appchi-theme", theme);
+    if (theme) localStorage.setItem("keep-theme", theme);
     const original = window.fetch.bind(window);
     window.fetch = (input, init) => {
       if (typeof input === "string" && input.endsWith("/events"))

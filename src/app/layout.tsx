@@ -24,11 +24,11 @@ const geistMono = localFont({
   weight: "100 900",
 });
 export const metadata: Metadata = {
-  title: "Appchi · Alert operations",
+  title: "Keep · Alert operations",
   description: "Internal alert and incident management",
 };
 const themeBootstrap = `try {
-  document.documentElement.dataset.theme = localStorage.getItem("appchi-theme") === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = localStorage.getItem("keep-theme") === "dark" ? "dark" : "light";
 } catch {
   document.documentElement.dataset.theme = "light";
 }`;

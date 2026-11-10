@@ -130,7 +130,7 @@ test("page, administration, home and browser-history navigation preserve the sig
   await page
     .getByRole("combobox", { name: "Tenant", exact: true })
     .selectOption(global);
-  await page.getByRole("link", { name: "Appchi home", exact: true }).click();
+  await page.getByRole("link", { name: "Keep home", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Feed", exact: true, level: 1 }),
   ).toBeVisible();

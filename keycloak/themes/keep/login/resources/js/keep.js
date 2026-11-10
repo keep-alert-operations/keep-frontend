@@ -19,7 +19,7 @@ appearance.addEventListener("click", () => {
     document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next;
   try {
-    localStorage.setItem("appchi-theme", next);
+    localStorage.setItem("keep-theme", next);
   } catch {
     // The selection still applies when browser storage is unavailable.
   }

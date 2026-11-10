@@ -37,7 +37,7 @@ const result = () => ({
     eligibility_exclusions: ["not_firing", "suppressed", "active_ownership"],
   },
   meta: {
-    profile: "appchi-cel-v1",
+    profile: "keep-cel-v1",
     as_of: "2026-09-23T12:00:00Z",
     alert_revision: "9007199254740997",
   },
@@ -215,7 +215,7 @@ test("invalid definitions show diagnostics and missing typed groups stay unavail
                 qualification_proven: false,
                 diagnostics: { message: "Synthetic CEL type error" },
               },
-              meta: { profile: "appchi-cel-v1" },
+              meta: { profile: "keep-cel-v1" },
             }
           : {
               ...response,

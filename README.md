@@ -1,8 +1,8 @@
-# appchi-frontend
+# keep-frontend
 
 Next.js user interface, generated HTTP client and custom Keycloak login theme.
 
-See [system design](https://github.com/appchi-alert-operations/appchi-design), [workspace setup](https://github.com/appchi-alert-operations/appchi-delivery) and [source provenance](SOURCE.md).
+See [system design](https://github.com/keep-alert-operations/keep-design), [workspace setup](https://github.com/keep-alert-operations/keep-delivery) and [source provenance](SOURCE.md).
 
 ## Development
 
@@ -17,7 +17,7 @@ npm run build
 npm test
 ```
 
-`APPCHI_BACKEND_URL` selects the trusted Product API origin for development. Real
+`KEEP_BACKEND_URL` selects the trusted Product API origin for development. Real
 identity and system browser checks require the documented isolated environment.
 The Docker build context is this repository. Keycloak theme assets live under
 `keycloak/themes`; realm/client configuration lives in delivery.

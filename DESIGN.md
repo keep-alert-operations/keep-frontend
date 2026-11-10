@@ -1,6 +1,6 @@
 ---
-name: Appchi
-description: "Internal alert operations workspace: the calm incumbent Appchi interface in the Ocean palette, light and dark."
+name: Keep
+description: "Internal alert operations workspace: the calm incumbent Keep interface in the Ocean palette, light and dark."
 colors:
   # Light theme (default, :root) roles; names match src/app/theme.css custom properties.
   bg: "#f7fafd"
@@ -395,13 +395,13 @@ components:
     padding: "12px 16px"
 ---
 
-# Design System: Appchi
+# Design System: Keep
 
 ## Overview
 
 **Creative North Star: "The Calm Ocean Workspace"**
 
-Appchi is an Operate surface: operators work it at desk monitors through a shift, and dashboards also run fullscreen on NOC wall displays read from across the room. The system as built is the incumbent Appchi workspace (structure of commit `f58c7d0`) recoloured with the user-chosen Ocean palette on 2026-10-26. Nothing moved: the same 76px icon rail, crumb-and-title page header, CEL bar, quick views, white table panels, Geist and Geist Mono, 8px controls and 12px panels. What changed is temperature. The shell reads as a cool blue tint instead of warm grey, and the blue marks exactly two things: where to act and where you are.
+Keep is an Operate surface: operators work it at desk monitors through a shift, and dashboards also run fullscreen on NOC wall displays read from across the room. The system as built is the incumbent Keep workspace (structure of commit `f58c7d0`) recoloured with the user-chosen Ocean palette on 2026-10-26. Nothing moved: the same 76px icon rail, crumb-and-title page header, CEL bar, quick views, white table panels, Geist and Geist Mono, 8px controls and 12px panels. What changed is temperature. The shell reads as a cool blue tint instead of warm grey, and the blue marks exactly two things: where to act and where you are.
 
 Density is moderate and even. Body text is 13.5px, rows are 48–52px, panels are flat white cards with a hairline border on a faintly blue canvas. Colour is semantic, not decorative: every colour in the feature styles resolves to one role in `src/app/theme.css`, defined once for light (the default) and once for dark. Status and severity keep their red, orange, amber and green meanings, tuned to sit inside the palette, and every severity and status colour sits beside its text label. Dense Feed and preset rows show the coloured label alone; detail headers and other lists add the shape-coded mark. Since REV-43 the header shows update status only when something is wrong, and no revision numbers appear on the alert, preset or dashboard screens.
 
@@ -571,10 +571,10 @@ Since REV-66 any panel may carry a link button (`.pn-go`): a 26px outlined `surf
 The Reports page (rail item after Boards) shows the incident report in the existing page frame. The period row holds a segmented control (24 hours, 7, 30, 90 days, Custom) whose Custom choice opens a 340px popover with From and To dates, the 13px 500 range label with exact instants in its tooltip, the Compare with previous period checkbox and its `subtle` "vs …" line, then a right-aligned "Computed … ago" and a small Refresh button. A 12px panel holds five figures separated by `line` hairlines: a 12.5px 500 `muted` label with a 20px round ⓘ button (`faint`, hover `accent` on `accent-soft`) opening a 300px definition popover, the value at 26px 600 tabular, a 12px `subtle` sub-line and a 12px change line (`ok-ink` better, `high` worse, `subtle` neutral). The chart panel draws opened and resolved as paired 9px bars with 3px rounded tops in `chart-1` and `chart-2`, three `line` gridlines, sparse 11px axis labels, a legend with totals, hover tooltips and View as table. Bar lists (resolution cause) use an 8px `fill` track with a `chart-1` fill. The breakdown is one panel with a segmented switcher and a grid table whose Opened column carries a 58px mini bar. First loads use flat `fill-strong` placeholders without animation. Below 1180px the figures form three columns and the panels stack; at 640px two columns, and tables scroll inside their panel.
 
 ### Theme switch and theme mechanism
-A sun/moon switch in the account menu: a 56×30 `fill-strong` track with a 24px `surface` thumb that slides 26px in 160ms (no motion under reduced-motion). Light is the default regardless of OS preference; a dark choice is stored as `appchi-theme` in localStorage and applied as `data-theme` on `<html>` by an inline bootstrap script before first paint. Each theme sets `color-scheme`, so native controls, scrollbars and form widgets follow. Browser surfaces are themed from the palette: `accent-color` and `caret-color` are `primary`, `::selection` is `primary-soft` with `text`, placeholders are `subtle` at full opacity, scrollbars are `border-hover` on transparent, and focus is the 2px `focus` outline.
+A sun/moon switch in the account menu: a 56×30 `fill-strong` track with a 24px `surface` thumb that slides 26px in 160ms (no motion under reduced-motion). Light is the default regardless of OS preference; a dark choice is stored as `keep-theme` in localStorage and applied as `data-theme` on `<html>` by an inline bootstrap script before first paint. Each theme sets `color-scheme`, so native controls, scrollbars and form widgets follow. Browser surfaces are themed from the palette: `accent-color` and `caret-color` are `primary`, `::selection` is `primary-soft` with `text`, placeholders are `subtle` at full opacity, scrollbars are `border-hover` on transparent, and focus is the 2px `focus` outline.
 
 ### Sign-in screens and Keycloak theme
-The application's signed-out, sign-in and expired screens use a 472px `surface` card at 16px radius with the 40px brand mark, a 20px title and a 44px primary button. The Appchi Keycloak password form (`keycloak/themes/appchi`) mirrors the same palette through `light-dark()` tokens (`--ap-*`) holding the theme.css light and dark values, the local Geist font, a 428px card at 16px radius, blue caret, accent and selection, and the same error colours. Its fields use the dark `code-bg` value as their dark ground.
+The application's signed-out, sign-in and expired screens use a 472px `surface` card at 16px radius with the 40px brand mark, a 20px title and a 44px primary button. The Keep Keycloak password form (`keycloak/themes/keep`) mirrors the same palette through `light-dark()` tokens (`--ap-*`) holding the theme.css light and dark values, the local Geist font, a 428px card at 16px radius, blue caret, accent and selection, and the same error colours. Its fields use the dark `code-bg` value as their dark ground.
 
 ### Known exceptions
 - Refreshing tables are dimmed to 0.62 opacity (`.is-stale`, 150ms fade) while a refetch is in flight. This is pre-existing and transient, and it drops secondary text below 4.5:1 (about 2.6–3.9:1) during the refresh. It is not a pattern to reuse for resting states.

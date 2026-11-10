@@ -4,11 +4,11 @@ export default function SignInExpiredPage() {
       <main id="main-content" className="login">
         <div className="login-brand">
           <div className="brand-mark" aria-hidden="true">
-            A
+            K
           </div>
           <div>
             <h1>Sign-in link expired</h1>
-            <p>Appchi</p>
+            <p>Keep</p>
           </div>
         </div>
         <p className="login-lead">
@@ -19,7 +19,7 @@ export default function SignInExpiredPage() {
           Sign in again
         </a>
         <p className="help">
-          <a href="/">Back to Appchi</a>
+          <a href="/">Back to Keep</a>
         </p>
       </main>
     </div>

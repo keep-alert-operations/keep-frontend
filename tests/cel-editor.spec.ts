@@ -2,9 +2,9 @@ import { expect, test, type Page } from "@playwright/test";
 
 const tenant = "00000000-0000-4000-8000-000000000001";
 const profile = (context: string) => ({
-  profile: "appchi-cel-v1",
+  profile: "keep-cel-v1",
   context,
-  cost_model: "appchi-cel-cost-v1",
+  cost_model: "keep-cel-cost-v1",
   fields: [
     { name: "message", type: "string", nullable: false, values: [] },
     {
@@ -43,7 +43,7 @@ const profile = (context: string) => ({
 });
 const valid = (context = "feed") => ({
   valid: true,
-  profile: "appchi-cel-v1",
+  profile: "keep-cel-v1",
   context,
   diagnostics: [],
   position_encoding: "unicode_codepoints",
@@ -107,7 +107,7 @@ test("feed discovers only supported fields and completes receiver methods at the
     .click();
   const editor = page.getByLabel("CEL expression", { exact: true });
   await expect(
-    page.getByText("appchi-cel-v1", { exact: false }).first(),
+    page.getByText("keep-cel-v1", { exact: false }).first(),
   ).toBeVisible();
   await editor.fill("sev");
   await editor.press("Control+Space");
@@ -214,7 +214,7 @@ test("keyboard completion announces its list and Tab dismisses it without trappi
     .click();
   const editor = page.getByLabel("CEL expression", { exact: true });
   await expect(
-    page.getByText("appchi-cel-v1", { exact: false }).first(),
+    page.getByText("keep-cel-v1", { exact: false }).first(),
   ).toBeVisible();
   await editor.fill("alert.sev");
   await editor.press("Control+Space");

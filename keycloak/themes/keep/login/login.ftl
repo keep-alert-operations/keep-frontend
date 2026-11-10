@@ -1,4 +1,4 @@
-<#-- Appchi's approved password form. Other authentication pages inherit Keycloak. -->
+<#-- Keep's approved password form. Other authentication pages inherit Keycloak. -->
 <#import "passkeys.ftl" as passkeys>
 <#assign invalidCredentials = messagesPerField.existsError('username', 'password')>
 <!DOCTYPE html>
@@ -6,25 +6,25 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sign in · Appchi</title>
-    <link rel="icon" type="image/svg+xml" href="${url.resourcesPath}/img/appchi.svg">
+    <title>Sign in · Keep</title>
+    <link rel="icon" type="image/svg+xml" href="${url.resourcesPath}/img/keep.svg">
     <script src="${url.resourcesPath}/js/appearance.js"></script>
-    <link rel="stylesheet" href="${url.resourcesPath}/css/appchi.css">
+    <link rel="stylesheet" href="${url.resourcesPath}/css/keep.css">
     <script type="importmap">
         {"imports": {"rfc4648": "${url.resourcesCommonPath}/vendor/rfc4648/rfc4648.js"}}
     </script>
     <#if scripts??>
         <#list scripts as script><script src="${script}" type="text/javascript"></script></#list>
     </#if>
-    <script type="module" src="${url.resourcesPath}/js/appchi.js"></script>
+    <script type="module" src="${url.resourcesPath}/js/keep.js"></script>
 </head>
-<body id="appchi-login" data-sso-check="${url.ssoLoginInOtherTabsUrl}"
+<body id="keep-login" data-sso-check="${url.ssoLoginInOtherTabsUrl}"
       <#if authenticationSession??>data-auth-session="${authenticationSession.authSessionIdHash}"</#if>>
     <main class="ap-stage">
         <section class="ap-panel" aria-labelledby="sign-in-title">
             <div class="ap-brand">
-                <div class="ap-mark" aria-hidden="true">A</div>
-                <div><div class="ap-name">Appchi</div><div class="ap-tagline">Alert operations, in one place.</div></div>
+                <div class="ap-mark" aria-hidden="true">K</div>
+                <div><div class="ap-name">Keep</div><div class="ap-tagline">Alert operations, in one place.</div></div>
             </div>
             <h1 class="ap-heading" id="sign-in-title">Sign in</h1>
             <p class="ap-intro">Use your company username and password.</p>

@@ -2,8 +2,8 @@ import DOMPurify, { type DOMPurify as Purifier } from "dompurify";
 
 /**
  * Browser sanitizing for HTML panels (REV-57). The server already stores only
- * sanitized HTML; this second pass uses the same allowlist as appchi-domain's
- * `appchi.configuration.html`, so keep the two in step.
+ * sanitized HTML; this second pass uses the same allowlist as keep-domain's
+ * `keep.configuration.html`, so keep the two in step.
  */
 export const MAX_PANEL_HTML = 16_000;
 const TAGS = [

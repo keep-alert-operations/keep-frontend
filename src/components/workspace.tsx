@@ -73,7 +73,7 @@ export function Workspace() {
     document.documentElement.dataset.theme = next;
     setTheme(next);
     try {
-      localStorage.setItem("appchi-theme", next);
+      localStorage.setItem("keep-theme", next);
     } catch {
       // The theme still changes for this page when browser storage is blocked.
     }
@@ -236,10 +236,10 @@ export function Workspace() {
         <main id="main-content" className="login">
           <div className="login-brand">
             <div className="brand-mark" aria-hidden="true">
-              A
+              K
             </div>
             <div>
-              <h1>Appchi</h1>
+              <h1>Keep</h1>
               <p>Alert operations, in one place.</p>
             </div>
           </div>
@@ -251,7 +251,7 @@ export function Workspace() {
             <>
               <p className="login-lead">
                 {pathname === "/signed-out"
-                  ? "You have signed out of Appchi."
+                  ? "You have signed out of Keep."
                   : "Sign in with your company username and password."}
               </p>
               <a
@@ -323,14 +323,14 @@ export function Workspace() {
       <aside className="rail">
         <a
           href="/"
-          aria-label="Appchi home"
+          aria-label="Keep home"
           className="brand-mark"
           onClick={(event) => {
             event.preventDefault();
             navigate("/");
           }}
         >
-          A
+          K
         </a>
         <nav aria-label="Tenant navigation">
           {sections

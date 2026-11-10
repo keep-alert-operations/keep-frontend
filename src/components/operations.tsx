@@ -107,7 +107,7 @@ export function currentKeyText(operator: RecordData) {
   return "No active key";
 }
 
-export const routingLabel = (name: unknown) => `Appchi - ${display(name)}`;
+export const routingLabel = (name: unknown) => `Keep - ${display(name)}`;
 
 const operationKinds: Record<string, string> = {
   setup: "Setup",
@@ -268,7 +268,7 @@ export function OperatorCreate(scope: Scope) {
                 placeholder="Up to 128 characters"
               />
               <span className="help">
-                Names are unique across Appchi. Senders authenticate with this
+                Names are unique across Keep. Senders authenticate with this
                 operator&apos;s own API key.
               </span>
             </div>
@@ -347,7 +347,7 @@ export function OperatorCreate(scope: Scope) {
             <span className="lbl">If setup stalls</span>
             <p className="help">
               Failed setup requires an explicit retry from the operator page.
-              Appchi does not retry provisioning in the background.
+              Keep does not retry provisioning in the background.
             </p>
           </section>
         </aside>

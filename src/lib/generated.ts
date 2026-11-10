@@ -3551,7 +3551,7 @@ export interface components {
       data: components["schemas"]["Validation"];
     };
     /** Create */
-    appchi__correlation__models__Create: {
+    keep__correlation__models__Create: {
       /** Name */
       name: string;
       /**
@@ -3577,7 +3577,7 @@ export interface components {
       command_id: string;
     };
     /** Definition */
-    appchi__correlation__models__Definition: {
+    keep__correlation__models__Definition: {
       /** Name */
       name: string;
       /**
@@ -3601,7 +3601,7 @@ export interface components {
       window_minutes: number;
     };
     /** Create */
-    appchi__maintenance__models__Create: {
+    keep__maintenance__models__Create: {
       /** Name */
       name: string;
       /**
@@ -3625,7 +3625,7 @@ export interface components {
       command_id: string;
     };
     /** Definition */
-    appchi__maintenance__models__Definition: {
+    keep__maintenance__models__Definition: {
       /** Name */
       name: string;
       /**
@@ -5321,7 +5321,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["appchi__maintenance__models__Create"];
+        "application/json": components["schemas"]["keep__maintenance__models__Create"];
       };
     };
     responses: {
@@ -5531,7 +5531,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["appchi__maintenance__models__Definition"];
+        "application/json": components["schemas"]["keep__maintenance__models__Definition"];
       };
     };
     responses: {
@@ -5850,7 +5850,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["appchi__correlation__models__Create"];
+        "application/json": components["schemas"]["keep__correlation__models__Create"];
       };
     };
     responses: {
@@ -6089,7 +6089,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["appchi__correlation__models__Definition"];
+        "application/json": components["schemas"]["keep__correlation__models__Definition"];
       };
     };
     responses: {

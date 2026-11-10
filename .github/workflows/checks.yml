@@ -16,10 +16,10 @@ jobs:
           cache: npm
       - name: Install and verify
         env:
-          APPCHI_TOKEN: ${{ secrets.APPCHI_REPOSITORIES_TOKEN }}
+          KEEP_TOKEN: ${{ secrets.APPCHI_REPOSITORIES_TOKEN }}
         run: |
-          test -n "$APPCHI_TOKEN" || { echo 'Configure APPCHI_REPOSITORIES_TOKEN for private contracts.'; exit 1; }
-          git config --global credential.helper '!f() { echo username=x-access-token; echo "password=$APPCHI_TOKEN"; }; f'
+          test -n "$KEEP_TOKEN" || { echo 'Configure APPCHI_REPOSITORIES_TOKEN for private contracts.'; exit 1; }
+          git config --global credential.helper '!f() { echo username=x-access-token; echo "password=$KEEP_TOKEN"; }; f'
           git config --global url."https://github.com/".insteadOf ssh://git@github.com/
           npm ci
           npm run generate
