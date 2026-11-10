@@ -236,7 +236,7 @@ export function Workspace() {
         <main id="main-content" className="login">
           <div className="login-brand">
             <div className="brand-mark" aria-hidden="true">
-              A
+              K
             </div>
             <div>
               <h1>Keep</h1>
@@ -330,7 +330,7 @@ export function Workspace() {
             navigate("/");
           }}
         >
-          A
+          K
         </a>
         <nav aria-label="Tenant navigation">
           {sections

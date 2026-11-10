@@ -4,7 +4,7 @@ export default function SignInExpiredPage() {
       <main id="main-content" className="login">
         <div className="login-brand">
           <div className="brand-mark" aria-hidden="true">
-            A
+            K
           </div>
           <div>
             <h1>Sign-in link expired</h1>

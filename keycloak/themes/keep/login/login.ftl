@@ -23,7 +23,7 @@
     <main class="ap-stage">
         <section class="ap-panel" aria-labelledby="sign-in-title">
             <div class="ap-brand">
-                <div class="ap-mark" aria-hidden="true">A</div>
+                <div class="ap-mark" aria-hidden="true">K</div>
                 <div><div class="ap-name">Keep</div><div class="ap-tagline">Alert operations, in one place.</div></div>
             </div>
             <h1 class="ap-heading" id="sign-in-title">Sign in</h1>
