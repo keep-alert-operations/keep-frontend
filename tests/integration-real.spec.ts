@@ -7,11 +7,11 @@ import { basename, dirname, join, resolve } from "node:path";
 import { createServer } from "node:net";
 import { randomBytes } from "node:crypto";
 
-const adminUrl = process.env.APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL;
+const adminUrl = process.env.KEEP_REAL_BROWSER_DATABASE_ADMIN_URL;
 const frontend = resolve(__dirname, "..");
-const repository = resolve(frontend, "../appchi-delivery");
+const repository = resolve(frontend, "../keep-delivery");
 const python =
-  process.env.APPCHI_REAL_BROWSER_PYTHON ??
+  process.env.KEEP_REAL_BROWSER_PYTHON ??
   join(
     repository,
     ".venv",
@@ -32,29 +32,29 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
-from appchi.db import Database
-from appchi.migrate import migrate, migration_directory
-from appchi.shared.crypto import EnvelopeCipher
-from appchi.ingestion.kafka_admission import KafkaAdmission
-from appchi.ingestion.native import canonical
-from appchi.kafka_source import RECEIVE_LEAD_MARGIN, ReceiveTimeAhead, apply_record
+from keep.db import Database
+from keep.migrate import migrate, migration_directory
+from keep.shared.crypto import EnvelopeCipher
+from keep.ingestion.kafka_admission import KafkaAdmission
+from keep.ingestion.native import canonical
+from keep.kafka_source import RECEIVE_LEAD_MARGIN, ReceiveTimeAhead, apply_record
 
 class Capture:
     def __init__(self): self.records=[]
     async def publish(self, topic, key, value): self.records.append((topic,key,value))
 
-name=os.environ['APPCHI_BROWSER_DATABASE_NAME']
-if not re.fullmatch(r'appchi_browser_test_[a-f0-9]{16}', name):
+name=os.environ['KEEP_BROWSER_DATABASE_NAME']
+if not re.fullmatch(r'keep_browser_test_[a-f0-9]{16}', name):
     raise RuntimeError('Refusing an unexpected test database name')
 action=sys.argv[1]
 if action=='drop':
-    with psycopg.connect(os.environ['APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL'], autocommit=True) as conn:
+    with psycopg.connect(os.environ['KEEP_REAL_BROWSER_DATABASE_ADMIN_URL'], autocommit=True) as conn:
         conn.execute('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname=%s AND pid<>pg_backend_pid()', (name,))
         conn.execute(sql.SQL('DROP DATABASE IF EXISTS {}').format(sql.Identifier(name)))
 elif action=='setup':
-    with psycopg.connect(os.environ['APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL'], autocommit=True) as conn:
+    with psycopg.connect(os.environ['KEEP_REAL_BROWSER_DATABASE_ADMIN_URL'], autocommit=True) as conn:
         conn.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(name)))
-    dsn=os.environ['APPCHI_DATABASE_URL']
+    dsn=os.environ['KEEP_DATABASE_URL']
     migrate(dsn, migration_directory())
     cipher=EnvelopeCipher({'browser-test': b'k'*32}, 'browser-test')
     db=Database(dsn)
@@ -66,7 +66,7 @@ elif action=='setup':
         conn.execute("INSERT INTO auth_sessions(handle_hash,principal_id,issuer,subject,provider_sid,csrf_hash,csrf_cipher,auth_time,activity_at,absolute_at,deployment_epoch) VALUES(%s,%s,'https://synthetic.invalid',%s,%s,%s,%s,clock_timestamp(),clock_timestamp(),clock_timestamp()+interval '1 hour','browser-test')", (hashed,principal,str(principal),str(principal),hashlib.sha256(csrf.encode()).digest(),cipher.seal(csrf.encode(),'session-csrf:'+hashed.hex())))
         tenant=conn.execute("SELECT id FROM tenants WHERE kind='global'").fetchone()['id']
     native={'application':'browser-smoke-'+str(uuid4()),'object':'cpu','node_name':'synthetic-node','message':'Real database browser smoke','operator':'synthetic-legacy','time_created':'22-09-2026 12:00:00','severity':'error'}
-    temp=Path(os.environ['APPCHI_BROWSER_TEMP'])
+    temp=Path(os.environ['KEEP_BROWSER_TEMP'])
     # Kafka-first seed: the admission envelope a broker would carry, applied by
     # the source processor's own PostgreSQL step. No broker or receipt lookup.
     clock=temp/'clock.json'
@@ -108,9 +108,9 @@ elif action=='setup':
     (temp/'cert.pem').write_bytes(certificate.public_bytes(serialization.Encoding.PEM))
     print(json.dumps({'tenant':str(tenant),'alert':str(alert),'handle':handle,'named_tenant':str(named_tenant),'named':str(named)}))
 elif action=='verify':
-    with psycopg.connect(os.environ['APPCHI_DATABASE_URL']) as conn:
-        assignee,revision=conn.execute('SELECT assignee_id,revision FROM alerts WHERE id=%s',(os.environ['APPCHI_BROWSER_ALERT_ID'],)).fetchone()
-        count=conn.execute('SELECT count(*) FROM alert_notes WHERE alert_id=%s AND text=%s AND NOT deleted',(os.environ['APPCHI_BROWSER_ALERT_ID'],'Real browser investigation note')).fetchone()[0]
+    with psycopg.connect(os.environ['KEEP_DATABASE_URL']) as conn:
+        assignee,revision=conn.execute('SELECT assignee_id,revision FROM alerts WHERE id=%s',(os.environ['KEEP_BROWSER_ALERT_ID'],)).fetchone()
+        count=conn.execute('SELECT count(*) FROM alert_notes WHERE alert_id=%s AND text=%s AND NOT deleted',(os.environ['KEEP_BROWSER_ALERT_ID'],'Real browser investigation note')).fetchone()[0]
         print(json.dumps({'assigned':assignee is not None,'revision':str(revision),'note_count':count}))
 else: raise RuntimeError('Unknown fixture action')
 `;
@@ -222,32 +222,32 @@ async function withStack(
   extra: Record<string, string>,
   body: (stack: Stack) => Promise<void>,
 ) {
-  const databaseName = `appchi_browser_test_${randomBytes(8).toString("hex")}`;
+  const databaseName = `keep_browser_test_${randomBytes(8).toString("hex")}`;
   const dsn = new URL(adminUrl!);
   dsn.pathname = `/${databaseName}`;
-  const temporary = mkdtempSync(join(tmpdir(), "appchi-real-browser-"));
+  const temporary = mkdtempSync(join(tmpdir(), "keep-real-browser-"));
   const backendPort = await freePort(),
     frontendPort = await freePort();
   const origin = `https://127.0.0.1:${frontendPort}`;
   const environment: NodeJS.ProcessEnv = {
     ...process.env,
     PYTHONPATH: "",
-    APPCHI_BROWSER_DATABASE_NAME: databaseName,
-    APPCHI_BROWSER_REPOSITORY: repository,
-    APPCHI_BROWSER_TEMP: temporary,
-    APPCHI_DATABASE_URL: dsn.href,
-    APPCHI_WRAPPING_KEY: Buffer.alloc(32, "k").toString("base64"),
-    APPCHI_WRAPPING_KEY_ID: "browser-test",
-    APPCHI_DEPLOYMENT_EPOCH: "browser-test",
-    APPCHI_PUBLIC_ORIGIN: origin,
-    APPCHI_CAPACITY_PROFILE: join(
+    KEEP_BROWSER_DATABASE_NAME: databaseName,
+    KEEP_BROWSER_REPOSITORY: repository,
+    KEEP_BROWSER_TEMP: temporary,
+    KEEP_DATABASE_URL: dsn.href,
+    KEEP_WRAPPING_KEY: Buffer.alloc(32, "k").toString("base64"),
+    KEEP_WRAPPING_KEY_ID: "browser-test",
+    KEEP_DEPLOYMENT_EPOCH: "browser-test",
+    KEEP_PUBLIC_ORIGIN: origin,
+    KEEP_CAPACITY_PROFILE: join(
       repository,
       "qualification",
       "development-capacity.json",
     ),
-    APPCHI_ENVIRONMENT: "development",
+    KEEP_ENVIRONMENT: "development",
     NEXT_TELEMETRY_DISABLED: "1",
-    APPCHI_BACKEND_URL: `http://127.0.0.1:${backendPort}`,
+    KEEP_BACKEND_URL: `http://127.0.0.1:${backendPort}`,
     ...extra,
   };
   let backendProcess: ReturnType<typeof launch> | undefined,
@@ -271,7 +271,7 @@ async function withStack(
       [
         "-m",
         "uvicorn",
-        "appchi.main:create_app",
+        "keep.main:create_app",
         "--factory",
         "--host",
         "127.0.0.1",
@@ -308,7 +308,7 @@ async function withStack(
     await healthy(health, origin, frontendProcess);
     await context.addCookies([
       {
-        name: "__Host-appchi_session",
+        name: "__Host-keep_session",
         value: seeded.handle,
         url: origin,
         secure: true,
@@ -335,7 +335,7 @@ async function withStack(
       // Verify the exact generated temporary root before any recursive removal.
       if (
         dirname(resolve(temporary)) !== resolve(tmpdir()) ||
-        !basename(temporary).startsWith("appchi-real-browser-")
+        !basename(temporary).startsWith("keep-real-browser-")
       )
         throw new Error("Unsafe fixture cleanup path");
       rmSync(temporary, { recursive: true, force: true });
@@ -349,7 +349,7 @@ test("real HTTPS browser acknowledges an admitted alert and commits its note to 
 }) => {
   test.skip(
     !adminUrl,
-    "Opt in with APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL pointing to an isolated local PostgreSQL administrator database",
+    "Opt in with KEEP_REAL_BROWSER_DATABASE_ADMIN_URL pointing to an isolated local PostgreSQL administrator database",
   );
   test.setTimeout(180000);
   await withStack(
@@ -395,7 +395,7 @@ test("real HTTPS browser acknowledges an admitted alert and commits its note to 
       const persisted = JSON.parse(
         execFileSync(python, ["-c", fixture, "verify"], {
           cwd: repository,
-          env: { ...environment, APPCHI_BROWSER_ALERT_ID: seeded.alert },
+          env: { ...environment, KEEP_BROWSER_ALERT_ID: seeded.alert },
           windowsHide: true,
           encoding: "utf8",
           timeout: 15000,
@@ -421,13 +421,13 @@ test("real HTTPS browser dismisses an alert for a time window and it returns on 
 }) => {
   test.skip(
     !adminUrl,
-    "Opt in with APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL pointing to an isolated local PostgreSQL administrator database",
+    "Opt in with KEEP_REAL_BROWSER_DATABASE_ADMIN_URL pointing to an isolated local PostgreSQL administrator database",
   );
   test.setTimeout(600000);
   await withStack(
     browser,
     playwright,
-    { APPCHI_ALERT_DISMISSAL_ENABLED: "true" },
+    { KEEP_ALERT_DISMISSAL_ENABLED: "true" },
     async ({ seeded, page, origin }) => {
       const commands = (body: (value: Record<string, unknown>) => boolean) =>
         page.waitForResponse(
@@ -561,7 +561,7 @@ test("real HTTPS browser reports incident handling from PostgreSQL", async ({
 }) => {
   test.skip(
     !adminUrl,
-    "Opt in with APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL pointing to an isolated local PostgreSQL administrator database",
+    "Opt in with KEEP_REAL_BROWSER_DATABASE_ADMIN_URL pointing to an isolated local PostgreSQL administrator database",
   );
   test.setTimeout(300000);
   await withStack(browser, playwright, {}, async ({ seeded, page, origin }) => {
@@ -723,7 +723,7 @@ test("real HTTPS browser titles a named v2 alert by its name", async ({
   // Requirements: REV-54; alert operations 3, 24.
   test.skip(
     !adminUrl,
-    "Opt in with APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL pointing to an isolated local PostgreSQL administrator database",
+    "Opt in with KEEP_REAL_BROWSER_DATABASE_ADMIN_URL pointing to an isolated local PostgreSQL administrator database",
   );
   test.setTimeout(180000);
   await withStack(browser, playwright, {}, async ({ seeded, page, origin }) => {
@@ -762,7 +762,7 @@ test("real HTTPS browser uploads an image panel and serves it after saving", asy
   // Requirements: REV-62; dashboard operations 2, 13, 14 and 16.
   test.skip(
     !adminUrl,
-    "Opt in with APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL pointing to an isolated local PostgreSQL administrator database",
+    "Opt in with KEEP_REAL_BROWSER_DATABASE_ADMIN_URL pointing to an isolated local PostgreSQL administrator database",
   );
   test.setTimeout(180000);
   await withStack(browser, playwright, {}, async ({ seeded, page, origin }) => {

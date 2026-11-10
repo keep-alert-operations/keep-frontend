@@ -20,7 +20,7 @@ super-admins create tenants and read platform health and audit.
 
 ## Product Purpose
 
-Appchi is an internal, multi-tenant alert operations system. It receives v1
+Keep is an internal, multi-tenant alert operations system. It receives v1
 (fixed Global tenant) and v2 (per-tenant, through managed operators and Grafana)
 alerts, keeps one evolving row per logical alert with its occurrence and source
 history, and provides CEL-queried feeds, shared presets, incidents, automatic
@@ -52,7 +52,7 @@ the counts and freshness they are shown, and take ownership without friction.
 - Closed corporate network; deployed on OpenShift. Pages must not depend on
   external hosts at runtime (fonts are served locally).
 - Company Keycloak/LDAP username-and-password sign-in; sessions end after 30
-  minutes idle or 24 hours. The Keycloak login page uses an Appchi theme
+  minutes idle or 24 hours. The Keycloak login page uses an Keep theme
   (`keycloak/themes`).
 - Alerts arrive from Grafana contact points and other senders; a tenant can see
   "alerts arriving late" when source processing is blocked.
@@ -73,12 +73,12 @@ the counts and freshness they are shown, and take ownership without friction.
   modal dialog.
 - Drafts live in tab memory; navigation warns before discarding them.
 - Behavior, routes, API calls, permissions and copy are specified in
-  `appchi-design/specs`; visual work must not change them.
+  `keep-design/specs`; visual work must not change them.
 - Undecided: product logo/mark (the current "A" square is a placeholder).
 
 ## Brand Commitments
 
-- Name: Appchi. Nothing else from the current look is binding (user,
+- Name: Keep. Nothing else from the current look is binding (user,
   2026-10-25).
 - The user does not want it to feel like a generic SaaS admin dashboard, a
   hacker/neon dark console, or a playful consumer app (user, 2026-10-25).

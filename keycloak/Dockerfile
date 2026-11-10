@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1
-# Build from the appchi-frontend repository root. Supply a reviewed, mirrored
+# Build from the keep-frontend repository root. Supply a reviewed, mirrored
 # Keycloak image digest compatible with this repository's theme contract.
 ARG KEYCLOAK_BASE_IMAGE
 FROM ${KEYCLOAK_BASE_IMAGE} AS build
 ENV KC_DB=postgres KC_HEALTH_ENABLED=true KC_METRICS_ENABLED=true
-COPY --chown=1000:0 keycloak/themes/appchi /opt/keycloak/themes/appchi
+COPY --chown=1000:0 keycloak/themes/keep /opt/keycloak/themes/keep
 RUN /opt/keycloak/bin/kc.sh build
 
 FROM ${KEYCLOAK_BASE_IMAGE} AS runtime

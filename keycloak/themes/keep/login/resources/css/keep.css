@@ -22,7 +22,7 @@ button:disabled {
   cursor: wait;
 }
 
-#appchi-login {
+#keep-login {
   /* The application's Ocean palette (src/app/theme.css), light and dark. */
   --ap-canvas: light-dark(#f7fafd, #0b141e);
   --ap-surface: light-dark(#ffffff, #122030);
@@ -54,14 +54,14 @@ button:disabled {
   caret-color: var(--ap-button);
   accent-color: var(--ap-button);
 }
-#appchi-login ::selection {
+#keep-login ::selection {
   background: var(--ap-selection);
   color: var(--ap-text);
 }
-#appchi-login * {
+#keep-login * {
   box-sizing: border-box;
 }
-#appchi-login .ap-stage {
+#keep-login .ap-stage {
   min-height: 100svh;
   padding: 48px 24px 32px;
   display: flex;
@@ -71,7 +71,7 @@ button:disabled {
   gap: 22px;
   background: var(--ap-canvas);
 }
-#appchi-login .ap-panel {
+#keep-login .ap-panel {
   width: 100%;
   max-width: 428px;
   padding: 34px 34px 28px;
@@ -80,12 +80,12 @@ button:disabled {
   border-radius: 16px;
   box-shadow: 0 12px 40px light-dark(rgb(11 37 69 / 0.06), #00000026);
 }
-#appchi-login .ap-brand {
+#keep-login .ap-brand {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-#appchi-login .ap-mark {
+#keep-login .ap-mark {
   display: grid;
   place-items: center;
   width: 40px;
@@ -97,46 +97,46 @@ button:disabled {
   font-size: 19px;
   font-weight: 600;
 }
-#appchi-login .ap-name {
+#keep-login .ap-name {
   font-size: 21px;
   line-height: 1.25;
   font-weight: 600;
   letter-spacing: -0.025em;
 }
-#appchi-login .ap-tagline {
+#keep-login .ap-tagline {
   margin-top: 2px;
   color: var(--ap-muted);
   font-size: 12px;
 }
-#appchi-login .ap-heading {
+#keep-login .ap-heading {
   margin: 30px 0 6px;
   font-size: 24px;
   line-height: 1.25;
   font-weight: 600;
   letter-spacing: -0.025em;
 }
-#appchi-login .ap-intro {
+#keep-login .ap-intro {
   margin: 0 0 24px;
   color: var(--ap-muted);
   font-size: 13.5px;
   line-height: 1.6;
 }
-#appchi-login .ap-form {
+#keep-login .ap-form {
   display: flex;
   flex-direction: column;
   gap: 18px;
   margin: 0;
 }
-#appchi-login .ap-label {
+#keep-login .ap-label {
   display: block;
   margin: 0 0 7px;
   font-size: 13px;
   font-weight: 500;
 }
-#appchi-login .ap-input-wrap {
+#keep-login .ap-input-wrap {
   position: relative;
 }
-#appchi-login .ap-input {
+#keep-login .ap-input {
   width: 100%;
   height: 46px;
   padding: 10px 13px;
@@ -147,18 +147,18 @@ button:disabled {
   font: inherit;
   font-size: 14px;
 }
-#appchi-login .ap-input::placeholder {
+#keep-login .ap-input::placeholder {
   color: var(--ap-placeholder);
   opacity: 1;
 }
-#appchi-login .ap-input[type="password"],
-#appchi-login .ap-input.ap-password {
+#keep-login .ap-input[type="password"],
+#keep-login .ap-input.ap-password {
   padding-right: 48px;
 }
-#appchi-login .ap-input[aria-invalid="true"] {
+#keep-login .ap-input[aria-invalid="true"] {
   border-color: var(--ap-error);
 }
-#appchi-login .ap-eye {
+#keep-login .ap-eye {
   position: absolute;
   right: 2px;
   top: 1px;
@@ -171,11 +171,11 @@ button:disabled {
   background: transparent;
   color: var(--ap-muted);
 }
-#appchi-login .ap-eye:hover {
+#keep-login .ap-eye:hover {
   color: var(--ap-text);
   background: var(--ap-hover);
 }
-#appchi-login .ap-submit {
+#keep-login .ap-submit {
   margin-top: 4px;
   min-height: 46px;
   width: 100%;
@@ -191,17 +191,17 @@ button:disabled {
   font-size: 14px;
   font-weight: 500;
 }
-#appchi-login .ap-submit:hover {
+#keep-login .ap-submit:hover {
   border-color: var(--ap-button-hover);
   background: var(--ap-button-hover);
 }
-#appchi-login .ap-submit:disabled {
+#keep-login .ap-submit:disabled {
   opacity: 0.7;
 }
-#appchi-login .ap-submit svg {
+#keep-login .ap-submit svg {
   flex: none;
 }
-#appchi-login .ap-message {
+#keep-login .ap-message {
   display: flex;
   align-items: flex-start;
   gap: 9px;
@@ -213,14 +213,14 @@ button:disabled {
   font-size: 12.5px;
   line-height: 1.55;
 }
-#appchi-login .ap-message svg {
+#keep-login .ap-message svg {
   flex: 0 0 16px;
   margin-top: 2px;
 }
-#appchi-login [hidden] {
+#keep-login [hidden] {
   display: none !important;
 }
-#appchi-login .ap-help {
+#keep-login .ap-help {
   margin-top: 24px;
   padding-top: 20px;
   border-top: 1px solid var(--ap-line);
@@ -228,7 +228,7 @@ button:disabled {
   font-size: 12.5px;
   color: var(--ap-muted);
 }
-#appchi-login .ap-help-link {
+#keep-login .ap-help-link {
   padding: 3px 4px;
   background: transparent;
   border: 0;
@@ -237,14 +237,14 @@ button:disabled {
   font-weight: 500;
   color: var(--ap-link);
 }
-#appchi-login .ap-help-link:hover {
+#keep-login .ap-help-link:hover {
   text-decoration: underline;
 }
-#appchi-login .ap-help-note {
+#keep-login .ap-help-note {
   margin: 10px 0 0;
   font-size: 12.5px;
 }
-#appchi-login .ap-appearance {
+#keep-login .ap-appearance {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -257,46 +257,46 @@ button:disabled {
   font: inherit;
   font-size: 12px;
 }
-#appchi-login .ap-appearance:hover {
+#keep-login .ap-appearance:hover {
   background: var(--ap-hover);
   color: var(--ap-text);
 }
 @media (max-width: 460px) {
-  #appchi-login .ap-stage {
+  #keep-login .ap-stage {
     min-height: 100svh;
     padding: 28px 14px 20px;
     gap: 16px;
   }
-  #appchi-login .ap-panel {
+  #keep-login .ap-panel {
     padding: 28px 22px 24px;
   }
-  #appchi-login .ap-heading {
+  #keep-login .ap-heading {
     margin-top: 26px;
   }
 }
 @media (pointer: coarse) {
-  #appchi-login .ap-input {
+  #keep-login .ap-input {
     font-size: 16px;
   }
-  #appchi-login .ap-appearance,
-  #appchi-login .ap-help-link {
+  #keep-login .ap-appearance,
+  #keep-login .ap-help-link {
     min-height: 44px;
   }
 }
 
-#appchi-login :is(button, summary, a, input):focus-visible {
+#keep-login :is(button, summary, a, input):focus-visible {
   outline: 2px solid var(--ap-focus);
   outline-offset: 3px;
 }
-#appchi-login .ap-help-link {
+#keep-login .ap-help-link {
   list-style: none;
   display: inline-block;
 }
-#appchi-login .ap-help-link::-webkit-details-marker {
+#keep-login .ap-help-link::-webkit-details-marker {
   display: none;
 }
-#appchi-login .ap-message-info,
-#appchi-login .ap-message-success {
+#keep-login .ap-message-info,
+#keep-login .ap-message-success {
   background: var(--ap-hover);
   border-color: var(--ap-line);
   color: var(--ap-text);

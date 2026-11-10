@@ -17,7 +17,7 @@ export default defineConfig({
       },
     },
   ],
-  webServer: process.env.APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL
+  webServer: process.env.KEEP_REAL_BROWSER_DATABASE_ADMIN_URL
     ? undefined
     : {
         command: "npm run dev -- --port 3100",

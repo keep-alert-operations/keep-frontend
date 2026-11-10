@@ -83,7 +83,7 @@ interface AlertListContext {
   ids: string[];
   current: string;
 }
-const listKey = (tenantId: string) => `appchi.alert-list:${tenantId}`;
+const listKey = (tenantId: string) => `keep.alert-list:${tenantId}`;
 
 /**
  * Remembers the list an alert was opened from so the detail page can show it

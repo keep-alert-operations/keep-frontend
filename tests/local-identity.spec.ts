@@ -1,11 +1,11 @@
-/** Opt-in actual local Keycloak username/password -> Appchi session acceptance. */
+/** Opt-in actual local Keycloak username/password -> Keep session acceptance. */
 import { test, expect, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 
-const repository = resolve(__dirname, "../../appchi-delivery");
+const repository = resolve(__dirname, "../../keep-delivery");
 function credentials() {
   return JSON.parse(
     readFileSync(
@@ -45,7 +45,7 @@ async function signIn(page: Page, username: string) {
 }
 
 test.skip(
-  process.env.APPCHI_LOCAL_IDENTITY_TEST !== "1",
+  process.env.KEEP_LOCAL_IDENTITY_TEST !== "1",
   "Requires the isolated local identity stack",
 );
 
@@ -73,7 +73,7 @@ test("native groups give the local demo tenant admin, edit and view access", asy
   if (!tenant) {
     const grants = [];
     for (const [name, role] of [
-      ["Appchi Administrators", "admin"],
+      ["Keep Administrators", "admin"],
       ["Developers", "edit"],
       ["Observers", "view"],
     ]) {
@@ -155,7 +155,7 @@ test("live group removal changes access and signed provider logout revokes the s
   const local = credentials();
   const user = local.users["local-viewer"].id;
   const group = local.groups.Observers;
-  const memberUrl = `https://localhost:58443/admin/realms/appchi-local/users/${user}/groups/${group}`;
+  const memberUrl = `https://localhost:58443/admin/realms/keep-local/users/${user}/groups/${group}`;
   const settings = JSON.parse(
     readFileSync(
       resolve(repository, ".local/keycloak/app-environment.json"),
@@ -167,7 +167,7 @@ test("live group removal changes access and signed provider logout revokes the s
       resolve(repository, ".venv/Scripts/python.exe"),
       [
         "-m",
-        "appchi.identity.local_keycloak_worker",
+        "keep.identity.local_keycloak_worker",
         "--config",
         resolve(repository, ".local/keycloak/directory.json"),
         "--once",
@@ -177,7 +177,7 @@ test("live group removal changes access and signed provider logout revokes the s
         env: {
           ...process.env,
           ...settings,
-          APPCHI_DATABASE_URL: settings.APPCHI_LOCAL_WORKER_DATABASE_URL,
+          KEEP_DATABASE_URL: settings.KEEP_LOCAL_WORKER_DATABASE_URL,
         },
         stdio: "pipe",
         timeout: 15000,
@@ -213,7 +213,7 @@ test("live group removal changes access and signed provider logout revokes the s
       200,
     );
     const logout = await consoleContext.request.post(
-      `https://localhost:58443/admin/realms/appchi-local/users/${user}/logout`,
+      `https://localhost:58443/admin/realms/keep-local/users/${user}/logout`,
       { headers },
     );
     expect(logout.status()).toBe(204);

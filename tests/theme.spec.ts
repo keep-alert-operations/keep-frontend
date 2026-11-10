@@ -79,7 +79,7 @@ test("account theme switch persists across pages and reloads", async ({
   await page.getByRole("switch", { name: "Dark mode", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.getByRole("switch", { name: "Dark mode" })).toBeChecked();
-  expect(await page.evaluate(() => localStorage.getItem("appchi-theme"))).toBe(
+  expect(await page.evaluate(() => localStorage.getItem("keep-theme"))).toBe(
     "dark",
   );
   const darkBackground = await page
@@ -109,7 +109,7 @@ test("account theme switch persists across pages and reloads", async ({
     page.getByRole("switch", { name: "Dark mode" }),
   ).not.toBeChecked();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-  expect(await page.evaluate(() => localStorage.getItem("appchi-theme"))).toBe(
+  expect(await page.evaluate(() => localStorage.getItem("keep-theme"))).toBe(
     "light",
   );
   await page.reload();
@@ -117,7 +117,7 @@ test("account theme switch persists across pages and reloads", async ({
 });
 
 test("signed-out login uses the stored theme", async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("appchi-theme", "dark"));
+  await page.addInitScript(() => localStorage.setItem("keep-theme", "dark"));
   await mockApi(page, false);
   await page.goto("/");
   await expect(

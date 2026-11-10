@@ -16,7 +16,7 @@ Use Node.js 22.17 or newer. Exact packages and integrity hashes are in
 ```powershell
 cd frontend
 npm ci
-$env:APPCHI_BACKEND_URL = 'http://127.0.0.1:8000'
+$env:KEEP_BACKEND_URL = 'http://127.0.0.1:8000'
 npm run dev
 ```
 
@@ -60,18 +60,18 @@ development cluster used in this workspace, not a company binding.
 
 ```powershell
 cd frontend
-$env:APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL = 'postgresql://appchi_migrator@127.0.0.1:55432/postgres'
+$env:KEEP_REAL_BROWSER_DATABASE_ADMIN_URL = 'postgresql://keep_migrator@127.0.0.1:55432/postgres'
 $env:PLAYWRIGHT_CHANNEL = 'chrome'
 node node_modules/@playwright/test/cli.js test tests/integration-real.spec.ts --reporter=list
-Remove-Item Env:APPCHI_REAL_BROWSER_DATABASE_ADMIN_URL
+Remove-Item Env:KEEP_REAL_BROWSER_DATABASE_ADMIN_URL
 ```
 
-An optional `APPCHI_REAL_BROWSER_PYTHON` selects another backend Python executable;
-otherwise the test uses `../appchi-delivery/.venv`. With this opt-in environment variable set,
+An optional `KEEP_REAL_BROWSER_PYTHON` selects another backend Python executable;
+otherwise the test uses `../keep-delivery/.venv`. With this opt-in environment variable set,
 the ordinary Playwright port-3100 server is disabled. Run the integration file
 explicitly, then clear the variable before running the ordinary browser suite.
 
-The fixture creates a randomly named `appchi_browser_test_<hex>` database, applies
+The fixture creates a randomly named `keep_browser_test_<hex>` database, applies
 the real migrations, inserts one synthetic verified principal and a hashed opaque
 session with encrypted CSRF material, and opens the human-auth gate only in that
 disposable database. It builds the Kafka-first admission envelope for a native v1
@@ -79,7 +79,7 @@ alert and applies it with the source processor's own PostgreSQL step, without a
 broker or receipt lookup.
 It then launches the actual Uvicorn API and Next.js HTTPS server on dynamically
 allocated loopback ports. A short-lived self-signed test certificate permits a real
-Secure, HttpOnly `__Host-appchi_session` cookie; certificate verification is relaxed
+Secure, HttpOnly `__Host-keep_session` cookie; certificate verification is relaxed
 only in the test browser/request context.
 
 The browser loads authoritative alert detail, assigns it to the signed-in user, and writes a note
@@ -91,7 +91,7 @@ credential acceptance path is added to application code.
 
 Pre-REV-27 executed result (the earlier acknowledgement workflow): **1 passed in 28.8 seconds** (test body 26.7 seconds) against real
 local PostgreSQL and HTTPS Next.js/FastAPI with installed Chrome 153.0.8010.48.
-A follow-up catalog query confirmed zero remaining `appchi_browser_test_*`
+A follow-up catalog query confirmed zero remaining `keep_browser_test_*`
 databases and no remaining fixture Next.js/Uvicorn processes. TypeScript
 validation also passed. This establishes
 one real UI/API/database workflow; it does not qualify Keycloak sign-in, LDAP,
@@ -303,4 +303,4 @@ recorded display names, with ID fallback for older history lacking a snapshot.
 Browser fixtures use controlled responses except for the explicitly separate
 real-service case. They are not a product authentication path.
 
-The latest UI redesign continuation supersedes those frontend checkpoints: **111 controlled Chrome cases passed and 7 opt-in environment cases were skipped in 3.4 minutes** on 2026-09-24. Formatting, TypeScript, the isolated production build, five display-name unit checks and generated contract checks also passed. Custom preset column choices now render in saved/draft order while the reference's default layout is preserved. See [implementation status](https://github.com/appchi-alert-operations/appchi-delivery/blob/main/status/implementation-status.md#ui-redesign-continuation--2026-09-24) and [UI review evidence](https://github.com/appchi-alert-operations/appchi-delivery/blob/main/qualification/ui-redesign-2026-09-24/README.md) for scope, outputs and remaining limitations.
+The latest UI redesign continuation supersedes those frontend checkpoints: **111 controlled Chrome cases passed and 7 opt-in environment cases were skipped in 3.4 minutes** on 2026-09-24. Formatting, TypeScript, the isolated production build, five display-name unit checks and generated contract checks also passed. Custom preset column choices now render in saved/draft order while the reference's default layout is preserved. See [implementation status](https://github.com/keep-alert-operations/keep-delivery/blob/main/status/implementation-status.md#ui-redesign-continuation--2026-09-24) and [UI review evidence](https://github.com/keep-alert-operations/keep-delivery/blob/main/qualification/ui-redesign-2026-09-24/README.md) for scope, outputs and remaining limitations.

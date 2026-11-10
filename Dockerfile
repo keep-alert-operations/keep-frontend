@@ -13,7 +13,7 @@ RUN --mount=type=secret,id=apt_sources --mount=type=secret,id=build_ca \
     if [ -f /run/secrets/build_ca ]; then \
         if grep -q 'PRIVATE KEY' /run/secrets/build_ca; then exit 1; fi; \
         mkdir -p /usr/local/share/ca-certificates /etc/ssl/certs; \
-        cp /run/secrets/build_ca /usr/local/share/ca-certificates/appchi-build-ca.crt; \
+        cp /run/secrets/build_ca /usr/local/share/ca-certificates/keep-build-ca.crt; \
         cat /run/secrets/build_ca >> /etc/ssl/certs/ca-certificates.crt; \
     fi; \
     apt-get update && apt-get install -y --no-install-recommends git ca-certificates && \
@@ -30,12 +30,12 @@ RUN --mount=type=secret,id=github_token --mount=type=secret,id=build_environment
     export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt; \
     export PIP_CERT="$SSL_CERT_FILE" REQUESTS_CA_BUNDLE="$SSL_CERT_FILE"; \
     export GIT_SSL_CAINFO="$SSL_CERT_FILE" NODE_EXTRA_CA_CERTS="$SSL_CERT_FILE"; \
-    export GIT_CONFIG_GLOBAL=/tmp/appchi-build-gitconfig; \
-    if [ -n "${APPCHI_GIT_BASE_URL:-}" ]; then \
-        case "$APPCHI_GIT_BASE_URL" in https://*/ ) ;; *) exit 1 ;; esac; \
-        case "$APPCHI_GIT_BASE_URL" in *'@'*|*'?'*|*'#'*) exit 1 ;; esac; \
-        git config --global url."$APPCHI_GIT_BASE_URL".insteadOf https://github.com/appchi-alert-operations/; \
-        git config --global --add url."$APPCHI_GIT_BASE_URL".insteadOf ssh://git@github.com/appchi-alert-operations/; \
+    export GIT_CONFIG_GLOBAL=/tmp/keep-build-gitconfig; \
+    if [ -n "${KEEP_GIT_BASE_URL:-}" ]; then \
+        case "$KEEP_GIT_BASE_URL" in https://*/ ) ;; *) exit 1 ;; esac; \
+        case "$KEEP_GIT_BASE_URL" in *'@'*|*'?'*|*'#'*) exit 1 ;; esac; \
+        git config --global url."$KEEP_GIT_BASE_URL".insteadOf https://github.com/keep-alert-operations/; \
+        git config --global --add url."$KEEP_GIT_BASE_URL".insteadOf ssh://git@github.com/keep-alert-operations/; \
     else \
         git config --global url."https://github.com/".insteadOf ssh://git@github.com/; \
     fi; \
@@ -43,9 +43,9 @@ RUN --mount=type=secret,id=github_token --mount=type=secret,id=build_environment
     rm -f "$GIT_CONFIG_GLOBAL"; rm -rf /root/.npm
 
 FROM dependencies AS build
-ARG APPCHI_BACKEND_URL
+ARG KEEP_BACKEND_URL
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV APPCHI_BACKEND_URL=${APPCHI_BACKEND_URL}
+ENV KEEP_BACKEND_URL=${KEEP_BACKEND_URL}
 COPY next.config.ts next-env.d.ts tsconfig.json ./
 COPY src ./src
 RUN npm run build
@@ -56,7 +56,7 @@ RUN --mount=type=secret,id=build_ca \
     if [ -f /run/secrets/build_ca ]; then \
         if grep -q 'PRIVATE KEY' /run/secrets/build_ca; then exit 1; fi; \
         mkdir -p /usr/local/share/ca-certificates /etc/ssl/certs; \
-        cp /run/secrets/build_ca /usr/local/share/ca-certificates/appchi-build-ca.crt; \
+        cp /run/secrets/build_ca /usr/local/share/ca-certificates/keep-build-ca.crt; \
         cat /run/secrets/build_ca >> /etc/ssl/certs/ca-certificates.crt; \
     fi;
 

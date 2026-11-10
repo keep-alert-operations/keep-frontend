@@ -5,14 +5,14 @@ import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 
 test.skip(
-  process.env.APPCHI_LOCAL_RUNTIME_TEST !== "1",
+  process.env.KEEP_LOCAL_RUNTIME_TEST !== "1",
   "Requires the running local runtime",
 );
 
 test("native alert reaches the real feed and supports browser acknowledgement and notes", async ({
   page,
 }) => {
-  const repository = resolve(__dirname, "../../appchi-delivery");
+  const repository = resolve(__dirname, "../../keep-delivery");
   const state = resolve(repository, ".local/runtime");
   mkdirSync(state, { recursive: true });
   const credentials = JSON.parse(
@@ -40,12 +40,12 @@ test("native alert reaches the real feed and supports browser acknowledgement an
   const pad = (value: number) => String(value).padStart(2, "0");
   const created = `${pad(now.getUTCDate())}-${pad(now.getUTCMonth() + 1)}-${now.getUTCFullYear()} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`;
   const ingestion =
-    process.env.APPCHI_LOCAL_INGESTION_URL ?? "http://127.0.0.1:58001";
+    process.env.KEEP_LOCAL_INGESTION_URL ?? "http://127.0.0.1:58001";
   const admission = await page.request.post(
     `${ingestion}/api/ingest/v1/alerts`,
     {
       data: {
-        application: "Appchi local demo",
+        application: "Keep local demo",
         object: "cpu",
         node_name: "demo-node-01",
         operator: "local-demo",

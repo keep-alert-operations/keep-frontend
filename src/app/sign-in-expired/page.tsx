@@ -8,7 +8,7 @@ export default function SignInExpiredPage() {
           </div>
           <div>
             <h1>Sign-in link expired</h1>
-            <p>Appchi</p>
+            <p>Keep</p>
           </div>
         </div>
         <p className="login-lead">
@@ -19,7 +19,7 @@ export default function SignInExpiredPage() {
           Sign in again
         </a>
         <p className="help">
-          <a href="/">Back to Appchi</a>
+          <a href="/">Back to Keep</a>
         </p>
       </main>
     </div>

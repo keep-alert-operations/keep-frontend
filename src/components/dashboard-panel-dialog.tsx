@@ -1491,8 +1491,8 @@ export function DashboardPanelDialog({
         <span className="lbl">About this count</span>
         <p className="help">
           Comes straight from ServiceNow through the ticket count service, about
-          every minute. It isn&apos;t based on Appchi alerts or incidents, and
-          the panel can&apos;t change tickets.
+          every minute. It isn&apos;t based on Keep alerts or incidents, and the
+          panel can&apos;t change tickets.
         </p>
       </div>
     </>

@@ -668,7 +668,7 @@ test("super admins see the ticket count service and can test it", async ({
   const card = page.getByRole("region", { name: "ServiceNow ticket count" });
   await expect(card).toContainText("Connected");
   await expect(card).toContainText("ticket-count.ops.example");
-  await expect(card).toContainText("APPCHI_TICKET_COUNT_URL");
+  await expect(card).toContainText("KEEP_TICKET_COUNT_URL");
   // Read-only: no address field, no save or disconnect.
   await expect(card.getByRole("textbox")).toHaveCount(0);
   await expect(card.getByRole("button")).toHaveText(["Test connection"]);
