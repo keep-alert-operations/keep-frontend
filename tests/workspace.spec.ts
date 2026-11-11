@@ -339,7 +339,7 @@ test("tenant administrators cannot open platform controls", async ({
 test("operator preparation stays unavailable and retries the exact observed revision", async ({
   page,
 }) => {
-  await setup(page, "admin");
+  await setup(page, "admin", "admin");
   const operator = {
     id: alert,
     revision: "9007199254740999",
@@ -370,7 +370,7 @@ test("operator preparation stays unavailable and retries the exact observed revi
       });
     },
   );
-  await page.goto(`/tenants/${global}/operators/${alert}`);
+  await page.goto(`/tenants/${other}/operators/${alert}`);
   await expect(
     page.getByRole("button", { name: "Copy current key" }),
   ).toBeDisabled();
@@ -385,7 +385,7 @@ test("operator preparation stays unavailable and retries the exact observed revi
 test("replacement key is available while revoked-key cleanup remains pending", async ({
   page,
 }) => {
-  await setup(page, "admin");
+  await setup(page, "admin", "admin");
   const operator = {
     id: alert,
     revision: "9",
@@ -418,7 +418,7 @@ test("replacement key is available while revoked-key cleanup remains pending", a
       });
     },
   );
-  await page.goto(`/tenants/${global}/operators/${alert}`);
+  await page.goto(`/tenants/${other}/operators/${alert}`);
   await page.getByRole("button", { name: "Create key", exact: true }).click();
   await expect.poll(() => submitted?.expected_revision).toBe("9");
   await expect(
@@ -433,7 +433,7 @@ test("explicit operator copy sends the secret only to clipboard", async ({
   page,
   context,
 }) => {
-  await setup(page, "admin");
+  await setup(page, "admin", "admin");
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   const secret = "synthetic-browser-test-key-never-render";
   await page.route(`**/api/tenants/*/operators/${alert}`, (route) =>
@@ -460,7 +460,7 @@ test("explicit operator copy sends the secret only to clipboard", async ({
       });
     },
   );
-  await page.goto(`/tenants/${global}/operators/${alert}`);
+  await page.goto(`/tenants/${other}/operators/${alert}`);
   await page.getByRole("button", { name: "Copy current key" }).click();
   await expect(
     page.getByText("Current key copied to clipboard."),
@@ -631,14 +631,14 @@ const row = {
   component: "test",
   acknowledged: false,
 };
-async function setup(page: Page, role = "edit") {
+async function setup(page: Page, role = "edit", otherRole = "view") {
   await page.route("**/auth/session", (route) =>
     route.fulfill({
       json: {
         data: {
           ...session,
           tenants: session.tenants.map((t) =>
-            t.id === global ? { ...t, role } : t,
+            t.id === global ? { ...t, role } : { ...t, role: otherRole },
           ),
         },
       },
