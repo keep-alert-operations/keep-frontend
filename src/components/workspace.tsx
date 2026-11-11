@@ -44,9 +44,18 @@ export interface Scope {
   /** Tenant processing banners rendered at the top of the page body. */
   banners?: React.ReactNode;
   onDenied: () => void;
-  navigate: (url: string) => void;
-  setDirty: (dirty: boolean) => void;
+  /** Opens a page, first confirming when the current page reports unsaved work.
+   * `refresh` rereads the signed-in user's tenant access before opening it, for
+   * a tenant created after the session was read. */
+  navigate: (url: string, options?: { refresh?: boolean }) => void;
+  /** Reports unsaved work; a string replaces the default leave question. */
+  setDirty: (dirty: boolean | string) => void;
 }
+
+const discardQuestion =
+  "Discard unsaved changes and leave? Choose Cancel to stay and save your draft.";
+const leaveQuestion = (dirty: boolean | string) =>
+  typeof dirty === "string" ? dirty : discardQuestion;
 
 export function Workspace() {
   const pathname = usePathname(),
@@ -58,7 +67,14 @@ export function Workspace() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [notice, setNotice] = useState<string>();
   const [epoch, setEpoch] = useState(0),
-    [dirty, setDirty] = useState(false);
+    [dirty, setDirtyState] = useState<boolean | string>(false);
+  // Navigation reads the latest report, including one made earlier in the same
+  // event handler, before React has rendered it. The setter's identity is stable.
+  const dirtyNow = useRef<boolean | string>(false);
+  const setDirty = useCallback((value: boolean | string) => {
+    dirtyNow.current = value;
+    setDirtyState(value);
+  }, []);
   const sessionRequest = useRef<AbortController | null>(null);
   const signedOut = useRef(false);
   const hasAuthenticated = useRef(false);
@@ -78,8 +94,9 @@ export function Workspace() {
       // The theme still changes for this page when browser storage is blocked.
     }
   }
+  /** Rereads the session; says whether it was applied, superseded or failed. */
   const reauthorize = useCallback(async (clear = false) => {
-    if (signedOut.current) return;
+    if (signedOut.current) return "failed";
     sessionRequest.current?.abort();
     const controller = new AbortController();
     sessionRequest.current = controller;
@@ -90,18 +107,20 @@ export function Workspace() {
     }
     try {
       const result = await requestSession(controller.signal);
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted) return "superseded";
       hasAuthenticated.current = true;
       setSession(result.data);
       setError(undefined);
+      return "applied";
     } catch (failure) {
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted) return "superseded";
       setError(failure);
       if (failure instanceof ApiError && [401, 403].includes(failure.status)) {
         setSession(undefined);
         setDirty(false);
         setEpoch((v) => v + 1);
       }
+      return "failed";
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
@@ -169,25 +188,28 @@ export function Workspace() {
     }, 60000);
     return () => clearInterval(timer);
   }, [session?.principal.id, onDenied]);
-  const navigate = (url: string) => {
-    if (
-      dirty &&
-      !window.confirm(
-        "Discard unsaved changes and leave? Choose Cancel to stay and save your draft.",
-      )
-    )
-      return;
+  const navigate = (url: string, options?: { refresh?: boolean }) => {
+    const pending = dirtyNow.current;
+    if (pending && !window.confirm(leaveQuestion(pending))) return;
     setDirty(false);
-    router.push(url);
+    if (!options?.refresh) {
+      router.push(url);
+      return;
+    }
+    // Open the page only with a session that lists the new tenant. A check that
+    // another session read cut short is retried once; a failure stays here.
+    void (async () => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const outcome = await reauthorize();
+        if (outcome === "applied") router.push(url);
+        if (outcome !== "superseded") return;
+      }
+    })();
   };
   useEffect(() => {
     if (!dirty) return;
     const leave = (event: PopStateEvent) => {
-      if (
-        window.confirm(
-          "Discard unsaved changes and leave? Choose Cancel to stay and save your draft.",
-        )
-      ) {
+      if (window.confirm(leaveQuestion(dirty))) {
         setDirty(false);
         return;
       }

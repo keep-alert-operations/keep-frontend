@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Tenant, timestamp } from "@/lib/api";
 import { useCommand, useDirtyWarning, useResource } from "@/lib/hooks";
@@ -294,12 +294,16 @@ function SourceRepair({
   );
 }
 
+/** Creates a tenant with no grants; its Permissions page then requires an
+ * administrator (REV-71). */
 function TenantCreate({
   scope,
   onDirty,
+  onCreated,
 }: {
   scope: Scope;
   onDirty: (dirty: boolean) => void;
+  onCreated: (tenant: Tenant) => void;
 }) {
   const [name, setName] = useState("");
   const [created, setCreated] = useState<Tenant>();
@@ -319,11 +323,12 @@ function TenantCreate({
           event.preventDefault();
           const result = await command.execute<Tenant>("/api/tenants", {
             name,
-            initial_grants: [
-              { principal_id: scope.session.principal.id, role: "admin" },
-            ],
+            initial_grants: [],
           });
-          if (result) setCreated(result.data);
+          if (result) {
+            setCreated(result.data);
+            onCreated(result.data);
+          }
         }}
       >
         <div className="adm-create-row">
@@ -350,24 +355,22 @@ function TenantCreate({
           </button>
         </div>
         <p className="help">
-          You become the tenant&apos;s first administrator. Tenants cannot be
-          deleted or disabled after creation.
+          You are not added to the tenant. Its Permissions page opens next,
+          where you add its first administrator. Tenants cannot be deleted or
+          disabled after creation.
         </p>
         <CommandFeedback command={command} />
         {created && (
           <div className="banner bn-ok" role="status">
             <span>
-              <b>Created {created.name}.</b> Manage additional access from its
+              <b>Created {created.name}.</b> Add its first administrator on its
               Permissions page.
             </span>
             <span className="adm-spacer" />
             <button
               type="button"
               className="btn btn-sm"
-              onClick={() => {
-                scope.onDenied();
-                scope.navigate(`/tenants/${created.id}/permissions`);
-              }}
+              onClick={() => onCreated(created)}
             >
               Open tenant permissions
             </button>
@@ -499,6 +502,15 @@ export function Administration(scope: Scope) {
     scope.setDirty(repairDirty || tenantDirty);
     return () => scope.setDirty(false);
   }, [repairDirty, tenantDirty, scope.setDirty]);
+  // Creation finishes after an await, so read a repair reason typed meanwhile.
+  const repairDraft = useRef(repairDirty);
+  repairDraft.current = repairDirty;
+  /** Opens a new tenant's Permissions page; only a repair draft asks first. */
+  const openPermissions = (tenant: Tenant) => {
+    setTenantDirty(false);
+    scope.setDirty(repairDraft.current);
+    scope.navigate(`/tenants/${tenant.id}/permissions`, { refresh: true });
+  };
   if (!scope.session.global_super_admin)
     return (
       <Page
@@ -541,7 +553,11 @@ export function Administration(scope: Scope) {
       <div className="adm-split adm-split-half">
         <div className="adm-col">
           <SourceRepair scope={scope} onDirty={setRepairDirty} />
-          <TenantCreate scope={scope} onDirty={setTenantDirty} />
+          <TenantCreate
+            scope={scope}
+            onDirty={setTenantDirty}
+            onCreated={openPermissions}
+          />
         </div>
         <PlatformHealth scope={scope} />
       </div>

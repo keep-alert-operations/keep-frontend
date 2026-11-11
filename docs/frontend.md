@@ -159,6 +159,9 @@ Elasticsearch, Kafka, Redis, company integrations, capacity, or production readi
   Tenant/platform audit is a paged read view with applied filters and malformed
   response handling. Global-super-admin controls include tenant creation, platform
   health/audit and source-head repair with a reason and observed generation.
+  Creation adds no grants and opens the new tenant's Permissions page, which
+  requires saving an administrator and confirms before leaving until one exists
+  (REV-71).
   Configuration histories,
   references and maintenance alert membership have cursor controls.
 
