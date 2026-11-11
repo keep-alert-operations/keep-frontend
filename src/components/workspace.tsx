@@ -30,6 +30,35 @@ const sections = [
   ["reports", "Reports"],
   ["operators", "Operators"],
 ] as const;
+
+/** Per-tenant Administration pages; Global has none (REV-72). */
+const tenantAdminPages = ["operators", "permissions", "audit"];
+
+/** The Administration tabs this user sees in this tenant, in order. In Global
+ * only global super-admins get Administration, with Integrations and Platform
+ * (REV-72). */
+function adminTabs(tenant: Tenant, session: Session): [string, string][] {
+  return [
+    ...(tenant.kind === "global"
+      ? []
+      : ([
+          ["operators", "Operators"],
+          ...(tenant.role === "admin"
+            ? [
+                ["permissions", "Permissions"],
+                ["audit", "Access audit"],
+              ]
+            : []),
+        ] as [string, string][])),
+    ...(session.global_super_admin
+      ? ([
+          ["integrations", "Integrations"],
+          ["platform", "Platform"],
+        ] as [string, string][])
+      : []),
+  ];
+}
+
 export interface Scope {
   tenant: Tenant;
   session: Session;
@@ -340,6 +369,9 @@ export function Workspace() {
     "integrations",
     "platform",
   ].includes(section);
+  // The rail's Admin link opens the first Administration tab.
+  const [adminHome, adminLabel] =
+    (tenant && adminTabs(tenant, session)[0]) ?? [];
   return (
     <div className="shell" data-section={section} data-detail={Boolean(id)}>
       <aside className="rail">
@@ -384,16 +416,16 @@ export function Workspace() {
             ))}
         </nav>
         <div className="rail-bottom">
-          {tenant?.kind !== "global" && (
+          {tenant && adminHome && (
             <a
-              href={tenant ? `/tenants/${tenant.id}/operators` : "#"}
-              aria-label="Operators"
+              href={`/tenants/${tenant.id}/${adminHome}`}
+              aria-label={adminLabel}
               title="Administration"
               aria-current={adminSection ? "page" : undefined}
               onClick={(event) => {
                 if (event.ctrlKey || event.metaKey || event.shiftKey) return;
                 event.preventDefault();
-                if (tenant) navigate(`/tenants/${tenant.id}/operators`);
+                navigate(`/tenants/${tenant.id}/${adminHome}`);
               }}
             >
               <Icon name="operators" />
@@ -643,21 +675,7 @@ function TenantWorkspace(
   ].includes(props.section);
   const subnav = adminSection ? (
     <nav className="tabbar" aria-label="Administration">
-      {[
-        ["operators", "Operators"],
-        ...(props.tenant.role === "admin"
-          ? [
-              ["permissions", "Permissions"],
-              ["audit", "Access audit"],
-            ]
-          : []),
-        ...(props.session.global_super_admin
-          ? [
-              ["integrations", "Integrations"],
-              ["platform", "Platform"],
-            ]
-          : []),
-      ].map(([key, label]) => (
+      {adminTabs(props.tenant, props.session).map(([key, label]) => (
         <a
           key={key}
           className="tab"
@@ -683,14 +701,17 @@ function TenantWorkspace(
     subnav,
     banners: <HealthBanners health={health} />,
   };
+  // Operators, Permissions and Access audit don't exist in Global (REV-72).
+  const tenantAdminPage = tenantAdminPages.includes(props.section);
+  const hidden = tenantAdminPage && props.tenant.kind === "global";
   return props.section === "platform" ? (
     <Administration {...scope} />
   ) : props.section === "integrations" ? (
     <Integrations {...scope} />
   ) : props.section === "alerts" ? (
     <Alerts {...scope} id={props.id} />
-  ) : sections.some(([key]) => key === props.section) ||
-    ["permissions", "audit"].includes(props.section) ? (
+  ) : !hidden &&
+    (sections.some(([key]) => key === props.section) || tenantAdminPage) ? (
     <Resources {...scope} section={props.section} id={props.id} />
   ) : (
     <div className="empty" style={{ margin: 24 }}>

@@ -161,7 +161,9 @@ Elasticsearch, Kafka, Redis, company integrations, capacity, or production readi
   health/audit and source-head repair with a reason and observed generation.
   Creation adds no grants and opens the new tenant's Permissions page, which
   requires saving an administrator and confirms before leaving until one exists
-  (REV-71).
+  (REV-71). In Global, Administration appears only for global super-admins and has
+  only the Integrations and Platform tabs; Global's Operators, Permissions and
+  Access audit addresses show Page unavailable (REV-72).
   Configuration histories,
   references and maintenance alert membership have cursor controls.
 

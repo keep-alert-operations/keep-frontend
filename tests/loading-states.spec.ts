@@ -10,7 +10,10 @@ const cases = [
   ["incidents", "No incidents found"],
   ["correlation-rules", "No correlation rules yet"],
   ["maintenance", "No maintenance windows"],
-  ["operators", "No operators send to this tenant."],
+  [
+    "operators",
+    "No operators yet. Create one to give an alert source its own key.",
+  ],
 ] as const;
 
 function gate() {
@@ -60,8 +63,8 @@ async function setup(page: Page, section: string, viewPath = section) {
           tenants: [
             {
               id: tenant,
-              name: "Global",
-              kind: "global",
+              name: "Synthetic tenant",
+              kind: "specific",
               role: "admin",
               revision: "1",
             },

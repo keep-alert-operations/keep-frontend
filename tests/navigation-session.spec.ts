@@ -4,7 +4,11 @@ const global = "00000000-0000-4000-8000-000000000001";
 const other = "00000000-0000-4000-8000-000000000002";
 const alert = "00000000-0000-4000-8000-000000000003";
 
-async function setup(page: Page, otherRole: "view" | "admin" = "view") {
+async function setup(
+  page: Page,
+  otherRole: "view" | "admin" = "view",
+  superAdmin = false,
+) {
   await page.clock.install();
   await page.clock.pauseAt(new Date());
   const state = { sessions: 0, expired: false, streams: 0 };
@@ -23,6 +27,7 @@ async function setup(page: Page, otherRole: "view" | "admin" = "view") {
               data: {
                 principal: { id: alert, display_name: "Navigation user" },
                 csrf_token: "test",
+                global_super_admin: superAdmin,
                 tenants: [
                   {
                     id: global,
@@ -241,4 +246,66 @@ test("expired sign-in recovery remains outside the workspace session check", asy
     page.getByText("Checking your session…", { exact: true }),
   ).toHaveCount(0);
   expect(sessions).toBe(0);
+});
+
+/** Requirements: REV-72; shared system 3; tenant access 7. In Global the
+ * Admin link appears only for global super admins and opens Integrations and
+ * Platform; Operators, Permissions and Access audit don't exist there. */
+test("Global administration shows only Integrations and Platform to super admins", async ({
+  page,
+}) => {
+  await setup(page, "admin", true);
+  const admin = page.getByTitle("Administration", { exact: true });
+  const tabs = page.getByRole("navigation", { name: "Administration" });
+  await expect(admin).toHaveAccessibleName("Integrations");
+  await admin.click();
+  await expect(page).toHaveURL(new RegExp(`/tenants/${global}/integrations$`));
+  await expect(
+    page.getByRole("heading", { name: "Integrations", exact: true, level: 1 }),
+  ).toBeVisible();
+  await expect(tabs.getByRole("link")).toHaveText(["Integrations", "Platform"]);
+  await tabs.getByRole("link", { name: "Platform", exact: true }).click();
+  await expect(
+    page.getByRole("heading", {
+      name: "Platform administration",
+      exact: true,
+      level: 1,
+    }),
+  ).toBeVisible();
+  await expect(admin).toHaveAttribute("aria-current", "page");
+  for (const section of ["operators", "permissions", "audit"]) {
+    await page.goto(`/tenants/${global}/${section}`);
+    await expect(
+      page.getByRole("heading", { name: "Page unavailable", level: 1 }),
+    ).toBeVisible();
+    await expect(tabs).toHaveCount(0);
+  }
+  // A specific tenant keeps every tab for a super admin.
+  await page.goto(`/tenants/${other}/alerts`);
+  await expect(admin).toHaveAccessibleName("Operators");
+  await admin.click();
+  await expect(tabs.getByRole("link")).toHaveText([
+    "Operators",
+    "Permissions",
+    "Access audit",
+    "Integrations",
+    "Platform",
+  ]);
+});
+
+/** Requirements: REV-72; shared system 3. Without global administration,
+ * Global has no Admin link; a specific tenant keeps Operators. */
+test("Global has no Admin link for users who aren't super admins", async ({
+  page,
+}) => {
+  await setup(page, "view");
+  const admin = page.getByTitle("Administration", { exact: true });
+  await expect(page.getByRole("link", { name: "Presets" })).toBeVisible();
+  await expect(admin).toHaveCount(0);
+  await page.goto(`/tenants/${other}/alerts`);
+  await expect(admin).toHaveAccessibleName("Operators");
+  await admin.click();
+  await expect(
+    page.getByRole("navigation", { name: "Administration" }).getByRole("link"),
+  ).toHaveText(["Operators"]);
 });
