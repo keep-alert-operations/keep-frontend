@@ -52,12 +52,30 @@ test("global administrator reviews source repair and preserves a conflicted draf
   expect(submitted?.command_id).toMatch(/^[0-9a-f-]{36}$/);
 });
 
-test("tenant creation gives the current global administrator the explicit initial grant", async ({
+/** Requirements: REV-71; tenant access 2. Creation adds no one and opens the
+ * new tenant's Permissions page. */
+test("tenant creation adds no grants and opens the new tenant's permissions", async ({
   page,
 }) => {
   await setup(page, "admin");
+  const created = {
+    id: "00000000-0000-4000-8000-000000000003",
+    name: "Operations",
+    kind: "specific",
+    role: "admin",
+    revision: "1",
+  };
+  let committed = false;
   await page.route("**/auth/session", (route) =>
-    route.fulfill({ json: { data: { ...session, global_super_admin: true } } }),
+    route.fulfill({
+      json: {
+        data: {
+          ...session,
+          global_super_admin: true,
+          tenants: committed ? [...session.tenants, created] : session.tenants,
+        },
+      },
+    }),
   );
   await page.route("**/api/admin/**", (route) =>
     route.fulfill({
@@ -72,30 +90,231 @@ test("tenant creation gives the current global administrator the explicit initia
   let submitted: Record<string, unknown> | undefined;
   await page.route("**/api/tenants", (route) => {
     submitted = route.request().postDataJSON();
-    return route.fulfill({
-      status: 201,
+    committed = true;
+    return route.fulfill({ status: 201, json: { data: created } });
+  });
+  await page.route(`**/api/tenants/${created.id}/permissions`, (route) =>
+    route.fulfill({
       json: {
-        data: {
-          id: other,
-          name: "Operations",
-          kind: "specific",
-          role: "admin",
-          revision: "1",
-        },
+        data: [],
+        meta: { revision: "1", has_local_admin: false },
+        next_cursor: null,
       },
-    });
+    }),
+  );
+  await page.goto(`/tenants/${global}/platform`);
+  await expect(
+    page.getByText("You are not added to the tenant."),
+  ).toBeVisible();
+  await page.getByLabel("Tenant name").fill("Operations");
+  await page
+    .getByRole("button", { name: "Create tenant", exact: true })
+    .click();
+  await expect(page).toHaveURL(`/tenants/${created.id}/permissions`);
+  await expect(
+    page.getByText("Operations has no administrator.", { exact: false }),
+  ).toBeVisible();
+  expect(submitted?.initial_grants).toEqual([]);
+});
+
+/** Requirements: REV-71. A repair reason typed while creation is pending still
+ * asks before leaving, and a failed session read keeps the Platform page. */
+test("tenant creation keeps a repair draft and stays when the session cannot be read", async ({
+  page,
+}) => {
+  await setup(page, "admin");
+  const created = {
+    id: "00000000-0000-4000-8000-000000000004",
+    name: "Operations",
+    kind: "specific",
+    role: "admin",
+    revision: "1",
+  };
+  let sessionFails = false;
+  await page.route("**/auth/session", (route) =>
+    sessionFails
+      ? route.fulfill({
+          status: 503,
+          json: { error: { code: "unavailable", message: "Unavailable" } },
+        })
+      : route.fulfill({
+          json: { data: { ...session, global_super_admin: true } },
+        }),
+  );
+  await page.route("**/api/admin/**", (route) =>
+    route.fulfill({
+      json: {
+        data: new URL(route.request().url()).pathname.endsWith("/processing")
+          ? {
+              blocked: true,
+              block_generation: "7",
+              head: null,
+              last_repair: null,
+            }
+          : [],
+        next_cursor: null,
+      },
+    }),
+  );
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route("**/api/tenants", async (route) => {
+    await held;
+    return route.fulfill({ status: 201, json: { data: created } });
   });
   await page.goto(`/tenants/${global}/platform`);
   await page.getByLabel("Tenant name").fill("Operations");
   await page
     .getByRole("button", { name: "Create tenant", exact: true })
     .click();
+  await page.getByLabel("Repair reason").fill("Reviewed the missing proof");
+  const questions: string[] = [];
+  page.once("dialog", (dialog) => {
+    questions.push(dialog.message());
+    return dialog.dismiss();
+  });
+  release();
+  await expect.poll(() => questions.length).toBe(1);
+  expect(questions[0]).toContain("Discard unsaved changes");
+  await expect(page).toHaveURL(`/tenants/${global}/platform`);
+  await expect(page.getByLabel("Repair reason")).toHaveValue(
+    "Reviewed the missing proof",
+  );
+
+  await page.getByLabel("Repair reason").fill("");
+  sessionFails = true;
+  await page.getByRole("button", { name: "Open tenant permissions" }).click();
+  await expect(page.getByText("Unavailable", { exact: false })).toBeVisible();
+  await expect(page).toHaveURL(`/tenants/${global}/platform`);
   await expect(
     page.getByText("Created Operations.", { exact: false }),
   ).toBeVisible();
-  expect(submitted?.initial_grants).toEqual([
-    { principal_id: session.principal.id, role: "admin" },
+});
+
+/** Requirements: REV-71; tenant access 2 and 4. The first save must add an
+ * administrator, and leaving before that asks first. */
+test("a tenant without an administrator requires one before its permissions page is left", async ({
+  page,
+}) => {
+  await setup(page, "admin");
+  await page.route("**/auth/session", (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          ...session,
+          global_super_admin: true,
+          tenants: session.tenants.map((t) => ({ ...t, role: "admin" })),
+        },
+      },
+    }),
+  );
+  const chosen = "00000000-0000-4000-8000-000000000021";
+  let saved: Record<string, unknown> | undefined;
+  await page.route(`**/api/tenants/${other}/permissions`, (route) => {
+    if (route.request().method() === "PATCH") {
+      saved = route.request().postDataJSON();
+      return route.fulfill({ json: { data: { revision: "2" } } });
+    }
+    return route.fulfill({
+      json: saved
+        ? {
+            data: [
+              {
+                principal_id: chosen,
+                role: "admin",
+                display_name: "First administrator",
+                kind: "user",
+                eligible: true,
+                deleted: false,
+              },
+            ],
+            meta: { revision: "2", has_local_admin: true },
+            next_cursor: null,
+          }
+        : {
+            data: [],
+            meta: { revision: "1", has_local_admin: false },
+            next_cursor: null,
+          },
+    });
+  });
+  await page.route("**/permission-principals?**", (route) =>
+    route.fulfill({
+      json: {
+        data: [
+          {
+            id: chosen,
+            directory_source: "fixture",
+            object_id: "first-admin",
+            display_name: "First administrator",
+            kind: "user",
+            eligible: true,
+            deleted: false,
+            selectable: true,
+            verification: "verified",
+            verified_at: "2026-11-11T00:00:00Z",
+          },
+        ],
+      },
+    }),
+  );
+  await page.goto(`/tenants/${other}/permissions`);
+  await expect(
+    page.getByText("Synthetic second tenant has no administrator.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Role for new grant")).toHaveValue("admin");
+  const save = page.getByRole("button", { name: /^Save/ });
+  await expect(save).toBeDisabled();
+
+  const questions: string[] = [];
+  page.once("dialog", (dialog) => {
+    questions.push(dialog.message());
+    return dialog.dismiss();
+  });
+  await page
+    .getByRole("navigation", { name: "Tenant navigation" })
+    .getByRole("link", { name: "Feed" })
+    .click();
+  await expect.poll(() => questions.length).toBe(1);
+  expect(questions[0]).toContain(
+    "Synthetic second tenant has no administrator.",
+  );
+  await expect(page).toHaveURL(`/tenants/${other}/permissions`);
+
+  await page
+    .getByRole("textbox", {
+      name: "Add a user or team from the company directory",
+    })
+    .fill("first");
+  await page
+    .getByRole("button", { name: "Choose First administrator" })
+    .click();
+  await page.getByLabel("Role for new grant").selectOption("view");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(save).toBeDisabled();
+  await page.getByLabel("Role for First administrator").selectOption("admin");
+  await expect(save).toBeEnabled();
+  await save.click();
+  await expect(
+    page.getByText("has no administrator.", { exact: false }),
+  ).toHaveCount(0);
+  expect(saved?.expected_revision).toBe("1");
+  expect(saved?.operations).toEqual([
+    { principal_id: chosen, action: "set", role: "admin" },
   ]);
+
+  page.once("dialog", (dialog) => {
+    questions.push(dialog.message());
+    return dialog.dismiss();
+  });
+  await page
+    .getByRole("navigation", { name: "Tenant navigation" })
+    .getByRole("link", { name: "Feed" })
+    .click();
+  await expect(page).toHaveURL(`/tenants/${other}/alerts`);
+  expect(questions).toHaveLength(1);
 });
 
 test("tenant administrators cannot open platform controls", async ({

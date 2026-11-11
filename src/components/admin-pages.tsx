@@ -278,8 +278,8 @@ function RolesHelp({ tenant }: { tenant: string }) {
         <span className="lbl">How grants combine</span>
         <p className="help">
           Team and direct grants combine and the highest role wins. Changes are
-          saved together. {tenant} always keeps at least one eligible
-          administrator.
+          saved together, and every save must leave {tenant} with at least one
+          eligible administrator.
         </p>
       </section>
     </aside>
@@ -402,15 +402,25 @@ function GrantEditor({ scope }: { scope: Scope }) {
   const revision = typeof revisionValue === "string" ? revisionValue : null;
   const [base, setBase] = useState<string | null>(null);
   const [pick, setPick] = useState<DirectoryPrincipal & { id: string }>();
-  const [addRole, setAddRole] = useState<Role>("view");
+  const [addRole, setAddRole] = useState<Role>();
   const [pickerKey, setPickerKey] = useState(0);
   const frozen = command.busy || command.uncertain;
   const dirty = edits.length > 0 || command.uncertain;
-  useDirtyWarning(dirty);
+  // REV-71: a tenant created without grants, or one whose last eligible
+  // administrator was lost, needs one before this page is left.
+  const adminRequired = result.data?.meta?.has_local_admin === false;
+  const addsAdmin = edits.some(
+    (item) => item.action === "set" && item.role === "admin",
+  );
+  const newRole = addRole ?? (adminRequired && !addsAdmin ? "admin" : "view");
+  const leaving = adminRequired
+    ? `${scope.tenant.name} has no administrator. Leave without saving one? Choose Cancel to stay and add an administrator.`
+    : dirty;
+  useDirtyWarning(!!leaving);
   useEffect(() => {
-    scope.setDirty(dirty);
+    scope.setDirty(leaving);
     return () => scope.setDirty(false);
-  }, [dirty, scope.setDirty]);
+  }, [leaving, scope.setDirty]);
   const grants = Array.isArray(result.data?.data) ? result.data.data : null;
   const invalid = !!result.data && !grants;
   const effectiveBase = edits.length || command.uncertain ? base : revision;
@@ -494,7 +504,8 @@ function GrantEditor({ scope }: { scope: Scope }) {
             className="btn btn-p"
             disabled={
               command.busy ||
-              (!command.uncertain && (!count || stale || !revision))
+              (!command.uncertain &&
+                (!count || stale || !revision || (adminRequired && !addsAdmin)))
             }
             onClick={() => void save()}
           >
@@ -540,6 +551,14 @@ function GrantEditor({ scope }: { scope: Scope }) {
           </button>
         </div>
       )}
+      {adminRequired && (
+        <div className="banner bn-warn" role="status">
+          <span>
+            <b>{scope.tenant.name} has no administrator.</b> Add a user or team
+            with the Admin role and save before leaving this page.
+          </span>
+        </div>
+      )}
       {(command.error || command.uncertain) && (
         <CommandFeedback command={command} />
       )}
@@ -576,7 +595,7 @@ function GrantEditor({ scope }: { scope: Scope }) {
                   <select
                     className="inp"
                     aria-label="Role for new grant"
-                    value={addRole}
+                    value={newRole}
                     disabled={frozen}
                     onChange={(event) => setAddRole(event.target.value as Role)}
                   >
@@ -595,10 +614,10 @@ function GrantEditor({ scope }: { scope: Scope }) {
                         label: pick.display_name,
                         kind: pick.kind,
                         action: "set",
-                        role: addRole,
+                        role: newRole,
                       });
                       setPick(undefined);
-                      setAddRole("view");
+                      setAddRole(undefined);
                       setPickerKey((value) => value + 1);
                     }}
                   >
