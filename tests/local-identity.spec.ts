@@ -160,14 +160,13 @@ test("live group removal changes access and local logout ends the session", asyn
   );
   // Re-sync through the production Keep LDAP directory worker (the same module
   // used in deployment, run once), NOT the removed local Keycloak worker and NOT
-  // any identity-provider admin REST API. Confirm the module path against
-  // keep-delivery's packaged LDAP directory worker entrypoint.
+  // any identity-provider admin REST API.
   function syncDirectory() {
     execFileSync(
       resolve(repository, ".venv/Scripts/python.exe"),
       [
         "-m",
-        "keep.identity.ldap_directory_worker",
+        "keep.identity.worker",
         "--config",
         resolve(identityState, "directory.json"),
         "--once",
