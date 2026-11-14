@@ -15,7 +15,7 @@
         "focus": "2px solid focus outline",
         "color-scheme": "light / dark per theme"
       },
-      "keycloak": "keycloak/themes/keep/login/resources/css/keep.css mirrors the palette through light-dark() --ap-* tokens."
+      "loginPortal": "The username/password form is the identity provider's own login portal (Authelia's stock portal, with a Keep logo). Keep ships no login theme, so the portal is not palette-mirrored."
     },
     "contrast": {
       "floor": "4.5:1 for every text role on its surfaces, both themes, placeholders included",
@@ -2385,7 +2385,7 @@
       {
         "name": "sign-in-card",
         "value": "0 12px 40px rgb(var(--shadow-rgb) / 0.06)",
-        "purpose": "Sign-in and expired cards; Keycloak uses light-dark(rgb(11 37 69 / 0.06), #00000026)."
+        "purpose": "Sign-in and expired cards. The login form itself is the identity provider's stock portal (Authelia) and is not styled by Keep."
       },
       {
         "name": "focus-ring-code",

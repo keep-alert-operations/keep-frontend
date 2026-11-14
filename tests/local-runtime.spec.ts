@@ -15,18 +15,24 @@ test("native alert reaches the real feed and supports browser acknowledgement an
   const repository = resolve(__dirname, "../../keep-delivery");
   const state = resolve(repository, ".local/runtime");
   mkdirSync(state, { recursive: true });
+  // The delivery repo's local identity fixture generator owns this directory. It
+  // replaced the former `.local/keycloak` tree when Keycloak was dropped for the
+  // OpenLDAP + Authelia dev stack; confirm the exact path in keep-delivery.
   const credentials = JSON.parse(
     readFileSync(
-      resolve(repository, ".local/keycloak/credentials.json"),
+      resolve(repository, ".local/identity/credentials.json"),
       "utf8",
     ),
   );
   await page.goto("/auth/login");
-  await page.locator("#username").fill("local-admin");
+  // Authelia stock login portal selectors: name="username" / name="password"
+  // inputs and the #sign-in-button submit control. These track Authelia's portal
+  // markup rather than Keycloak's #kc-login form; confirm against the live portal.
+  await page.locator('input[name="username"]').fill("local-admin");
   await page
-    .locator("#password")
+    .locator('input[name="password"]')
     .fill(credentials.users["local-admin"].password);
-  await page.locator("#kc-login").click();
+  await page.locator("#sign-in-button").click();
   await expect(page).toHaveURL(/^https:\/\/localhost:3443\//);
   const sessionResponse = await page.request.get("/auth/session");
   expect(sessionResponse.status()).toBe(200);

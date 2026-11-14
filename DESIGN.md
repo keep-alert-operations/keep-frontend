@@ -573,8 +573,8 @@ The Reports page (rail item after Boards) shows the incident report in the exist
 ### Theme switch and theme mechanism
 A sun/moon switch in the account menu: a 56×30 `fill-strong` track with a 24px `surface` thumb that slides 26px in 160ms (no motion under reduced-motion). Light is the default regardless of OS preference; a dark choice is stored as `keep-theme` in localStorage and applied as `data-theme` on `<html>` by an inline bootstrap script before first paint. Each theme sets `color-scheme`, so native controls, scrollbars and form widgets follow. Browser surfaces are themed from the palette: `accent-color` and `caret-color` are `primary`, `::selection` is `primary-soft` with `text`, placeholders are `subtle` at full opacity, scrollbars are `border-hover` on transparent, and focus is the 2px `focus` outline.
 
-### Sign-in screens and Keycloak theme
-The application's signed-out, sign-in and expired screens use a 472px `surface` card at 16px radius with the 40px brand mark, a 20px title and a 44px primary button. The Keep Keycloak password form (`keycloak/themes/keep`) mirrors the same palette through `light-dark()` tokens (`--ap-*`) holding the theme.css light and dark values, the local Geist font, a 428px card at 16px radius, blue caret, accent and selection, and the same error colours. Its fields use the dark `code-bg` value as their dark ground.
+### Sign-in screens
+The application's signed-out, sign-in and expired screens use a 472px `surface` card at 16px radius with the 40px brand mark, a 20px title and a 44px primary button. The username-and-password form itself is not a Keep-owned page: it is rendered by the identity provider's own login portal (Authelia's stock portal, with a Keep logo). Keep no longer ships a custom login theme, so the portal keeps its own stock appearance and only the application screens follow the palette described here.
 
 ### Known exceptions
 - Refreshing tables are dimmed to 0.62 opacity (`.is-stale`, 150ms fade) while a refetch is in flight. This is pre-existing and transient, and it drops secondary text below 4.5:1 (about 2.6–3.9:1) during the refresh. It is not a pattern to reuse for resting states.

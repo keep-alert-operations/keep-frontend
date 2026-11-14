@@ -94,7 +94,7 @@ local PostgreSQL and HTTPS Next.js/FastAPI with installed Chrome 153.0.8010.48.
 A follow-up catalog query confirmed zero remaining `keep_browser_test_*`
 databases and no remaining fixture Next.js/Uvicorn processes. TypeScript
 validation also passed. This establishes
-one real UI/API/database workflow; it does not qualify Keycloak sign-in, LDAP,
+one real UI/API/database workflow; it does not qualify Authelia/OIDC sign-in, LDAP,
 Elasticsearch, Kafka, Redis, company integrations, capacity, or production readiness.
 
 ## Connected workflows
@@ -231,7 +231,7 @@ render-observation telemetry and relative-time one-second refresh, complete
 dashboard batch-retry acceptance and real counts/preview integration coverage.
 CSP/nonce and gateway security acceptance, a full WCAG audit, measured performance,
 and broader authenticated real-service browser qualification remain release gates.
-The local checks do not qualify private Keycloak/LDAP/Kong/Grafana bindings,
+The local checks do not qualify private Authelia/LDAP/Kong/Grafana bindings,
 production capacity, or deployment readiness, and do not mark the entire initial
 release complete.
 
