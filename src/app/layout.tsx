@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { RumVitals } from "@/components/rum-vitals";
 import "./theme.css";
 import "./globals.css";
 import "./design.css";
@@ -44,6 +45,7 @@ export default function RootLayout({
         <a className="skip" href="#main-content">
           Skip to content
         </a>
+        <RumVitals />
         {children}
       </body>
     </html>

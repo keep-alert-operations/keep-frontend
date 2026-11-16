@@ -1,5 +1,6 @@
 import createClient from "openapi-fetch";
 import type { paths } from "./generated";
+import { apiOutcome, rumApi, rumSession } from "./rum";
 
 // Generated path/method typing comes from the backend OpenAPI contract. Response
 // envelopes remain explicit until every backend response model is published.
@@ -10,7 +11,25 @@ export const generatedClient = createClient<paths>({
 export async function requestSession(
   signal?: AbortSignal,
 ): Promise<Envelope<Session>> {
-  const result = await generatedClient.GET("/auth/session", { signal });
+  const since = performance.now();
+  let result: Awaited<
+    ReturnType<
+      typeof generatedClient.GET<"/auth/session", { signal?: AbortSignal }>
+    >
+  >;
+  try {
+    result = await generatedClient.GET("/auth/session", { signal });
+  } catch (failure) {
+    if (!signal?.aborted) rumApi("/auth/session", "GET", since, "network");
+    throw failure;
+  }
+  rumApi(
+    "/auth/session",
+    "GET",
+    since,
+    apiOutcome(result.response.status),
+    result.response.status,
+  );
   if (!result.response.ok) {
     const failure = result.error as
       | { error?: { code?: string; message?: string; request_id?: string } }
@@ -29,6 +48,7 @@ export async function requestSession(
       "invalid_response",
       "The session response does not match its API contract.",
     );
+  rumSession(payload.data.csrf_token);
   return payload;
 }
 export type Revision = string;
@@ -87,27 +107,38 @@ export async function requestStatus<T>(
 ): Promise<{ status: number; envelope: Envelope<T> }> {
   if (!path.startsWith("/api/") && !path.startsWith("/auth/"))
     throw new Error("Invalid API scope");
-  const response = await fetch(path, {
-    method: options.method ?? "GET",
-    credentials: "same-origin",
-    cache: "no-store",
-    signal: options.signal,
-    headers: {
-      Accept: "application/json",
+  const method = options.method ?? "GET";
+  const since = performance.now();
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      method,
+      credentials: "same-origin",
+      cache: "no-store",
+      signal: options.signal,
+      headers: {
+        Accept: "application/json",
+        ...(options.body !== undefined
+          ? { "Content-Type": "application/json" }
+          : {}),
+        ...(options.csrf ? { "X-CSRF-Token": options.csrf } : {}),
+        ...options.headers,
+      },
       ...(options.body !== undefined
-        ? { "Content-Type": "application/json" }
+        ? { body: JSON.stringify(options.body) }
         : {}),
-      ...(options.csrf ? { "X-CSRF-Token": options.csrf } : {}),
-      ...options.headers,
-    },
-    ...(options.body !== undefined
-      ? { body: JSON.stringify(options.body) }
-      : {}),
-  });
+    });
+  } catch (failure) {
+    // A request the UI itself cancelled is not a failure the user met.
+    if (!options.signal?.aborted) rumApi(path, method, since, "network");
+    throw failure;
+  }
   let payload: unknown;
   try {
     payload = await response.json();
   } catch {
+    if (!options.signal?.aborted)
+      rumApi(path, method, since, "unreadable", response.status);
     throw new ApiError(
       response.status,
       "invalid_response",
@@ -125,6 +156,14 @@ export async function requestStatus<T>(
         };
       } | null
     )?.error;
+    rumApi(
+      path,
+      method,
+      since,
+      apiOutcome(response.status),
+      response.status,
+      detail?.request_id,
+    );
     throw new ApiError(
       response.status,
       detail?.code ?? "request_failed",
@@ -133,12 +172,15 @@ export async function requestStatus<T>(
       detail?.fields,
     );
   }
-  if (!payload || typeof payload !== "object" || !("data" in payload))
+  if (!payload || typeof payload !== "object" || !("data" in payload)) {
+    rumApi(path, method, since, "unreadable", response.status);
     throw new ApiError(
       502,
       "invalid_response",
       "The service response does not match its API contract.",
     );
+  }
+  rumApi(path, method, since, "ok", response.status);
   return { status: response.status, envelope: payload as Envelope<T> };
 }
 export function message(error: unknown): string {

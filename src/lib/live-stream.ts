@@ -1,4 +1,6 @@
 /** Same-origin SSE hints. No event is an authorization or freshness proof. */
+import { rumLive, rumLiveDisconnect } from "./rum";
+
 export interface LiveEvent {
   type: string;
   data: string;
@@ -116,9 +118,12 @@ export function liveStream(
       !stopped && generation === attempt && !controller.signal.aborted;
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
     let opened = runtime.now();
-    function fail(denied = false) {
+    let cause = "network";
+    function fail(denied = false, reason = cause, status?: number) {
       if (!current()) return;
       disconnect();
+      rumLiveDisconnect(denied ? "denied" : reason, status);
+      rumLive(denied ? "denied" : "degraded");
       if (denied) {
         stopped = true;
         runtime.cancel(hidden);
@@ -134,9 +139,10 @@ export function liveStream(
     }
     function arm() {
       runtime.cancel(watchdog);
-      watchdog = runtime.later(() => fail(), 30000);
+      watchdog = runtime.later(() => fail(false, "watchdog"), 30000);
     }
     arm(); // Also bound response-header stalls.
+    rumLive("connecting");
     try {
       const response = await runtime.fetch(options.path, {
         credentials: "same-origin",
@@ -156,7 +162,11 @@ export function liveStream(
       if (!response.ok) {
         // Known denial is authoritative even if cancelling a broken response
         // body rejects or never settles. Cleanup cannot postpone clearing scope.
-        fail([401, 403, 404].includes(response.status));
+        fail(
+          [401, 403, 404].includes(response.status),
+          "http_status",
+          response.status,
+        );
         void response.body?.cancel().catch(() => {});
         return;
       }
@@ -169,10 +179,12 @@ export function liveStream(
         !response.body
       ) {
         await response.body?.cancel();
+        cause = "invalid_response";
         throw new Error("Invalid live stream response");
       }
       opened = runtime.now();
       options.onConnect();
+      rumLive("connected");
       const parser = new LiveEventParser(
         (event) => {
           if (!current()) return;
@@ -193,7 +205,7 @@ export function liveStream(
         const result = await reader.read();
         if (!current()) return;
         if (result.done) {
-          fail();
+          fail(false, "stream_end");
           return;
         }
         parser.push(result.value);
@@ -216,7 +228,11 @@ export function liveStream(
       runtime.cancel(hidden);
       runtime.cancel(retry);
       retry = undefined;
-      if (!next) hidden = runtime.later(() => disconnect(), 60000);
+      if (!next)
+        hidden = runtime.later(() => {
+          disconnect();
+          rumLive("hidden");
+        }, 60000);
       else {
         disconnect();
         void connect();
@@ -227,6 +243,7 @@ export function liveStream(
       runtime.cancel(hidden);
       runtime.cancel(retry);
       disconnect();
+      rumLive(undefined);
     },
   };
 }
