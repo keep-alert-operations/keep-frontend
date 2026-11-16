@@ -43,6 +43,12 @@
   --primary-soft: #ddeefa;
   --accent: #075e96;
   --accent-soft: #eef6fd;
+
+  /* Lighthouse brand mark */
+  --brand-tower: #0b2545;
+  --brand-light: #f2a93b;
+  --brand-band: #4fb3f0;
+  --brand-sea: #0a6fb0;
   --focus: #0a6fb0;
   --focus-ring: #cfe5f6;
   --info: #075e96;
@@ -181,6 +187,11 @@
   --primary-soft: #173d5c;
   --accent: #74c4f4;
   --accent-soft: #14304a;
+
+  --brand-tower: #e6eef6;
+  --brand-light: #f5b94a;
+  --brand-band: #0a6fb0;
+  --brand-sea: #4fb3f0;
   --focus: #4fb3f0;
   --focus-ring: #1c4b70;
   --info: #9bd3f7;
