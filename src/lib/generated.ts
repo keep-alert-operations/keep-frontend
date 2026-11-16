@@ -270,6 +270,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/rum-events": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Rum Events
+     * @description Accept one batch of browser monitoring events.
+     */
+    post: operations["rum_events_api_rum_events_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/tenants/{tenant_id}/presets": {
     parameters: {
       query?: never;
@@ -3427,6 +3447,68 @@ export interface components {
        */
       retry: boolean;
     };
+    /** RumBatch */
+    RumBatch: {
+      /** Events */
+      events: components["schemas"]["RumEvent"][];
+    };
+    /**
+     * RumEvent
+     * @description One real-user-monitoring event from the browser (observability 9).
+     *
+     *     The shape is checked here; which fields each kind needs, and that every value
+     *     used as a metric label belongs to its closed set, is checked by the Product API.
+     *     Events carry route templates and resource IDs, never addresses, query text or
+     *     content.
+     */
+    RumEvent: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind:
+        | "web_vital"
+        | "page_view"
+        | "api"
+        | "api_error"
+        | "live"
+        | "live_disconnect"
+        | "js_error"
+        | "tab"
+        | "dropped";
+      /** Name */
+      name?: string | null;
+      /** View */
+      view?: string | null;
+      /** Route */
+      route?: string | null;
+      /** Method */
+      method?: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE") | null;
+      /** Outcome */
+      outcome?: string | null;
+      /** State */
+      state?: string | null;
+      /** Reason */
+      reason?: string | null;
+      /** Value */
+      value?: number | null;
+      /** Count */
+      count?: number | null;
+      /** Buckets */
+      buckets?: number[] | null;
+      /** Status */
+      status?: number | null;
+      /** Request Id */
+      request_id?: string | null;
+      /** Error Name */
+      error_name?: string | null;
+      /** Stack */
+      stack?: string | null;
+      /** Alert Id */
+      alert_id?: string | null;
+      /** Incident Id */
+      incident_id?: string | null;
+    };
     /** SavedTest */
     SavedTest: {
       /** Alert Id */
@@ -4473,6 +4555,39 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  rum_events_api_rum_events_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RumBatch"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
         headers: {
           [name: string]: unknown;
         };
