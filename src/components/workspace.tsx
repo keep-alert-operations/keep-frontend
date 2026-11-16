@@ -19,6 +19,8 @@ import { Administration } from "./administration";
 import { Integrations } from "./integrations";
 import { ErrorNotice } from "./ui";
 import { Icon } from "./icons";
+import { ThemeSwitch, useTheme } from "./theme-switch";
+import { signInPath } from "@/lib/sign-in";
 
 const sections = [
   ["alerts", "Feed"],
@@ -93,8 +95,9 @@ export function Workspace() {
     [error, setError] = useState<unknown>(),
     [loading, setLoading] = useState(true);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, toggleTheme] = useTheme();
   const [notice, setNotice] = useState<string>();
+  const [signingOut, setSigningOut] = useState(false);
   const [epoch, setEpoch] = useState(0),
     [dirty, setDirtyState] = useState<boolean | string>(false);
   // Navigation reads the latest report, including one made earlier in the same
@@ -108,21 +111,6 @@ export function Workspace() {
   const signedOut = useRef(false);
   const hasAuthenticated = useRef(false);
   const loginStarted = useRef(false);
-  useEffect(() => {
-    setTheme(
-      document.documentElement.dataset.theme === "dark" ? "dark" : "light",
-    );
-  }, []);
-  function toggleTheme() {
-    const next = theme === "dark" ? "light" : "dark";
-    document.documentElement.dataset.theme = next;
-    setTheme(next);
-    try {
-      localStorage.setItem("keep-theme", next);
-    } catch {
-      // The theme still changes for this page when browser storage is blocked.
-    }
-  }
   /** Rereads the session; says whether it was applied, superseded or failed. */
   const reauthorize = useCallback(async (clear = false) => {
     if (signedOut.current) return "failed";
@@ -175,12 +163,13 @@ export function Workspace() {
     error instanceof ApiError &&
     error.status === 401 &&
     error.code === "unauthenticated";
+  // Entry without a session opens Keep's sign-in page for this path and query
+  // (identity configuration 2). A session lost later keeps the recovery card.
   useEffect(() => {
     if (!openingSignIn || loginStarted.current) return;
     loginStarted.current = true;
-    const returnTo = window.location.pathname + window.location.search;
     window.location.replace(
-      `/auth/login?return_to=${encodeURIComponent(returnTo)}`,
+      signInPath(window.location.pathname + window.location.search),
     );
   }, [openingSignIn]);
   const onDenied = useCallback(() => {
@@ -200,23 +189,6 @@ export function Workspace() {
     if (tenant && !requestedTenant)
       router.replace(`/tenants/${tenant.id}/alerts`);
   }, [tenant, requestedTenant, router]);
-  const activitySession = useRef(session);
-  activitySession.current = session;
-  useEffect(() => {
-    if (!session?.principal.id) return;
-    const timer = setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      void request("/auth/activity", {
-        method: "POST",
-        body: {},
-        csrf: activitySession.current?.csrf_token,
-      }).catch((failure) => {
-        if (failure instanceof ApiError && [401, 403].includes(failure.status))
-          onDenied();
-      });
-    }, 60000);
-    return () => clearInterval(timer);
-  }, [session?.principal.id, onDenied]);
   const navigate = (url: string, options?: { refresh?: boolean }) => {
     const pending = dirtyNow.current;
     if (pending && !window.confirm(leaveQuestion(pending))) return;
@@ -249,39 +221,32 @@ export function Workspace() {
     return () => window.removeEventListener("popstate", leave, true);
   }, [dirty, pathname]);
   async function logout() {
-    // Protected client state is cleared even if the provider logout is unavailable.
+    // Sign-out is local only (REV-73; identity configuration 10). Protected
+    // client state is cleared at once, even if the request cannot be confirmed.
     signedOut.current = true;
     sessionRequest.current?.abort();
     const csrf = session?.csrf_token;
     setSession(undefined);
     setDirty(false);
     setEpoch((v) => v + 1);
+    setSigningOut(true);
     try {
-      const result = await request<{
-        logout_url?: string;
-        provider_logout_completed?: boolean;
-      }>("/auth/logout", { method: "POST", csrf, body: {} });
-      if (result.data.logout_url) {
-        const target = new URL(result.data.logout_url, location.origin);
-        if (["https:", "http:"].includes(target.protocol))
-          location.assign(target.href);
-      }
-      setNotice(
-        result.data.provider_logout_completed === false
-          ? "Signed out locally. Provider sign-out could not be completed."
-          : "You have signed out.",
-      );
+      await request("/auth/logout", { method: "POST", csrf, body: {} });
+      setNotice(undefined);
     } catch (failure) {
       setNotice(
         `Sign-out could not be confirmed. Protected data was cleared. ${message(failure)}`,
       );
     }
+    setSigningOut(false);
+    router.replace("/signed-out");
   }
   if (!session) {
     // An unauthenticated response is the normal signed-out state; only
     // transport or service failures are reported as a connection problem.
     const signedOutState =
       error instanceof ApiError && [401, 403].includes(error.status);
+    const signedOutPage = pathname === "/signed-out";
     return (
       <div className="login-screen">
         <main id="main-content" className="login">
@@ -294,26 +259,35 @@ export function Workspace() {
               <p>Alert operations, in one place.</p>
             </div>
           </div>
-          {loading || openingSignIn ? (
+          {loading || openingSignIn || signingOut ? (
             <p role="status" className="login-lead">
-              {openingSignIn ? "Opening sign in…" : "Checking your session…"}
+              {signingOut
+                ? "Signing out…"
+                : openingSignIn
+                  ? "Opening sign in…"
+                  : "Checking your session…"}
             </p>
           ) : (
             <>
-              <p className="login-lead">
-                {pathname === "/signed-out"
+              <p
+                className="login-lead"
+                role={signedOutPage ? "status" : undefined}
+              >
+                {signedOutPage
                   ? "You have signed out of Keep."
                   : "Sign in with your company username and password."}
               </p>
               <a
                 className="btn btn-p login-button"
                 href={
-                  pathname === "/signed-out"
-                    ? "/auth/login"
-                    : `/auth/login?return_to=${encodeURIComponent(pathname)}`
+                  signedOutPage
+                    ? signInPath()
+                    : signInPath(
+                        window.location.pathname + window.location.search,
+                      )
                 }
               >
-                Sign in with company account
+                Sign in
               </a>
               {notice ? (
                 <div className="banner bn-info" role="status">
@@ -354,8 +328,8 @@ export function Workspace() {
             </>
           )}
           <p className="help">
-            Your company identity determines tenant access. Sessions end after
-            30 minutes idle or 24 hours.
+            Your company identity determines tenant access. Sessions last 24
+            hours.
           </p>
           <ThemeSwitch theme={theme} onToggle={toggleTheme} />
         </main>
@@ -479,41 +453,6 @@ export function Workspace() {
           </div>
         )}
       </main>
-    </div>
-  );
-}
-
-function ThemeSwitch({
-  theme,
-  onToggle,
-}: {
-  theme: "light" | "dark";
-  onToggle: () => void;
-}) {
-  const dark = theme === "dark";
-  return (
-    <div className="theme-switcher">
-      <span className="theme-switcher-label">Appearance</span>
-      <button
-        type="button"
-        className="theme-switch"
-        role="switch"
-        aria-label="Dark mode"
-        aria-checked={dark}
-        onClick={onToggle}
-      >
-        <span className="theme-switch-track" aria-hidden="true">
-          <span className="theme-switch-light">
-            <Icon name="sun" size={14} />
-          </span>
-          <span className="theme-switch-dark">
-            <Icon name="moon" size={14} />
-          </span>
-          <span className={`theme-switch-thumb${dark ? " is-dark" : ""}`}>
-            <Icon name={dark ? "moon" : "sun"} size={13} />
-          </span>
-        </span>
-      </button>
     </div>
   );
 }

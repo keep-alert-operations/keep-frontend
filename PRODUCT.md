@@ -51,9 +51,10 @@ the counts and freshness they are shown, and take ownership without friction.
 
 - Closed corporate network; deployed on OpenShift. Pages must not depend on
   external hosts at runtime (fonts are served locally).
-- Company Keycloak/LDAP username-and-password sign-in; sessions end after 30
-  minutes idle or 24 hours. The Keycloak login page uses a Keep theme
-  (`keycloak/themes`).
+- Company username-and-password sign-in on Keep's own `/sign-in` page: one
+  LDAP bind against Active Directory, people and groups from ADAPI (REV-73).
+  Sessions last 24 hours from sign-in, with no idle timeout; sign-out is
+  local to Keep.
 - Alerts arrive from Grafana contact points and other senders; a tenant can see
   "alerts arriving late" when source processing is blocked.
 - Desk monitors (primary) and NOC wall displays (dashboards fullscreen).

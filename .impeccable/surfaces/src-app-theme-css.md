@@ -2,12 +2,12 @@
 version: 1
 slug: "src-app-theme-css"
 primary_target: "src/app/theme.css"
-related_targets: ["src/app/globals.css","src/app/design.css","src/app/styles","keycloak/themes/keep/login/resources/css/keep.css"]
+related_targets: ["src/app/globals.css","src/app/design.css","src/app/styles"]
 ---
 
 ## Scope
 
-Operate surface, whole application: shared shell (76px icon rail, page frame), every Keep screen, the signed-out, sign-in and expired screens, and the Keep Keycloak password form. Palette refinement of the incumbent design at `f58c7d0`, not a new world. Audience and constraints are in PRODUCT.md, including the user's standing preference for the current simple, easy-on-the-eye feel with a real colour palette. Light is the default with a remembered dark choice (`keep-theme`, `data-theme` on `<html>`); every route, API call, permission, copy string, ARIA role/label, keyboard path, layout, radius, spacing and font stays as it is.
+Operate surface, whole application: shared shell (76px icon rail, page frame), every Keep screen, the signed-out screen and the `/sign-in` password form (REV-73). Palette refinement of the incumbent design at `f58c7d0`, not a new world. Audience and constraints are in PRODUCT.md, including the user's standing preference for the current simple, easy-on-the-eye feel with a real colour palette. Light is the default with a remembered dark choice (`keep-theme`, `data-theme` on `<html>`); every route, API call, permission, copy string, ARIA role/label, keyboard path, layout, radius, spacing and font stays as it is.
 
 ## Direction contract
 

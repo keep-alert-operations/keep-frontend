@@ -26,7 +26,12 @@ shows a connection/authentication failure instead of synthetic operational data.
 The backend origin is server-only and supplies `/api` and `/auth` rewrites. In
 production the approved ingress must route those paths to Python under the same
 HTTPS origin. The frontend sends authenticated commands; Python owns authorization and
-transactional mutation semantics. The frontend does not exchange OIDC tokens.
+transactional mutation semantics. The `/sign-in` page (REV-73) posts the username
+and password once to `POST /auth/login`; the browser then holds only the opaque
+session cookie. The page is outside `/auth` and outside the workspace route, so it
+never runs the session check. The workspace opens `/sign-in?return_to=…` when its
+first session check answers 401 `unauthenticated`; a session lost later shows the
+signed-out card with a Sign in link that keeps the current path and query.
 
 ```powershell
 npm run generate
@@ -94,13 +99,15 @@ local PostgreSQL and HTTPS Next.js/FastAPI with installed Chrome 153.0.8010.48.
 A follow-up catalog query confirmed zero remaining `keep_browser_test_*`
 databases and no remaining fixture Next.js/Uvicorn processes. TypeScript
 validation also passed. This establishes
-one real UI/API/database workflow; it does not qualify Keycloak sign-in, LDAP,
+one real UI/API/database workflow; it does not qualify password sign-in, LDAP, ADAPI,
 Elasticsearch, Kafka, Redis, company integrations, capacity, or production readiness.
 
 ## Connected workflows
 
-- Session sign-in link, sign-out, current identity/tenant/role, scoped navigation,
-  foreground activity heartbeat, session reauthorization and access-loss clearing.
+- The `/sign-in` page (refused, not-in-directory, ambiguous and unavailable
+  messages), local sign-out, current identity/tenant/role, scoped navigation,
+  the 30-second session reauthorization and access-loss clearing. There is no
+  activity heartbeat: a session lasts 24 hours with no idle timeout (REV-73).
 - Alert CEL/text/suppression query, exact decimal count presentation, snapshot page
   controls, detail, lifecycle, derived ownership status, one self/other/unassign menu, notes
   create/edit/delete, history/occurrences/source reads and explicit bulk status. Feed and
@@ -151,10 +158,14 @@ Elasticsearch, Kafka, Redis, company integrations, capacity, or production readi
   to the clipboard without rendering or persistent browser storage. Audit is paged.
   Missing remote capability/provisioner support stays pending or needs attention;
   the durable worker interface does not establish company Kong/Grafana qualification.
-- Tenant-admin permission editing uses verified directory users/teams, atomic
+- Tenant-admin permission editing searches the company directory, atomic
   explicit-grant batches and the roster response revision; conflicts retain the
-  draft. Alert/incident assignment uses verified eligible-user directory search,
-  showing pending matches without making them selectable. Bulk alert controls
+  draft. Choosing a user or team Keep has not saved saves it from ADAPI first
+  (`POST …/permission-principals/resolve`, REV-73). A save too large for the
+  request shows "Saving from the directory…" and polls `GET …/resolve` 3 seconds
+  after each answer until it is saved or failed; a failure offers Try again
+  (`retry: true`). A search that reached ADAPI's 1,000-row cap asks the user to
+  type more. Alert/incident assignment uses saved eligible-user search. Bulk alert controls
   include lifecycle and assignment actions while retaining selected revisions.
   Tenant/platform audit is a paged read view with applied filters and malformed
   response handling. Global-super-admin controls include tenant creation, platform
@@ -231,7 +242,7 @@ render-observation telemetry and relative-time one-second refresh, complete
 dashboard batch-retry acceptance and real counts/preview integration coverage.
 CSP/nonce and gateway security acceptance, a full WCAG audit, measured performance,
 and broader authenticated real-service browser qualification remain release gates.
-The local checks do not qualify private Keycloak/LDAP/Kong/Grafana bindings,
+The local checks do not qualify private LDAP/ADAPI/Kong/Grafana bindings,
 production capacity, or deployment readiness, and do not mark the entire initial
 release complete.
 

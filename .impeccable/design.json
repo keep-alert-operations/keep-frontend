@@ -15,7 +15,7 @@
         "focus": "2px solid focus outline",
         "color-scheme": "light / dark per theme"
       },
-      "keycloak": "keycloak/themes/keep/login/resources/css/keep.css mirrors the palette through light-dark() --ap-* tokens."
+      "sign-in": "src/app/styles/sign-in.css styles the /sign-in password form (REV-73) with these theme roles; fields use code-bg."
     },
     "contrast": {
       "floor": "4.5:1 for every text role on its surfaces, both themes, placeholders included",
@@ -2385,7 +2385,7 @@
       {
         "name": "sign-in-card",
         "value": "0 12px 40px rgb(var(--shadow-rgb) / 0.06)",
-        "purpose": "Sign-in and expired cards; Keycloak uses light-dark(rgb(11 37 69 / 0.06), #00000026)."
+        "purpose": "Sign-in and signed-out cards."
       },
       {
         "name": "focus-ring-code",

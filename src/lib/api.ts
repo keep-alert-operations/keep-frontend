@@ -67,16 +67,24 @@ export class ApiError extends Error {
     super(message);
   }
 }
+type RequestOptions = {
+  method?: string;
+  body?: unknown;
+  csrf?: string;
+  signal?: AbortSignal;
+  headers?: Record<string, string>;
+};
 export async function request<T>(
   path: string,
-  options: {
-    method?: string;
-    body?: unknown;
-    csrf?: string;
-    signal?: AbortSignal;
-    headers?: Record<string, string>;
-  } = {},
+  options: RequestOptions = {},
 ): Promise<Envelope<T>> {
+  return (await requestStatus<T>(path, options)).envelope;
+}
+/** `request` that also reports the success status, such as 200 or 202. */
+export async function requestStatus<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<{ status: number; envelope: Envelope<T> }> {
   if (!path.startsWith("/api/") && !path.startsWith("/auth/"))
     throw new Error("Invalid API scope");
   const response = await fetch(path, {
@@ -131,7 +139,7 @@ export async function request<T>(
       "invalid_response",
       "The service response does not match its API contract.",
     );
-  return payload as Envelope<T>;
+  return { status: response.status, envelope: payload as Envelope<T> };
 }
 export function message(error: unknown): string {
   if (error instanceof ApiError)

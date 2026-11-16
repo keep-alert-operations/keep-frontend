@@ -22,6 +22,12 @@ const config: NextConfig = {
         }))
       : [];
   },
+  // The former expired-sign-in address offers Keep's sign-in page (REV-73).
+  async redirects() {
+    return [
+      { source: "/sign-in-expired", destination: "/sign-in", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {

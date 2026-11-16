@@ -121,7 +121,7 @@ test("signed-out login uses the stored theme", async ({ page }) => {
   await mockApi(page, false);
   await page.goto("/");
   await expect(
-    page.getByRole("link", { name: "Sign in with company account" }),
+    page.getByRole("link", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".login-screen")).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
