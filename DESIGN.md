@@ -409,7 +409,7 @@ The confirmed rejections come from the user: no black-and-white or grayscale pal
 
 **Key Characteristics:**
 - Incumbent structure, Ocean colour: cool blue-tinted rail and canvas, white panels, navy ink.
-- One solid blue for primary actions, Run, the active rail tile, the brand mark and the selected tab underline; a soft blue pill for the selected quick view.
+- One solid blue for primary actions, Run, the active rail tile and the selected tab underline; a soft blue pill for the selected quick view. The Lighthouse brand mark has its own four roles.
 - Semantic roles only, light and dark, each text role at 4.5:1 or better on its surfaces.
 - Flat bordered panels at rest; navy-tinted shadows only on things that float.
 - Geist for interface text, including times relative to now; Geist Mono for CEL, exact timestamps, source lines and board counts.
@@ -419,7 +419,7 @@ The confirmed rejections come from the user: no black-and-white or grayscale pal
 A cool, restrained Ocean palette: blue-tinted neutrals carry the screen, one saturated blue carries action and location, and warm status hues appear only where they mean something.
 
 ### Primary
-- **Ocean Blue** (`primary` #0a6fb0 light / `primary-dark` #4fb3f0 dark): solid fill for primary buttons, the CEL Run button, the active rail tile, the "A" brand mark, the selected tab underline, the user-event timeline dot and the blue threshold accent. Light fills carry white text (`primary-text`); dark fills carry near-black navy text (`primary-text-dark` #04121f).
+- **Ocean Blue** (`primary` #0a6fb0 light / `primary-dark` #4fb3f0 dark): solid fill for primary buttons, the CEL Run button, the active rail tile, the selected tab underline, the user-event timeline dot and the blue threshold accent. Light fills carry white text (`primary-text`); dark fills carry near-black navy text (`primary-text-dark` #04121f).
 - **Deep Ocean** (`primary-hover` #085c93 / #74c4f4): hover state of every blue fill. In dark the hover lightens rather than darkens.
 - **Harbour Link** (`accent` #075e96 / #74c4f4): link text, the selected quick view's label and count, CEL keywords.
 - **Shallow Water** (`primary-soft` #ddeefa / #173d5c): the selected quick-view pill and text selection highlight.
@@ -427,6 +427,9 @@ A cool, restrained Ocean palette: blue-tinted neutrals carry the screen, one sat
 - **Focus Blue** (`focus` #0a6fb0 / #4fb3f0, with `focus-ring` #cfe5f6 / #1c4b70): 2px focus outlines on every interactive element and the 3px ring around an active code field.
 - **Info Ink** (`info` #075e96 / #9bd3f7, with `info-line` #c5dcef / #1f4a6b): Acknowledged status, info banners and notices.
 - **Avatar Tint** (`avatar` #cfe3f5 / #1d3a55): the account initials circle.
+
+### Brand mark
+- **Lighthouse** (chosen by the user on 2026-11-16; `src/components/brand-mark.tsx`): `brand-tower` #0b2545 / #e6eef6 for the roof, gallery and tower; `brand-light` #f2a93b / #f5b94a (signal amber) for the lamp; `brand-band` #4fb3f0 / #0a6fb0 for the band; `brand-sea` #0a6fb0 / #4fb3f0 for the line of sea. In dark the tower turns near-white. It is drawn on a 40-unit grid with no tile behind it and shown at 34px in the rail and 40px on the sign-in screens.
 
 ### Tertiary
 - **Incident Violet** (`incident` #5b4bd1 / #9d94ff): incident timeline dots. `incident-ink` (#4136a8 / #c0baff) on `incident-soft` (#efedfc / #25244d) is the incident chip; `incident-soft-2` and `incident-line` tint incident panels. `syntax-number` (#6b46c1 / #c3a8ff) colours numbers in CEL.
@@ -450,7 +453,7 @@ A cool, restrained Ocean palette: blue-tinted neutrals carry the screen, one sat
 - **Danger** (`danger` #b42318 / #b4413b with white `danger-text`, `danger-hover`): solid destructive confirmation buttons only.
 
 ### Named Rules
-**The One Blue Rule.** Solid Ocean blue means "act here" or "you are here": primary buttons, Run, the active rail tile, the brand mark, the selected tab underline and focus. A selected filter is the soft `primary-soft` pill, never the solid fill, and blue is never used as decoration.
+**The One Blue Rule.** Solid Ocean blue means "act here" or "you are here": primary buttons, Run, the active rail tile, the selected tab underline and focus. A selected filter is the soft `primary-soft` pill, never the solid fill, and blue is never used as decoration.
 
 **The Roles Only Rule.** Every colour in feature styles is a `var(--role)` from `src/app/theme.css`, and each role is defined exactly twice, once for light and once for dark. No raw hex or rgba appears outside the token layer; shadows are built from `--shadow-rgb` and `--shade-*`.
 
@@ -547,7 +550,7 @@ Severity is 12.5px 600 text in its text colour, preceded by its shape-coded mark
 - **Code fields:** `code-bg` with a `code-gutter` line-number column, Geist Mono 12.5px on 21px lines, syntax in `accent` (keywords), `ok-ink` (strings), `high` (operators) and `syntax-number`.
 
 ### Navigation
-- **Rail:** 76px fixed column in `side` with a `side-edge` right border; the 34px blue "A" brand mark at the top, then 60×54px tiles at 10px radius with an icon over a 10.5px label in `side-ink`. Hover is `side-hover` with `text`; the current page is a solid `primary` tile with `primary-text`. Admin and the account avatar sit at the bottom. At 639px and below the rail is 60px with 50px tiles.
+- **Rail:** 76px fixed column in `side` with a `side-edge` right border; the 34px Lighthouse brand mark at the top, then 60×54px tiles at 10px radius with an icon over a 10.5px label in `side-ink`. Hover is `side-hover` with `text`; the current page is a solid `primary` tile with `primary-text`. Admin and the account avatar sit at the bottom. At 639px and below the rail is 60px with 50px tiles.
 - **Tabs:** 38px, 13px 500 `muted`; selected is 600 `text` with a 2px `primary` underline. **Segmented control:** `fill-strong` track at 9px radius, selected thumb `surface` with the segment shadow.
 
 ### Update notice
@@ -579,14 +582,14 @@ The application's signed-out and session-check screens use a 472px `surface` car
 ### Known exceptions
 - Refreshing tables are dimmed to 0.62 opacity (`.is-stale`, 150ms fade) while a refetch is in flight. This is pre-existing and transient, and it drops secondary text below 4.5:1 (about 2.6–3.9:1) during the refresh. It is not a pattern to reuse for resting states.
 - Threshold count panels and the dashboard list's mini previews use coloured 3–4px top borders on rounded cards. This is incumbent and limited to threshold colour; no other card type carries an accent border.
-- The product logo is undecided. The "A" square is a placeholder, not a brand asset.
+- Signal amber (`brand-light`) appears only in the Lighthouse brand mark. `src/app/icon.svg` is a static file that cannot read theme roles, so it repeats the brand values as literal colours with its own `prefers-color-scheme: dark` rule.
 
 ## Do's and Don'ts
 
 ### Do:
 - **Do** take every colour from a `src/app/theme.css` role and define any new role once for light and once for dark.
 - **Do** keep text roles at 4.5:1 or better on their surfaces in both themes, placeholders included.
-- **Do** use solid Ocean blue (`primary`) only for the primary action, Run, the current rail tile, the brand mark, the selected tab underline and focus.
+- **Do** use solid Ocean blue (`primary`) only for the primary action, Run, the current rail tile, the selected tab underline and focus.
 - **Do** show a selected filter or quick view as the soft blue pill (`primary-soft` with `accent` text).
 - **Do** keep a text label beside every severity and status colour so meaning never rests on hue alone; add the shape-coded mark outside dense alert rows.
 - **Do** keep resting panels flat (12px radius, 1px `border`, no shadow) and reserve navy-tinted shadows for floating objects.
@@ -599,4 +602,4 @@ The application's signed-out and session-check screens use a 472px `surface` car
 - **Don't** add coloured accent borders to cards other than threshold count panels.
 - **Don't** add eyebrow or kicker labels above page titles; the header is crumb row, title and subtitle.
 - **Don't** show a standing Live indicator or revision numbers on the alert, preset or dashboard screens; the header reports update status only when something is wrong.
-- **Don't** treat the "A" square as a finished logo.
+- **Don't** use signal amber (`brand-light`) outside the brand mark; warnings keep `amber` and `amber-mark`.

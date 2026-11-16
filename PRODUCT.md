@@ -75,7 +75,8 @@ the counts and freshness they are shown, and take ownership without friction.
 - Drafts live in tab memory; navigation warns before discarding them.
 - Behavior, routes, API calls, permissions and copy are specified in
   `keep-design/specs`; visual work must not change them.
-- Undecided: product logo/mark (the current "A" square is a placeholder).
+- Logo: the Lighthouse mark (navy tower, signal-amber light, blue band and
+  line of sea), chosen by the user on 2026-11-16 after three rounds of options.
 
 ## Brand Commitments
 

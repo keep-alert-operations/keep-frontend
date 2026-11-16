@@ -19,6 +19,7 @@ import { Administration } from "./administration";
 import { Integrations } from "./integrations";
 import { ErrorNotice } from "./ui";
 import { Icon } from "./icons";
+import { BrandMark } from "./brand-mark";
 import { ThemeSwitch, useTheme } from "./theme-switch";
 import { signInPath } from "@/lib/sign-in";
 
@@ -252,7 +253,7 @@ export function Workspace() {
         <main id="main-content" className="login">
           <div className="login-brand">
             <div className="brand-mark" aria-hidden="true">
-              K
+              <BrandMark />
             </div>
             <div>
               <h1>Keep</h1>
@@ -358,7 +359,7 @@ export function Workspace() {
             navigate("/");
           }}
         >
-          K
+          <BrandMark />
         </a>
         <nav aria-label="Tenant navigation">
           {sections

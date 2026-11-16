@@ -191,11 +191,24 @@ pre {
   height: 34px;
   flex-shrink: 0;
   border-radius: 9px;
-  background: var(--primary);
-  color: var(--primary-text);
-  font-size: 15px;
-  font-weight: 700;
   text-decoration: none;
+}
+.brand-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.brand-logo-tower {
+  fill: var(--brand-tower);
+}
+.brand-logo-light {
+  fill: var(--brand-light);
+}
+.brand-logo-band {
+  fill: var(--brand-band);
+}
+.brand-logo-sea {
+  fill: var(--brand-sea);
 }
 .rail > .brand-mark {
   margin-bottom: 12px;
@@ -1188,7 +1201,6 @@ summary {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  font-size: 18px;
 }
 .login h1 {
   font-size: 20px;

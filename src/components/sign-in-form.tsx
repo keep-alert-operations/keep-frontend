@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiError } from "@/lib/api";
 import { signIn } from "@/lib/sign-in";
+import { BrandMark } from "./brand-mark";
 import { ThemeSwitch, useTheme } from "./theme-switch";
 
 interface Failure {
@@ -121,7 +122,7 @@ export function SignInForm() {
         >
           <div className="login-brand">
             <div className="brand-mark" aria-hidden="true">
-              K
+              <BrandMark />
             </div>
             <div>
               <div className="sign-in-name">Keep</div>
