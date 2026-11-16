@@ -69,6 +69,7 @@ async function fixture(page: Page, relative = false) {
       },
     });
   });
+  // REV-73 removed the heartbeat; any request here is counted as a regression.
   await page.route("**/auth/activity", (route) => {
     seen.activity++;
     return route.fulfill({ json: { data: { accepted: true } } });
@@ -127,7 +128,9 @@ async function fixture(page: Page, relative = false) {
   return seen;
 }
 
-test("session polling preserves activity heartbeat and healthy SSE avoids fallback polls", async ({
+/** Requirements: REV-73; identity configuration 4. Sessions have no idle
+ * timeout, so the 30-second session check is the only session traffic. */
+test("session polling sends no activity heartbeat and healthy SSE avoids fallback polls", async ({
   page,
 }) => {
   const seen = await fixture(page);
@@ -143,7 +146,7 @@ test("session polling preserves activity heartbeat and healthy SSE avoids fallba
     ).toBeVisible();
   }
   await expect.poll(() => seen.sessions).toBeGreaterThanOrEqual(5);
-  await expect.poll(() => seen.activity).toBeGreaterThanOrEqual(2);
+  expect(seen.activity).toBe(0);
   expect(seen.polls).toBe(polls);
 });
 

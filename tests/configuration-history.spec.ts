@@ -586,7 +586,7 @@ test("lost tenant access clears retained history and its draft", async ({
     document.dispatchEvent(new Event("visibilitychange")),
   );
   await expect(
-    page.getByRole("link", { name: "Sign in with company account" }),
+    page.getByRole("link", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await expect(page.getByLabel("Filter (CEL)", { exact: true })).toHaveCount(0);
   await expect(page.getByText(oldPreset.name, { exact: true })).toHaveCount(0);

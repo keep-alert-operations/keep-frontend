@@ -1,4 +1,11 @@
-/** Opt-in actual local Keycloak username/password -> Keep session acceptance. */
+/**
+ * Opt-in local sign-in acceptance against the real local stack: Keep's
+ * `/sign-in` page, one OpenLDAP bind and the mock ADAPI (REV-73). No request
+ * mocks, test login route or injected session.
+ *
+ * Requirements: REV-73; identity configuration 2-5, 10 and 14; plan A1, A2,
+ * A8, A13 and A24.
+ */
 import { test, expect, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -6,42 +13,57 @@ import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 
 const repository = resolve(__dirname, "../../keep-delivery");
-function credentials() {
+const origin = "https://localhost:3443";
+const adapi = process.env.KEEP_LOCAL_ADAPI_URL ?? "http://127.0.0.1:58092";
+const python =
+  process.env.KEEP_LOCAL_IDENTITY_PYTHON ??
+  resolve(repository, ".venv/Scripts/python.exe");
+type Credentials = {
+  users: Record<string, { password: string; label: string }>;
+};
+function credentials(): Credentials {
   return JSON.parse(
     readFileSync(
-      resolve(repository, ".local/keycloak/credentials.json"),
+      resolve(repository, ".local/identity/credentials.json"),
       "utf8",
     ),
   );
 }
-function otp(username: string) {
-  return execFileSync(
-    resolve(repository, ".venv/Scripts/python.exe"),
-    [resolve(repository, "scripts/local_identity.py"), "otp", username],
-    { encoding: "utf8" },
-  ).trim();
+async function signIn(page: Page, username: string, password?: string) {
+  await page.goto("/sign-in");
+  await page.getByLabel("Username", { exact: true }).fill(username);
+  await page
+    .getByLabel("Password", { exact: true })
+    .fill(password ?? credentials().users[username].password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
 }
-const usedOtpSteps = new Map<string, number>();
-async function freshOtp(username: string) {
-  const step = Math.floor(Date.now() / 30000);
-  if (usedOtpSteps.get(username) === step) {
-    // Keycloak correctly rejects replay of a TOTP used by an earlier login.
-    await new Promise((resolve) =>
-      setTimeout(resolve, 30500 - (Date.now() % 30000)),
-    );
-  }
-  usedOtpSteps.set(username, Math.floor(Date.now() / 30000));
-  return otp(username);
-}
-async function signIn(page: Page, username: string) {
-  await page.goto("/auth/login");
-  await page.locator("#username").fill(username);
-  await page.locator("#password").fill(credentials().users[username].password);
-  await page.locator("#kc-login").click();
+async function signedIn(page: Page, username: string) {
+  await signIn(page, username);
+  await expect(page).not.toHaveURL(/\/sign-in/);
   await expect(page).toHaveURL(/^https:\/\/localhost:3443\//);
   const response = await page.request.get("/auth/session");
   expect(response.status()).toBe(200);
   return (await response.json()).data;
+}
+/** One trusted refresh, as `local-identity.ps1 -Action Refresh` runs it. */
+function refreshDirectory() {
+  const settings = JSON.parse(
+    readFileSync(
+      resolve(repository, ".local/identity/app-environment.json"),
+      "utf8",
+    ),
+  );
+  execFileSync(python, ["-m", "keep.worker", "directory", "--once"], {
+    cwd: repository,
+    env: {
+      ...process.env,
+      ...settings,
+      KEEP_DATABASE_URL: settings.KEEP_LOCAL_WORKER_DATABASE_URL,
+      KEEP_DIRECTORY_BOOTSTRAP_QUALIFIED: "false",
+    },
+    stdio: "pipe",
+    timeout: 60000,
+  });
 }
 
 test.skip(
@@ -50,69 +72,112 @@ test.skip(
 );
 
 for (const username of ["local-admin", "local-editor", "local-viewer"]) {
-  test(`${username} signs in through actual Keycloak username and password only`, async ({
+  test(`${username} signs in on the Keep sign-in page with username and password only`, async ({
     page,
   }) => {
-    const value = await signIn(page, username);
-    // Do not print tokens, cookies, passwords or the private local fixture.
+    const value = await signedIn(page, username);
+    // Do not print cookies, passwords or the private local fixture.
     expect(value.principal.display_name).toBe(
       credentials().users[username].label,
     );
     expect(value.global_super_admin).toBe(username === "local-admin");
+    expect(value).not.toHaveProperty("refresh_uncertain");
   });
 }
 
-test("native groups give the local demo tenant admin, edit and view access", async ({
+test("a wrong password is refused with one message and no session", async ({
+  page,
+}) => {
+  await signIn(page, "local-viewer", `not-the-password-${randomUUID()}`);
+  await expect(
+    page.getByRole("alert").filter({
+      hasText: "The username or password wasn't accepted.",
+    }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/sign-in/);
+  expect((await page.request.get("/auth/session")).status()).toBe(401);
+});
+
+test("a signed-out visit opens the sign-in page and returns to the address", async ({
+  page,
+}) => {
+  await page.goto("/tenants?view=local");
+  await expect(page).toHaveURL(
+    `${origin}/sign-in?return_to=${encodeURIComponent("/tenants?view=local")}`,
+  );
+  await page.getByLabel("Username", { exact: true }).fill("local-viewer");
+  await page
+    .getByLabel("Password", { exact: true })
+    .fill(credentials().users["local-viewer"].password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page).not.toHaveURL(/\/sign-in/);
+  expect((await page.request.get("/auth/session")).status()).toBe(200);
+});
+
+test("directory groups give the local demo tenant admin, edit and view access", async ({
   page,
   browser,
 }) => {
-  const admin = await signIn(page, "local-admin");
+  const admin = await signedIn(page, "local-admin");
+  const headers = { Origin: origin, "X-CSRF-Token": admin.csrf_token };
   let tenant = admin.tenants.find(
     (item: { name: string }) => item.name === "Local Demo",
   );
   if (!tenant) {
-    const grants = [];
-    for (const [name, role] of [
-      ["Keep Administrators", "admin"],
-      ["Developers", "edit"],
-      ["Observers", "view"],
-    ]) {
-      const response = await page.request.get(
-        "/api/admin/directory/principals",
-        { params: { q: name } },
-      );
-      expect(response.ok()).toBeTruthy();
-      const principal = (await response.json()).data.find(
-        (item: { display_name: string }) => item.display_name === name,
-      );
-      expect(principal.selectable).toBe(true);
-      grants.push({ principal_id: principal.id, role });
-    }
+    // REV-71: a tenant starts with no grants; its groups are saved on pick.
     const created = await page.request.post("/api/tenants", {
-      headers: {
-        Origin: "https://localhost:3443",
-        "X-CSRF-Token": admin.csrf_token,
-      },
+      headers,
       data: {
         command_id: randomUUID(),
         name: "Local Demo",
-        initial_grants: grants,
+        initial_grants: [],
       },
     });
     expect(created.status()).toBe(201);
     tenant = (await created.json()).data;
+    const operations = [];
+    for (const [username, role] of [
+      ["keep-administrators", "admin"],
+      ["keep-developers", "edit"],
+      ["keep-observers", "view"],
+    ]) {
+      const saved = await page.request.post(
+        `/api/tenants/${tenant.id}/permission-principals/resolve`,
+        { headers, data: { kind: "team", username } },
+      );
+      expect(saved.status()).toBe(200);
+      const principal = (await saved.json()).data;
+      expect(principal.selectable).toBe(true);
+      operations.push({ principal_id: principal.id, action: "set", role });
+    }
+    const roster = await page.request.get(
+      `/api/tenants/${tenant.id}/permissions`,
+    );
+    expect(roster.ok()).toBeTruthy();
+    const granted = await page.request.patch(
+      `/api/tenants/${tenant.id}/permissions`,
+      {
+        headers,
+        data: {
+          command_id: randomUUID(),
+          expected_revision: (await roster.json()).meta.revision,
+          operations,
+        },
+      },
+    );
+    expect(granted.ok()).toBeTruthy();
   }
   for (const [username, role] of [
     ["local-editor", "edit"],
     ["local-viewer", "view"],
   ]) {
     const context = await browser.newContext({
-      baseURL: "https://localhost:3443",
+      baseURL: origin,
       ignoreHTTPSErrors: true,
     });
     try {
       const userPage = await context.newPage();
-      const session = await signIn(userPage, username);
+      const session = await signedIn(userPage, username);
       expect(
         session.tenants.find((item: { id: string }) => item.id === tenant.id)
           ?.role,
@@ -128,101 +193,43 @@ test("native groups give the local demo tenant admin, edit and view access", asy
   }
 });
 
-test("live group removal changes access and signed provider logout revokes the session", async ({
+test("a group change reaches access through the refresh, and sign-out is local", async ({
   page,
-  browser,
 }) => {
-  test.skip(
-    !credentials().console_otp_secret,
-    "Enroll the local console administrator TOTP first",
-  );
-  const viewer = await signIn(page, "local-viewer");
+  const viewer = await signedIn(page, "local-viewer");
   const tenant = viewer.tenants.find(
     (item: { name: string }) => item.name === "Local Demo",
   );
   expect(tenant).toBeDefined();
-  const consoleContext = await browser.newContext({ ignoreHTTPSErrors: true });
-  const consolePage = await consoleContext.newPage();
-  let authorization = "";
-  consolePage.on("request", (request) => {
-    if (
-      request.url().startsWith("https://localhost:58443/admin/") &&
-      request.headers().authorization
-    ) {
-      authorization = request.headers().authorization;
-    }
-  });
-  const local = credentials();
-  const user = local.users["local-viewer"].id;
-  const group = local.groups.Observers;
-  const memberUrl = `https://localhost:58443/admin/realms/keep-local/users/${user}/groups/${group}`;
-  const settings = JSON.parse(
-    readFileSync(
-      resolve(repository, ".local/keycloak/app-environment.json"),
-      "utf8",
-    ),
-  );
-  function syncDirectory() {
-    execFileSync(
-      resolve(repository, ".venv/Scripts/python.exe"),
-      [
-        "-m",
-        "keep.identity.local_keycloak_worker",
-        "--config",
-        resolve(repository, ".local/keycloak/directory.json"),
-        "--once",
-      ],
-      {
-        cwd: repository,
-        env: {
-          ...process.env,
-          ...settings,
-          KEEP_DATABASE_URL: settings.KEEP_LOCAL_WORKER_DATABASE_URL,
-        },
-        stdio: "pipe",
-        timeout: 15000,
-      },
-    );
+  const membership = { group: "keep-observers", member: "local-viewer" };
+  async function hook(body: Record<string, unknown>) {
+    const response = await page.request.post(`${adapi}/__set`, { data: body });
+    expect(response.status()).toBe(200);
   }
   try {
-    await consolePage.goto("https://localhost:58443/admin/master/console/");
-    await consolePage.locator("#username").fill(local.console_username);
-    await consolePage.locator("#password").fill(local.console_password);
-    await consolePage.locator("#kc-login").click();
-    await consolePage
-      .locator("#otp")
-      .fill(await freshOtp(local.console_username));
-    await consolePage.locator("#kc-login").click();
-    await expect.poll(() => Boolean(authorization)).toBe(true);
-    const headers = { Authorization: authorization };
-    try {
-      expect(
-        (await consoleContext.request.delete(memberUrl, { headers })).status(),
-      ).toBe(204);
-      syncDirectory();
-      expect(
-        (await page.request.get(`/api/tenants/${tenant.id}`)).status(),
-      ).toBe(404);
-    } finally {
-      expect(
-        (await consoleContext.request.put(memberUrl, { headers })).status(),
-      ).toBe(204);
-      syncDirectory();
-    }
+    await hook({ remove_member: membership });
+    refreshDirectory();
     expect((await page.request.get(`/api/tenants/${tenant.id}`)).status()).toBe(
-      200,
+      404,
     );
-    const logout = await consoleContext.request.post(
-      `https://localhost:58443/admin/realms/keep-local/users/${user}/logout`,
-      { headers },
-    );
-    expect(logout.status()).toBe(204);
-    await expect
-      .poll(async () => (await page.request.get("/auth/session")).status(), {
-        timeout: 10000,
-      })
-      .toBe(401);
   } finally {
-    await consoleContext.close();
+    await hook({ add_member: membership });
+    refreshDirectory();
   }
+  expect((await page.request.get(`/api/tenants/${tenant.id}`)).status()).toBe(
+    200,
+  );
+  await page.goto(`/tenants/${tenant.id}/alerts`);
+  const logout = page.waitForResponse("**/auth/logout");
+  await page.getByRole("button", { name: /^Account:/ }).click();
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  const answer = await logout;
+  expect(answer.status()).toBe(200);
+  expect((await answer.json()).data).not.toHaveProperty("logout_url");
+  await expect(page).toHaveURL(`${origin}/signed-out`);
+  await expect(page.getByRole("link", { name: "Sign in" })).toHaveAttribute(
+    "href",
+    "/sign-in",
+  );
+  expect((await page.request.get("/auth/session")).status()).toBe(401);
 });

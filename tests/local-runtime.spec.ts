@@ -17,16 +17,18 @@ test("native alert reaches the real feed and supports browser acknowledgement an
   mkdirSync(state, { recursive: true });
   const credentials = JSON.parse(
     readFileSync(
-      resolve(repository, ".local/keycloak/credentials.json"),
+      resolve(repository, ".local/identity/credentials.json"),
       "utf8",
     ),
   );
-  await page.goto("/auth/login");
-  await page.locator("#username").fill("local-admin");
+  // Keep's own sign-in page and one local OpenLDAP bind (REV-73).
+  await page.goto("/sign-in");
+  await page.getByLabel("Username", { exact: true }).fill("local-admin");
   await page
-    .locator("#password")
+    .getByLabel("Password", { exact: true })
     .fill(credentials.users["local-admin"].password);
-  await page.locator("#kc-login").click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page).not.toHaveURL(/\/sign-in/);
   await expect(page).toHaveURL(/^https:\/\/localhost:3443\//);
   const sessionResponse = await page.request.get("/auth/session");
   expect(sessionResponse.status()).toBe(200);

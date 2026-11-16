@@ -45,27 +45,13 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Login */
-    get: operations["login_auth_login_get"];
+    get?: never;
     put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/auth/callback": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Callback */
-    get: operations["callback_auth_callback_get"];
-    put?: never;
-    post?: never;
+    /**
+     * Login
+     * @description Sign in with the company username and AD password (identity configuration 2-3).
+     */
+    post: operations["login_auth_login_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -79,27 +65,13 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Current Session */
+    /**
+     * Current Session
+     * @description The signed-in user, effective tenant access and the session's absolute deadline.
+     */
     get: operations["current_session_auth_session_get"];
     put?: never;
     post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/auth/activity": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Activity */
-    post: operations["activity_auth_activity_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -115,25 +87,11 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Logout */
+    /**
+     * Logout
+     * @description Revoke the local session before clearing its cookie (identity configuration 10).
+     */
     post: operations["logout_auth_logout_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/auth/backchannel-logout": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Backchannel Logout */
-    post: operations["backchannel_logout_auth_backchannel_logout_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1838,6 +1796,37 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/tenants/{tenant_id}/permission-principals/resolve": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Resolve Status
+     * @description Poll a save; reads PostgreSQL only, never ADAPI.
+     *
+     *     200 saved and usable; 202 leased or queued (a pending row without a live lease
+     *     is handed over again); 503 failed with its ``last_failure``; 404 no save.
+     */
+    get: operations["resolve_status_api_tenants__tenant_id__permission_principals_resolve_get"];
+    put?: never;
+    /**
+     * Resolve
+     * @description Save a picked principal: 200 saved, 202 pending, 422 not in ADAPI, 503 failed.
+     *
+     *     Order: a pending row (failed -> 503 unless ``retry``; leased -> 202; otherwise
+     *     hand over -> 202), then a stored usable principal (200, no ADAPI read), then
+     *     an inline save (200, or 202 when it does not fit the request).
+     */
+    post: operations["resolve_api_tenants__tenant_id__permission_principals_resolve_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/admin/tenants/{tenant_id}/kafka": {
     parameters: {
       query?: never;
@@ -3423,6 +3412,21 @@ export interface components {
       /** @description Null when assignment history is unavailable. */
       first_response: components["schemas"]["ReportFirstResponse"] | null;
     };
+    /** ResolveBody */
+    ResolveBody: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "user" | "team";
+      /** Username */
+      username: string;
+      /**
+       * Retry
+       * @default false
+       */
+      retry: boolean;
+    };
     /** SavedTest */
     SavedTest: {
       /** Alert Id */
@@ -3992,17 +3996,23 @@ export interface operations {
       };
     };
   };
-  login_auth_login_get: {
+  login_auth_login_post: {
     parameters: {
-      query?: {
-        return_to?: string;
-        fresh?: boolean;
-      };
+      query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": {
+          username: string;
+          /** Format: password */
+          password: string;
+          return_to?: string | null;
+        };
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
@@ -4011,48 +4021,6 @@ export interface operations {
         };
         content: {
           "application/json": unknown;
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  callback_auth_callback_get: {
-    parameters: {
-      query?: {
-        state?: string;
-        code?: string;
-        error?: string | null;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": unknown;
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -4077,47 +4045,7 @@ export interface operations {
       };
     };
   };
-  activity_auth_activity_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": unknown;
-        };
-      };
-    };
-  };
   logout_auth_logout_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": unknown;
-        };
-      };
-    };
-  };
-  backchannel_logout_auth_backchannel_logout_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -8278,6 +8206,75 @@ export interface operations {
       cookie?: never;
     };
     requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  resolve_status_api_tenants__tenant_id__permission_principals_resolve_get: {
+    parameters: {
+      query: {
+        kind: "user" | "team";
+        username: string;
+      };
+      header?: never;
+      path: {
+        tenant_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  resolve_api_tenants__tenant_id__permission_principals_resolve_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        tenant_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResolveBody"];
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {

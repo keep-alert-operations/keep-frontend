@@ -1,0 +1,192 @@
+/*
+ * Sign-in page (REV-73): the password form the user approved on 2026-09-27
+ * (REV-23), on the application's sign-in card and Ocean roles.
+ */
+.sign-in-stage {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 32px 0 16px;
+}
+.login.sign-in {
+  width: 428px;
+  gap: 0;
+  padding: 34px 34px 28px;
+}
+.sign-in-name {
+  font-size: 21px;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.login.sign-in h1 {
+  margin: 30px 0 6px;
+  font-size: 24px;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+}
+.login.sign-in .sign-in-intro {
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.sign-in-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
+}
+.sign-in-label {
+  display: block;
+  margin: 0 0 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+.sign-in-field {
+  position: relative;
+}
+.sign-in-input {
+  width: 100%;
+  height: 46px;
+  box-sizing: border-box;
+  padding: 10px 13px;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--code-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+.sign-in-input::placeholder {
+  color: var(--subtle);
+  opacity: 1;
+}
+.sign-in-input.sign-in-password {
+  padding-right: 48px;
+}
+.sign-in-input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+.sign-in-input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.sign-in-eye {
+  position: absolute;
+  right: 2px;
+  top: 1px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.sign-in-eye:hover {
+  color: var(--text);
+  background: var(--fill);
+}
+.sign-in-eye:focus-visible,
+.sign-in-help summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.btn.sign-in-submit {
+  margin-top: 4px;
+  width: 100%;
+  height: 46px;
+  min-height: 46px;
+  justify-content: center;
+  gap: 9px;
+  font-size: 14px;
+}
+.btn.sign-in-submit:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+.btn.sign-in-submit svg {
+  flex: none;
+}
+.sign-in-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 12px;
+  border: 1px solid var(--error-line);
+  border-radius: 8px;
+  background: var(--error-bg);
+  color: var(--error);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.sign-in-message:focus {
+  outline: none;
+}
+.sign-in-message:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.sign-in-message svg {
+  flex: 0 0 16px;
+  margin-top: 2px;
+}
+.sign-in-request {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-soft);
+  font-size: 11.5px;
+}
+.sign-in-help {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.sign-in-help summary {
+  display: inline-block;
+  list-style: none;
+  padding: 3px 4px;
+  border-radius: 4px;
+  font-weight: 500;
+  color: var(--accent);
+  cursor: pointer;
+}
+.sign-in-help summary::-webkit-details-marker {
+  display: none;
+}
+.sign-in-help summary:hover {
+  text-decoration: underline;
+}
+.login.sign-in .sign-in-help p {
+  margin: 10px 0 0;
+}
+@media (max-width: 460px) {
+  .sign-in-stage {
+    padding: 12px 0 4px;
+    gap: 14px;
+  }
+  .login.sign-in {
+    padding: 28px 22px 24px;
+  }
+  .login.sign-in h1 {
+    margin-top: 26px;
+  }
+}
+@media (pointer: coarse) {
+  .sign-in-input {
+    font-size: 16px;
+  }
+  .sign-in-help summary {
+    min-height: 44px;
+    line-height: 38px;
+  }
+}

@@ -1,6 +1,6 @@
 # keep-frontend
 
-Next.js user interface, generated HTTP client and custom Keycloak login theme.
+Next.js user interface, generated HTTP client, browser tests and the sign-in page.
 
 Read the workspace-level `../AGENTS.md` and instructions scoped to affected files.
 Choose task-relevant sources from the [context map](../keep-design/context/map.md)

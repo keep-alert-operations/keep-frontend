@@ -11,7 +11,7 @@ export default defineConfig({
     channel: "chrome",
     baseURL: "https://localhost:3443",
     // This test trusts only its generated development certificate in the browser.
-    // Backend OIDC and directory HTTPS still verify the explicit certificate.
+    // The Product API's LDAP and ADAPI connections don't use this setting.
     ignoreHTTPSErrors: true,
     trace: "off",
     screenshot: "off",

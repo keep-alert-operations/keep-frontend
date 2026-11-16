@@ -223,13 +223,15 @@ test("periodic reauthorization still clears the persistent workspace on session 
   await page.clock.runFor(30000);
   await expect(
     page.getByRole("link", {
-      name: "Sign in with company account",
+      name: "Sign in",
       exact: true,
     }),
   ).toBeVisible();
   await expect(page.locator(".shell")).toHaveCount(0);
 });
 
+/** Requirements: REV-73; identity configuration 2. The old expired-sign-in
+ * address offers the sign-in page, which never runs the session check. */
 test("expired sign-in recovery remains outside the workspace session check", async ({
   page,
 }) => {
@@ -239,8 +241,9 @@ test("expired sign-in recovery remains outside the workspace session check", asy
     return route.abort();
   });
   await page.goto("/sign-in-expired");
+  await expect(page).toHaveURL(/\/sign-in$/);
   await expect(
-    page.getByRole("link", { name: "Sign in again", exact: true }),
+    page.getByRole("heading", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByText("Checking your session…", { exact: true }),

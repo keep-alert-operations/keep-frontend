@@ -487,6 +487,10 @@ function GrantEditor({ scope }: { scope: Scope }) {
             <DirectoryPicker
               key={pickerKey}
               endpoint={`${tenantPath(scope.tenant.id)}/permission-principals`}
+              resolve={{
+                endpoint: `${tenantPath(scope.tenant.id)}/permission-principals/resolve`,
+                csrf: scope.session.csrf_token,
+              }}
               label="Add a user or team from the company directory"
               placeholder="Add a user or team from the company directory"
               labelHidden

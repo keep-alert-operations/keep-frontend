@@ -679,7 +679,7 @@ test("unauthenticated shell offers company sign-in without protected data", asyn
   );
   await page.goto("/");
   await expect(
-    page.getByRole("link", { name: "Sign in with company account" }),
+    page.getByRole("link", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("navigation", { name: "Tenant navigation" }),
@@ -936,7 +936,7 @@ for (const status of [401, 403]) {
       page.getByRole("textbox", { name: "Add a note", exact: true }),
     ).toHaveCount(0);
     await expect(
-      page.getByRole("link", { name: "Sign in with company account" }),
+      page.getByRole("link", { name: "Sign in", exact: true }),
     ).toBeVisible();
   });
 }
@@ -1020,7 +1020,7 @@ test("tenant access loss clears protected draft and operational content", async 
     document.dispatchEvent(new Event("visibilitychange")),
   );
   await expect(
-    page.getByRole("link", { name: "Sign in with company account" }),
+    page.getByRole("link", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await expect(page.getByText(row.message, { exact: true })).toHaveCount(0);
   await expect(
@@ -1270,6 +1270,9 @@ test("incident move sends both observed aggregate revisions and explicit alert I
   });
 });
 
+/** Requirements: REV-73; identity configuration 10; plan A8. Sign-out is
+ * local: protected data clears at once, no provider address is followed even
+ * if one were sent, and the signed-out screen offers Keep's sign-in page. */
 test("foreground reauthorization cannot repopulate protected data during sign-out", async ({
   page,
 }) => {
@@ -1280,7 +1283,12 @@ test("foreground reauthorization cannot repopulate protected data during sign-ou
       complete = resolve;
     });
     await route.fulfill({
-      json: { data: { provider_logout_completed: false } },
+      json: {
+        data: {
+          signed_out: true,
+          logout_url: "https://provider.invalid/logout",
+        },
+      },
     });
   });
   await page.goto(`/tenants/${global}/alerts`);
@@ -1295,12 +1303,18 @@ test("foreground reauthorization cannot repopulate protected data during sign-ou
   await expect(
     page.getByRole("navigation", { name: "Tenant navigation" }),
   ).toHaveCount(0);
+  await expect(page.getByText("Signing out…", { exact: true })).toBeVisible();
   await expect.poll(() => !!complete).toBe(true);
   complete?.();
+  await expect(page).toHaveURL(/\/signed-out$/);
   await expect(
-    page.getByText("Signed out locally.", { exact: false }),
+    page.getByText("You have signed out of Keep.", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Sign in with company account" }),
+    page.getByRole("link", { name: "Sign in", exact: true }),
+  ).toHaveAttribute("href", "/sign-in");
+  await expect(
+    page.getByText("Sessions last 24 hours.", { exact: false }),
   ).toBeVisible();
+  await expect(page.getByText(/30 minutes|idle/)).toHaveCount(0);
 });

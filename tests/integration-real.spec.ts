@@ -63,7 +63,7 @@ elif action=='setup':
     with db.transaction() as conn:
         conn.execute("UPDATE capability_gates SET ready=true WHERE capability='human_auth'")
         conn.execute("INSERT INTO principals(id,directory_source,object_id,kind,display_name,eligible,evidence_generation,verified_at) VALUES(%s,'browser-test',%s,'user','Synthetic browser user',true,1,clock_timestamp())", (principal,str(principal)))
-        conn.execute("INSERT INTO auth_sessions(handle_hash,principal_id,issuer,subject,provider_sid,csrf_hash,csrf_cipher,auth_time,activity_at,absolute_at,deployment_epoch) VALUES(%s,%s,'https://synthetic.invalid',%s,%s,%s,%s,clock_timestamp(),clock_timestamp(),clock_timestamp()+interval '1 hour','browser-test')", (hashed,principal,str(principal),str(principal),hashlib.sha256(csrf.encode()).digest(),cipher.seal(csrf.encode(),'session-csrf:'+hashed.hex())))
+        conn.execute("INSERT INTO auth_sessions(handle_hash,principal_id,csrf_hash,csrf_cipher,auth_time,absolute_at,deployment_epoch) VALUES(%s,%s,%s,%s,clock_timestamp(),clock_timestamp()+interval '1 hour','browser-test')", (hashed,principal,hashlib.sha256(csrf.encode()).digest(),cipher.seal(csrf.encode(),'session-csrf:'+hashed.hex())))
         tenant=conn.execute("SELECT id FROM tenants WHERE kind='global'").fetchone()['id']
     native={'application':'browser-smoke-'+str(uuid4()),'object':'cpu','node_name':'synthetic-node','message':'Real database browser smoke','operator':'synthetic-legacy','time_created':'22-09-2026 12:00:00','severity':'error'}
     temp=Path(os.environ['KEEP_BROWSER_TEMP'])

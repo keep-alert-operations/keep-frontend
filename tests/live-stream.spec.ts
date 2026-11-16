@@ -394,7 +394,7 @@ test("workspace visibly degrades on silent fetch stream and clears it at logout"
     }),
   );
   await page.route("**/auth/logout", (route) =>
-    route.fulfill({ json: { data: { provider_logout_completed: true } } }),
+    route.fulfill({ json: { data: { signed_out: true } } }),
   );
   await page.route("**/api/tenants/**", (route) =>
     route.fulfill({
@@ -433,7 +433,7 @@ test("workspace visibly degrades on silent fetch stream and clears it at logout"
   await page.getByRole("button", { name: /^Account:/ }).click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(
-    page.getByRole("link", { name: "Sign in with company account" }),
+    page.getByRole("link", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await page.clock.fastForward(60000);
   expect(
