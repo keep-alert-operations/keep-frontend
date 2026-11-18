@@ -3,7 +3,7 @@ import type { RowCommand } from "./alert-table";
 import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { ApiError, display, request, type RecordData } from "@/lib/api";
 import { useSearchResource } from "@/lib/search-resource";
-import type { SortItem } from "@/lib/preset-choices";
+import { alertVocabulary, type SortItem } from "@/lib/preset-choices";
 import type { Scope } from "./workspace";
 import { AlertTable } from "./alert-table";
 import { Menu } from "./ui";
@@ -20,15 +20,24 @@ export const GROUP_FIELDS = [
   ["name", "Alert name"],
   ["application", "Application"],
   ["component", "Component"],
+  ["object", "Object"],
   ["node_name", "Node"],
   ["site", "Site"],
   ["assignee_id", "Assignee"],
   ["active_incident_id", "Incident"],
 ] as const;
 export type GroupField = (typeof GROUP_FIELDS)[number][0];
+/** Group-by fields offered in a tenant of `kind` (REV-77: Global uses v1). */
+export function groupFieldsFor(kind: string | undefined): GroupField[] {
+  const offered = alertVocabulary(kind).groupFields;
+  return GROUP_FIELDS.map(([field]) => field).filter((field) =>
+    offered.includes(field),
+  );
+}
 export const GROUP_ROWS = 5;
 export const GROUP_PAGE = 10;
-const SEVERITIES = ["critical", "high", "warning", "clear"];
+// v2 and v1 (REV-77) severities, most urgent first.
+const SEVERITIES = ["critical", "error", "high", "major", "warning", "clear"];
 const STATUSES = ["firing", "acknowledged", "resolved"];
 
 export function isGroupField(value: unknown): value is GroupField {
@@ -101,10 +110,13 @@ const check = (
 
 /** Group by menu; `saved` (a preset's saved grouping) adds the Saved tag and note. */
 export function GroupByControl({
+  kind,
   value,
   saved,
   onChange,
 }: {
+  /** Tenant kind; Global offers the v1 fields (REV-77). */
+  kind: string;
   value: GroupField | null;
   saved?: GroupField | null;
   onChange: (value: GroupField | null) => void;
@@ -128,29 +140,27 @@ export function GroupByControl({
           <div className="gb-title" aria-hidden="true">
             Group alerts by
           </div>
-          {[null, ...GROUP_FIELDS.map(([field]) => field)].map(
-            (field, index) => (
-              <Fragment key={field ?? "none"}>
-                {index === 1 && <div className="gb-sep" role="separator" />}
-                <button
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={value === field}
-                  className="menu-item gb-item"
-                  onClick={() => {
-                    close();
-                    if (field !== value) onChange(field);
-                  }}
-                >
-                  <span className="gb-ck">{value === field && check}</span>
-                  {field ? groupFieldLabel(field) : "No grouping"}
-                  {saved !== undefined && saved === field && (
-                    <span className="gb-tag">Saved</span>
-                  )}
-                </button>
-              </Fragment>
-            ),
-          )}
+          {[null, ...groupFieldsFor(kind)].map((field, index) => (
+            <Fragment key={field ?? "none"}>
+              {index === 1 && <div className="gb-sep" role="separator" />}
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={value === field}
+                className="menu-item gb-item"
+                onClick={() => {
+                  close();
+                  if (field !== value) onChange(field);
+                }}
+              >
+                <span className="gb-ck">{value === field && check}</span>
+                {field ? groupFieldLabel(field) : "No grouping"}
+                {saved !== undefined && saved === field && (
+                  <span className="gb-tag">Saved</span>
+                )}
+              </button>
+            </Fragment>
+          ))}
           {saved !== undefined && (
             <>
               <div className="gb-sep" role="separator" />

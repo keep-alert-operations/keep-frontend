@@ -1,10 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /*
- * Requirements: REV-45; preset operations 6.
+ * Requirements: REV-45; REV-77; preset operations 6.
  * The Assigned to me quick view filters on the signed-in principal's ID,
  * counts like the other views and is never saved. Pressing the selected
- * view again returns to All.
+ * view again returns to All. The tenant is Global, so its alert is v1 and
+ * its severity views are Error, Major and Warning (REV-77).
  */
 
 const tenant = "00000000-0000-4000-8000-000000000001";
@@ -16,8 +17,9 @@ const row = {
   revision: "4",
   message: "Database latency",
   application: "payments",
-  component: "postgres",
-  severity: "critical",
+  object: "postgres",
+  severity: "error",
+  schema_version: "v1",
   status: "firing",
   display_status: "acknowledged",
   assignee_id: me,
@@ -36,7 +38,7 @@ async function setup(page: Page) {
           tenants: [
             {
               id: tenant,
-              name: "Payments",
+              name: "Global",
               kind: "global",
               role: "edit",
               revision: "1",
@@ -124,7 +126,8 @@ test("pressing the selected quick view again returns to All", async ({
   const group = page.getByRole("group", { name: "Quick views, not saved" });
   const all = group.getByRole("button", { name: "All", exact: true });
   for (const [name, cel] of [
-    ["Critical", 'severity == "critical"'],
+    ["Error", 'severity == "error"'],
+    ["Major", 'severity == "major"'],
     ["Assigned to me", mine],
   ]) {
     const view = group.getByRole("button", { name, exact: true });

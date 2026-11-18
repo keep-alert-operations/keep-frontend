@@ -148,8 +148,8 @@ const ALERT_MIN = 180,
  * always kept (added first when the preset lacks it); other columns drop from
  * the right once one no longer fits.
  */
-export function fittedColumns(saved: string[], width: number) {
-  const columns = currentAlertColumns(saved);
+export function fittedColumns(saved: string[], width: number, kind?: string) {
+  const columns = currentAlertColumns(saved, kind);
   const ordered = columns.includes("message")
     ? columns
     : ["message", ...columns];
@@ -245,6 +245,7 @@ export function TableTile({
   const columns = fittedColumns(
     latest.columns ?? ["severity", "message", "timestamp"],
     width || 600,
+    scope.tenant.kind,
   );
   const grid = { gridTemplateColumns: columns.map(track).join(" ") };
   const rows = latest.rows;

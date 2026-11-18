@@ -746,20 +746,24 @@ tbody tr:has(input:checked) {
   border: 2px solid var(--faint);
   border-radius: 50%;
 }
-.severity.critical {
+.severity.critical,
+.severity.error {
   color: var(--critical);
 }
-.severity.critical:before {
+.severity.critical:before,
+.severity.error:before {
   width: 10px;
   height: 10px;
   border: 0;
   border-radius: 2px;
   background: var(--critical-mark);
 }
-.severity.high {
+.severity.high,
+.severity.major {
   color: var(--high);
 }
-.severity.high:before {
+.severity.high:before,
+.severity.major:before {
   border: 0;
   border-radius: 0;
   transform: rotate(45deg);

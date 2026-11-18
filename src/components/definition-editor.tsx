@@ -12,13 +12,11 @@ import { useCommand, useDirtyWarning } from "@/lib/hooks";
 import {
   celTokens,
   currentAlertColumns,
-  DEFAULT_COLUMNS,
   DEFAULT_SORT,
   directionLabel,
   fieldLabel,
   previewTotal,
-  SELECTABLE_COLUMNS,
-  SORT_FIELDS,
+  alertVocabulary,
   sortItems,
   usePresetPreview,
   type SortItem,
@@ -36,7 +34,7 @@ import {
   type QuickViewKey,
 } from "./alert-table";
 import {
-  GROUP_FIELDS,
+  groupFieldsFor,
   groupFieldLabel,
   isGroupField,
   type GroupField,
@@ -113,14 +111,14 @@ export function Dialog({
   );
 }
 
-function presetDefinition(value?: Record<string, unknown>) {
+function presetDefinition(value?: Record<string, unknown>, kind?: string) {
   return {
     name: String(value?.name ?? ""),
     cel: typeof value?.cel === "string" ? value.cel : "true",
     columns:
       Array.isArray(value?.columns) && value.columns.length
-        ? currentAlertColumns((value.columns as unknown[]).map(String))
-        : DEFAULT_COLUMNS,
+        ? currentAlertColumns((value.columns as unknown[]).map(String), kind)
+        : alertVocabulary(kind).defaultColumns,
     sort: sortItems(value?.sort).length ? sortItems(value?.sort) : DEFAULT_SORT,
     group_by: isGroupField(value?.group_by) ? value.group_by : null,
     // Revisions saved before REV-58 have no alarm flag: they were silent.
@@ -136,10 +134,6 @@ const SETTINGS_TABS = [
   ["sound", "Sound"],
 ] as const;
 type SettingsTab = (typeof SETTINGS_TABS)[number][0];
-const GROUP_CHOICES: readonly (readonly [GroupField | null, string])[] = [
-  [null, "No grouping"],
-  ...GROUP_FIELDS,
-];
 
 function GripIcon() {
   return (
@@ -187,8 +181,15 @@ export function PresetEditor({
   /** Optional provenance line (e.g. retained revision source). */
   context?: ReactNode;
 }) {
-  const baseline = presetDefinition(existing);
-  const initial = presetDefinition(initialDraft ?? existing);
+  const baseline = presetDefinition(existing, scope.tenant.kind);
+  const initial = presetDefinition(initialDraft ?? existing, scope.tenant.kind);
+  const vocabulary = alertVocabulary(scope.tenant.kind);
+  const groupChoices: [GroupField | null, string][] = [
+    [null, "No grouping"],
+    ...groupFieldsFor(scope.tenant.kind).map(
+      (field) => [field, groupFieldLabel(field)] as [GroupField, string],
+    ),
+  ];
   const [name, setName] = useState(initial.name),
     [cel, setCel] = useState(initial.cel),
     [selectedColumns, setColumns] = useState<string[]>(initial.columns),
@@ -374,7 +375,7 @@ export function PresetEditor({
       next.splice(to, 0, ...next.splice(from, 1));
       return next;
     });
-  const addable = SELECTABLE_COLUMNS.filter(
+  const addable = vocabulary.selectableColumns.filter(
     (column) => !selectedColumns.includes(column),
   );
   const lines = Math.max(1, cel.split("\n").length);
@@ -517,6 +518,7 @@ export function PresetEditor({
           </div>
           <div className="pe-views">
             <QuickViews
+              kind={scope.tenant.kind}
               value={quick}
               onChange={setQuick}
               counts={counts.counts}
@@ -834,20 +836,22 @@ export function PresetEditor({
                         )
                       }
                     >
-                      {!SORT_FIELDS.includes(item.field) && (
+                      {!vocabulary.sortFields.includes(item.field) && (
                         <option value={item.field}>
                           {fieldLabel(item.field)}
                         </option>
                       )}
-                      {SORT_FIELDS.filter(
-                        (field) =>
-                          field === item.field ||
-                          !sort.some((entry) => entry.field === field),
-                      ).map((field) => (
-                        <option key={field} value={field}>
-                          {fieldLabel(field)}
-                        </option>
-                      ))}
+                      {vocabulary.sortFields
+                        .filter(
+                          (field) =>
+                            field === item.field ||
+                            !sort.some((entry) => entry.field === field),
+                        )
+                        .map((field) => (
+                          <option key={field} value={field}>
+                            {fieldLabel(field)}
+                          </option>
+                        ))}
                     </select>
                     <select
                       className="inp pe-dir"
@@ -880,7 +884,7 @@ export function PresetEditor({
                             ...previous,
                             {
                               field:
-                                SORT_FIELDS.find(
+                                vocabulary.sortFields.find(
                                   (field) =>
                                     !previous.some(
                                       (entry) => entry.field === field,
@@ -930,7 +934,7 @@ export function PresetEditor({
                   aria-labelledby={`${formId}-group`}
                   aria-describedby={`${formId}-group-help`}
                 >
-                  {GROUP_CHOICES.map(([field, label]) => (
+                  {groupChoices.map(([field, label]) => (
                     <label
                       key={field ?? ""}
                       className={groupBy === field ? "pe-radio-on" : undefined}

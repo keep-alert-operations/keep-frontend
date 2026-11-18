@@ -2,13 +2,16 @@ import { expect, test, type Page } from "@playwright/test";
 
 const tenant = "00000000-0000-4000-8000-000000000001";
 const alertId = "00000000-0000-4000-8000-000000000002";
+// The tenant is Global, so the alert is a native v1 alert as sent: `object`,
+// v1 severities and no runbook (REV-77).
 const row = {
   id: alertId,
   revision: "9007199254740999",
   message: "Database latency",
   application: "payments",
-  component: "postgres",
-  severity: "critical",
+  object: "postgres",
+  severity: "error",
+  schema_version: "v1",
   status: "firing",
   acknowledged: false,
   assignee_id: null,
@@ -23,7 +26,7 @@ async function setup(page: Page, role = "admin") {
           tenants: [
             {
               id: tenant,
-              name: "Payments",
+              name: "Global",
               kind: "global",
               role,
               revision: "1",
@@ -67,10 +70,10 @@ test("quick views compose with applied CEL and search without saving a preset", 
     .fill('application == "payments"');
   await page.getByLabel("Search text", { exact: true }).fill("latency");
   await page.getByRole("button", { name: "Run query", exact: true }).click();
-  await page.getByRole("button", { name: "Critical", exact: true }).click();
+  await page.getByRole("button", { name: "Error", exact: true }).click();
   await expect
     .poll(() => queries.at(-1)?.get("cel"))
-    .toBe('(application == "payments") && (severity == "critical")');
+    .toBe('(application == "payments") && (severity == "error")');
   expect(queries.at(-1)?.get("q")).toBe("latency");
   await page.getByLabel("Include suppressed").check();
   await expect
@@ -101,7 +104,7 @@ test("new preset reads direct-link CEL and retains edits when the URL query chan
   );
   const editor = page.getByLabel(/^(CEL expression|Filter \(CEL\))$/);
   await expect(editor).toHaveValue(initial);
-  const edited = 'component == "postgres"';
+  const edited = 'object == "postgres"';
   await editor.fill(edited);
   await page.evaluate(() => {
     const target = new URL(window.location.href);
@@ -259,7 +262,6 @@ test("alert detail uses list context, readable history and confirmed note deleti
           data: {
             ...row,
             operator: "pg-exporter",
-            runbook_url: "https://runbooks.example/latency",
             active_incident_id: "00000000-0000-4000-8000-000000000010",
             active_incident_title: "Payments DB degradation",
           },
@@ -274,7 +276,7 @@ test("alert detail uses list context, readable history and confirmed note deleti
               kind: "source",
               recorded_at: "2026-09-24T06:18:22Z",
               evidence: {
-                before: { ...row, severity: "high" },
+                before: { ...row, severity: "major" },
                 after: { ...row, operator: "pg-exporter" },
               },
             },
@@ -338,7 +340,7 @@ test("alert detail uses list context, readable history and confirmed note deleti
     page.getByText("Severity changed", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("from High to Critical by the source.", { exact: true }),
+    page.getByText("from Major to Error by the source.", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("Acknowledged.", { exact: true })).toBeVisible();
   await expect(page.getByText("Event details")).toHaveCount(0);
@@ -346,9 +348,8 @@ test("alert detail uses list context, readable history and confirmed note deleti
   await expect(
     page.getByRole("link", { name: "Payments DB degradation" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "Open runbook" }),
-  ).toHaveAttribute("href", "https://runbooks.example/latency");
+  // v1 has no runbook; v1-fields.spec.ts covers a v2 alert's runbook link.
+  await expect(page.getByRole("link", { name: "Open runbook" })).toHaveCount(0);
   await page.getByRole("button", { name: "Assign", exact: true }).click();
   await page.getByRole("button", { name: "Assign to me", exact: true }).click();
   await expect.poll(() => command?.kind).toBe("set_assignee");

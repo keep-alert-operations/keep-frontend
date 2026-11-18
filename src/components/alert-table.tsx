@@ -20,10 +20,10 @@ import {
 import { alertOperatorLabel } from "@/lib/alert-operator";
 import { useCommand } from "@/lib/hooks";
 import {
+  alertVocabulary,
   currentAlertColumns,
   DEFAULT_SORT,
   fieldLabel,
-  SORT_FIELDS,
   type SortItem,
 } from "@/lib/preset-choices";
 import type { Scope } from "./workspace";
@@ -47,11 +47,15 @@ import {
  * Transient quick views (reference S02/S05); never saved into a preset.
  * REV-43 drops the former Active view; every severity and status view
  * carries a colored dot. REV-45 adds Assigned to me for the signed-in user.
+ * REV-77: Global (v1) offers Error/Major/Warning, other tenants
+ * Critical/High/Warning; `quickViewsFor` picks the tenant's views.
  */
 export const QUICK_VIEWS = [
   { key: "all", label: "All", cel: "" },
   { key: "critical", label: "Critical", cel: 'severity == "critical"' },
+  { key: "error", label: "Error", cel: 'severity == "error"' },
   { key: "high", label: "High", cel: 'severity == "high"' },
+  { key: "major", label: "Major", cel: 'severity == "major"' },
   { key: "warning", label: "Warning", cel: 'severity == "warning"' },
   { key: "firing", label: "Firing", cel: 'display_status == "firing"' },
   {
@@ -67,6 +71,20 @@ export const QUICK_VIEWS = [
   },
 ] as const;
 export type QuickViewKey = (typeof QUICK_VIEWS)[number]["key"];
+const SEVERITY_VIEWS = new Set<string>([
+  "critical",
+  "error",
+  "high",
+  "major",
+  "warning",
+]);
+/** The quick views shown in a tenant of `kind`, in bar order. */
+export function quickViewsFor(kind: string | undefined) {
+  const severities = alertVocabulary(kind).severities;
+  return QUICK_VIEWS.filter(
+    (view) => !SEVERITY_VIEWS.has(view.key) || severities.includes(view.key),
+  );
+}
 
 /** `me` is the signed-in principal ID, used by Assigned to me. */
 export function composeCel(base: string, key: QuickViewKey, me: string) {
@@ -107,16 +125,18 @@ export function useQuickViewCounts(
       }
       busy = true;
       try {
-        const queries = QUICK_VIEWS.map((view) => ({
-          id: view.key,
-          cel: composeCel(
-            base!,
-            view.key,
-            current.current.session.principal.id,
-          ),
-          q,
-          include_suppressed: includeSuppressed,
-        }));
+        const queries = quickViewsFor(current.current.tenant.kind).map(
+          (view) => ({
+            id: view.key,
+            cel: composeCel(
+              base!,
+              view.key,
+              current.current.session.principal.id,
+            ),
+            q,
+            include_suppressed: includeSuppressed,
+          }),
+        );
         if (!includeSuppressed)
           queries.push({
             id: "including_suppressed" as QuickViewKey,
@@ -177,6 +197,7 @@ export function useQuickViewCounts(
 }
 
 export function QuickViews({
+  kind,
   value,
   onChange,
   counts,
@@ -186,6 +207,8 @@ export function QuickViews({
   disabled,
   actions,
 }: {
+  /** Tenant kind; Global shows the v1 severity views (REV-77). */
+  kind: string;
   value: QuickViewKey;
   onChange: (value: QuickViewKey) => void;
   counts?: Partial<Record<QuickViewKey, string>>;
@@ -204,7 +227,7 @@ export function QuickViews({
         title="Quick views are not saved"
         className="quick-view-group"
       >
-        {QUICK_VIEWS.map((view) => (
+        {quickViewsFor(kind).map((view) => (
           <Fragment key={view.key}>
             {(view.key === "firing" || view.key === "mine") && (
               <span className="qv-div" aria-hidden="true" />
@@ -313,11 +336,14 @@ function ColumnHeading({
   field,
   label = fieldLabel(field),
   sort,
+  sortFields,
   onSort,
 }: {
   field: string;
   label?: string;
   sort: SortItem[];
+  /** The tenant's sortable fields (REV-77). */
+  sortFields: string[];
   onSort?: (field: string) => void;
 }) {
   const sortField = field === "last_received_at" ? "timestamp" : field;
@@ -326,7 +352,7 @@ function ColumnHeading({
   const text = `${label}${direction ? ` ${direction === "asc" ? "↑" : "↓"}${sort.length > 1 ? index + 1 : ""}` : ""}`;
   const sortable =
     onSort &&
-    (SORT_FIELDS.includes(sortField) ||
+    (sortFields.includes(sortField) ||
       [
         "first_received_at",
         "occurrence_number",
@@ -429,8 +455,9 @@ export function AlertTable({
   const [dragging, setDragging] = useState(false);
   const [dismissing, setDismissing] = useState<RecordData | null>(null);
   useEffect(() => () => stopDrag.current(), []);
+  const sortFields = alertVocabulary(scope.tenant.kind).sortFields;
   if (columns) {
-    columns = currentAlertColumns(columns);
+    columns = currentAlertColumns(columns, scope.tenant.kind);
     if (hide && columns.length > 1)
       columns = columns.filter((field) => field !== hide);
   }
@@ -597,23 +624,35 @@ export function AlertTable({
               key={field}
               field={field}
               sort={sort}
+              sortFields={sortFields}
               onSort={onSort}
             />
           ))
         ) : (
           <>
             {shown("severity") && (
-              <ColumnHeading field="severity" sort={sort} onSort={onSort} />
+              <ColumnHeading
+                field="severity"
+                sort={sort}
+                sortFields={sortFields}
+                onSort={onSort}
+              />
             )}
             <span role="columnheader">Alert</span>
             {shown("display_status") && (
               <ColumnHeading
                 field="display_status"
                 sort={sort}
+                sortFields={sortFields}
                 onSort={onSort}
               />
             )}
-            <ColumnHeading field="timestamp" sort={sort} onSort={onSort} />
+            <ColumnHeading
+              field="timestamp"
+              sort={sort}
+              sortFields={sortFields}
+              onSort={onSort}
+            />
             {!narrow && (
               <>
                 {shown("assignee_id") && (
@@ -621,6 +660,7 @@ export function AlertTable({
                     field="assignee_id"
                     label="Ownership"
                     sort={sort}
+                    sortFields={sortFields}
                     onSort={onSort}
                   />
                 )}

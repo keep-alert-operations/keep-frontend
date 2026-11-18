@@ -11,15 +11,16 @@ const tenant = "00000000-0000-4000-8000-000000000001";
 const alertId = "00000000-0000-4000-8000-000000000002";
 const presetId = "00000000-0000-4000-8000-000000000003";
 const now = new Date("2026-10-26T12:00:00Z");
+// The tenant is Global, so the alert is a native v1 alert as sent (REV-77).
 const row = {
   id: alertId,
   revision: "9007199254740999",
   message: "Database latency",
   application: "payments",
-  component: "postgres",
+  object: "postgres",
   node_name: "db-07",
-  site: "eu-west-1",
-  severity: "critical",
+  severity: "error",
+  schema_version: "v1",
   status: "firing",
   assignee_id: null,
   timestamp: "2026-10-26T10:00:00Z",
@@ -100,8 +101,8 @@ test("quick views drop Active and mark each severity and status with a dot", asy
   const group = page.getByRole("group", { name: "Quick views, not saved" });
   await expect(group.getByRole("button")).toHaveText([
     /^All/,
-    /^Critical/,
-    /^High/,
+    /^Error/,
+    /^Major/,
     /^Warning/,
     /^Firing/,
     /^Acknowledged/,
@@ -154,7 +155,7 @@ test("feed rows show plain labels and times relative to now", async ({
   await setup(page);
   await page.goto(`/tenants/${tenant}/alerts`);
   const line = page.getByRole("row", { name: /Database latency/ });
-  await expect(line).toContainText("Critical");
+  await expect(line).toContainText("Error");
   await expect(line).toContainText("Firing");
   await expect(line.locator(".sev i, .st i")).toHaveCount(0);
   await expect(line).not.toContainText("payments · postgres");

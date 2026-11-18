@@ -6,7 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { ApiError, display, RecordData, request, tenantPath } from "@/lib/api";
 import { useCommand, useResource } from "@/lib/hooks";
 import {
-  DEFAULT_COLUMNS,
+  alertVocabulary,
   DEFAULT_SORT,
   nextQuickSort,
   sortItems,
@@ -768,7 +768,7 @@ function PresetResults({
   const columns =
     Array.isArray(preset.columns) && preset.columns.length
       ? (preset.columns as unknown[]).map(String)
-      : DEFAULT_COLUMNS;
+      : alertVocabulary(scope.tenant.kind).defaultColumns;
   const cel = typeof preset.cel === "string" ? preset.cel : "true";
   const savedGroupBy = isGroupField(preset.group_by) ? preset.group_by : null;
   // A toolbar change of grouping is temporary, like the sort override (REV-44).
@@ -1097,6 +1097,7 @@ function PresetResults({
         />
       </div>
       <QuickViews
+        kind={scope.tenant.kind}
         value={quick}
         onChange={setQuick}
         counts={counts.counts}
@@ -1115,6 +1116,7 @@ function PresetResults({
               </button>
             )}
             <GroupByControl
+              kind={scope.tenant.kind}
               value={groupBy}
               saved={savedGroupBy}
               onChange={(value) =>
