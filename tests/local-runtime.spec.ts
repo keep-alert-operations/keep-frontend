@@ -52,7 +52,7 @@ test("native alert reaches the real feed and supports browser acknowledgement an
         node_name: "demo-node-01",
         operator: "local-demo",
         message,
-        severity: "warning",
+        severity: "major",
         time_created: created,
         key_field: run,
       },
@@ -60,6 +60,7 @@ test("native alert reaches the real feed and supports browser acknowledgement an
   );
   expect(admission.status()).toBe(202);
   let alert = "";
+  let stored: Record<string, unknown> = {};
   await expect
     .poll(
       async () => {
@@ -72,11 +73,17 @@ test("native alert reaches the real feed and supports browser acknowledgement an
           (item: { id: string; message: string }) => item.message === message,
         );
         alert = item?.id ?? "";
+        stored = item ?? {};
         return Boolean(alert);
       },
       { timeout: 30000 },
     )
     .toBe(true);
+  // Requirements: REV-77; alert operations 3. A v1 alert is stored as sent:
+  // object stays object and major stays major.
+  expect(stored.object).toBe("cpu");
+  expect(stored.component ?? null).toBeNull();
+  expect(stored.severity).toBe("major");
   await page.goto(`/tenants/${tenant}/alerts`);
   await expect(
     page.getByRole("heading", { name: "Feed", exact: true }),
@@ -92,6 +99,14 @@ test("native alert reaches the real feed and supports browser acknowledgement an
   await expect(
     page.getByRole("heading", { name: message, exact: true }),
   ).toBeVisible();
+  // Requirements: REV-77; alert operations 3. Details show v1 fields.
+  const details = page.getByRole("region", { name: "Details" });
+  await expect(
+    details.locator(".fld", { hasText: "Object" }).locator("dd"),
+  ).toHaveText("cpu");
+  await expect(details.locator(".fld", { hasText: "Component" })).toHaveCount(
+    0,
+  );
   await page.getByRole("button", { name: "Assign", exact: true }).click();
   await page.getByRole("button", { name: "Assign to me", exact: true }).click();
   await expect(page.locator(".ad-marks .st-acknowledged")).toBeVisible();
@@ -138,6 +153,7 @@ test("native alert reaches the real feed and supports browser acknowledgement an
         checks: [
           "real-username-password",
           "native-v1-admission",
+          "native-v1-as-sent",
           "source-processing",
           "real-elasticsearch-feed",
           "live-hints-connected",
