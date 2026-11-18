@@ -1179,7 +1179,11 @@ function LinkedAlerts({
               </span>
               <span className="sub">
                 {available
-                  ? [row.application, row.component, row.node_name]
+                  ? [
+                      row.application,
+                      row.object ?? row.component,
+                      row.node_name,
+                    ]
                       .filter((part) => typeof part === "string" && part)
                       .join(" · ")
                   : key}

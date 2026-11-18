@@ -1690,7 +1690,7 @@ export function DashboardPanelDialog({
         <span className="lbl">Columns</span>
         {columns ? (
           <ul className="dashboard-panel-columns" aria-label="Preset columns">
-            {currentAlertColumns(columns).map((field) => (
+            {currentAlertColumns(columns, scope.tenant.kind).map((field) => (
               <li key={field}>
                 {field === "message" ? "Alert" : fieldLabel(field)}
               </li>

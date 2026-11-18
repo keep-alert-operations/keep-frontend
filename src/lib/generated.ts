@@ -2041,6 +2041,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/ingest/v1/grafana": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Ingest Grafana V1 */
+    post: operations["ingest_grafana_v1_api_ingest_v1_grafana_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/ingest/v2/alerts": {
     parameters: {
       query?: never;
@@ -8819,6 +8836,143 @@ export interface operations {
             };
       };
     };
+    responses: {
+      /** @description All items acknowledged by Kafka; eventual PostgreSQL application is not guaranteed. */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            request_id: string;
+            results: {
+              index: number;
+              /** @enum {integer} */
+              status: 202 | 422 | 503;
+              /** @enum {string} */
+              disposition: "accepted" | "rejected" | "publish_failed";
+              /** Format: date-time */
+              received_at?: string;
+              error?: {
+                code: string;
+                message: string;
+                retryable?: boolean;
+                fields?: unknown;
+              };
+            }[];
+          };
+        };
+      };
+      /** @description Mixed acceptance, validation rejection or unconfirmed publication. Retry failed members only. */
+      207: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            request_id: string;
+            results: {
+              index: number;
+              /** @enum {integer} */
+              status: 202 | 422 | 503;
+              /** @enum {string} */
+              disposition: "accepted" | "rejected" | "publish_failed";
+              /** Format: date-time */
+              received_at?: string;
+              error?: {
+                code: string;
+                message: string;
+                retryable?: boolean;
+                fields?: unknown;
+              };
+            }[];
+          };
+        };
+      };
+      /** @description All members failed validation, or legacy metadata was invalid. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json":
+            | {
+                /** Format: uuid */
+                request_id: string;
+                results: {
+                  index: number;
+                  /** @enum {integer} */
+                  status: 202 | 422 | 503;
+                  /** @enum {string} */
+                  disposition: "accepted" | "rejected" | "publish_failed";
+                  /** Format: date-time */
+                  received_at?: string;
+                  error?: {
+                    code: string;
+                    message: string;
+                    retryable?: boolean;
+                    fields?: unknown;
+                  };
+                }[];
+              }
+            | {
+                error: {
+                  code: string;
+                  message: string;
+                  request_id: string;
+                  fields?: unknown;
+                };
+              };
+        };
+      };
+      /** @description Admission dependency/deadline failure, or no member was acknowledged and at least one publication failed. Acknowledgement uncertainty may leave Kafka duplicates. */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json":
+            | {
+                /** Format: uuid */
+                request_id: string;
+                results: {
+                  index: number;
+                  /** @enum {integer} */
+                  status: 202 | 422 | 503;
+                  /** @enum {string} */
+                  disposition: "accepted" | "rejected" | "publish_failed";
+                  /** Format: date-time */
+                  received_at?: string;
+                  error?: {
+                    code: string;
+                    message: string;
+                    retryable?: boolean;
+                    fields?: unknown;
+                  };
+                }[];
+              }
+            | {
+                error: {
+                  code: string;
+                  message: string;
+                  request_id: string;
+                  fields?: unknown;
+                };
+              };
+        };
+      };
+    };
+  };
+  ingest_grafana_v1_api_ingest_v1_grafana_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
     responses: {
       /** @description All items acknowledged by Kafka; eventual PostgreSQL application is not guaranteed. */
       202: {

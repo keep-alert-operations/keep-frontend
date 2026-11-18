@@ -295,6 +295,7 @@ export function AlertFeed(scope: Scope) {
         />
       </form>
       <QuickViews
+        kind={scope.tenant.kind}
         value={quickView}
         onChange={(view) => {
           setQuickView(view);
@@ -316,6 +317,7 @@ export function AlertFeed(scope: Scope) {
               </button>
             )}
             <GroupByControl
+              kind={scope.tenant.kind}
               value={groupBy}
               onChange={(value) => {
                 setGroupBy(value);
@@ -584,6 +586,7 @@ const MEANINGFUL_FIELDS = [
   "suppressed",
   "application",
   "component",
+  "object",
   "node_name",
   "site",
   "operator",
@@ -1158,15 +1161,28 @@ function AlertDetail(scope: Scope & { id: string }) {
     occurrences: pageCount(occurrenceCount.data),
     "source-events": pageCount(sourceCount.data),
   };
+  // A v1 alert is shown as sent (REV-77): Object, and no Component, Site or
+  // Impact, which v1 does not have.
+  const v1 = alert?.schema_version === "v1";
   const fields: [string, React.ReactNode][] = alert
     ? [
         ["Application", display(alert.application)],
-        ["Component", display(alert.component)],
-        ["Node name", display(alert.node_name)],
-        ["Site", display(alert.site)],
-        ["Operator", alertOperatorLabel(alert)],
-        ["Provider", providerLabel(alert.provider)],
-        ["Impact", display(alert.impact)],
+        ...(v1
+          ? ([
+              // A row not yet converted still holds the object in component.
+              ["Object", display(alert.object ?? alert.component)],
+              ["Node name", display(alert.node_name)],
+              ["Operator", alertOperatorLabel(alert)],
+              ["Provider", providerLabel(alert.provider)],
+            ] as [string, React.ReactNode][])
+          : ([
+              ["Component", display(alert.component)],
+              ["Node name", display(alert.node_name)],
+              ["Site", display(alert.site)],
+              ["Operator", alertOperatorLabel(alert)],
+              ["Provider", providerLabel(alert.provider)],
+              ["Impact", display(alert.impact)],
+            ] as [string, React.ReactNode][])),
         [
           "First received",
           <RelativeTime

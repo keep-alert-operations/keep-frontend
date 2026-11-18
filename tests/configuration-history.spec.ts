@@ -235,7 +235,7 @@ test("saved results use the saved preview while quick views and counts use candi
                 {
                   id: presetId,
                   revision: "3",
-                  severity: "critical",
+                  severity: "error",
                   status: "firing",
                   message: body.cursor
                     ? "Second page alert"
@@ -280,13 +280,14 @@ test("saved results use the saved preview while quick views and counts use candi
     cursor: "opaque-next",
     limit: 50,
   });
-  await page.getByRole("button", { name: "Critical", exact: true }).click();
+  // Global holds v1 alerts, so its quick views use v1 severities (REV-77).
+  await page.getByRole("button", { name: "Error", exact: true }).click();
   await expect
     .poll(() =>
       previews.some(
         (body) =>
           body.limit === 50 &&
-          body.cel === `(${preset.cel}) && (severity == "critical")`,
+          body.cel === `(${preset.cel}) && (severity == "error")`,
       ),
     )
     .toBe(true);

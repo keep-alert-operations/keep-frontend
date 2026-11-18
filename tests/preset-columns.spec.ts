@@ -1,37 +1,56 @@
 import { expect, test, type Page } from "@playwright/test";
 
+/*
+ * Requirements: REV-77; preset operations 6; UI acceptance.
+ * Preset columns render in their saved order. The tenant is Global unless a
+ * test says otherwise, so the alert is a native v1 alert as sent (`object`,
+ * no site) and the column choices are the v1 ones; a specific tenant keeps
+ * the v2 choices.
+ */
 const tenant = "00000000-0000-4000-8000-000000000001";
 const preset = "00000000-0000-4000-8000-000000000002";
 const row = {
   id: "00000000-0000-4000-8000-000000000003",
   revision: "9007199254740999",
   message: "Database latency",
-  severity: "critical",
+  severity: "error",
   status: "firing",
   application: "Synthetic database",
-  component: "Query service",
-  schema_version: "v2",
+  object: "Query service",
+  schema_version: "v1",
   operator: "00000000-0000-4000-8000-000000000005",
   operator_display_name: "Payments",
   acknowledged: false,
-  site: "Synthetic west",
+  node_name: "Synthetic west",
   assignee_id: "00000000-0000-4000-8000-000000000004",
   assignee_display_name: "Test operator",
   timestamp: "2026-09-24T09:00:00Z",
 };
+// The same alert as v2, for a specific tenant.
+const v2Row = {
+  ...row,
+  severity: "critical",
+  object: undefined,
+  component: "Query service",
+  schema_version: "v2",
+  node_name: "db-07",
+  site: "Synthetic west",
+};
 
 async function setup(
   page: Page,
-  columns = ["message", "site", "assignee_id", "timestamp"],
+  columns = ["message", "node_name", "assignee_id", "timestamp"],
   suppressed = false,
+  kind: "global" | "specific" = "global",
 ) {
+  const alert = kind === "global" ? row : v2Row;
   const saved = {
     id: preset,
     revision: "7",
     name: "Custom columns",
     cel: "true",
     columns,
-    sort: [{ field: "site", direction: "asc" }],
+    sort: [{ field: "node_name", direction: "asc" }],
   };
   const creates: Array<{ columns: string[] }> = [];
   const previews: Record<string, unknown>[] = [];
@@ -44,8 +63,8 @@ async function setup(
           tenants: [
             {
               id: tenant,
-              name: "Global",
-              kind: "global",
+              name: kind === "global" ? "Global" : "Local Demo",
+              kind,
               role: "edit",
               revision: "1",
             },
@@ -81,7 +100,7 @@ async function setup(
       previews.push(route.request().postDataJSON());
       return route.fulfill({
         json: {
-          data: [{ ...row, suppressed }],
+          data: [{ ...alert, suppressed }],
           meta: { total: "1" },
           next_cursor: null,
         },
@@ -92,64 +111,72 @@ async function setup(
   return { creates, previews };
 }
 
-for (const customize of [false, true]) {
-  test(`new preset renders its ${customize ? "customized" : "initial"} columns immediately after creation and reload`, async ({
-    page,
-  }) => {
-    const { creates } = await setup(page);
-    await page.goto(`/tenants/${tenant}/presets/new`);
-    await page.getByLabel("Name", { exact: true }).fill("New column preset");
-    await page.getByRole("tab", { name: /^Columns/ }).click();
-    if (customize) {
+// Global defaults to v1 Object; a specific tenant keeps v2 Component (REV-77).
+for (const [kind, field, label] of [
+  ["global", "object", "Object"],
+  ["specific", "component", "Component"],
+] as const)
+  for (const customize of [false, true]) {
+    test(`new ${kind} preset renders its ${customize ? "customized" : "initial"} columns immediately after creation and reload`, async ({
+      page,
+    }) => {
+      const { creates } = await setup(page, undefined, false, kind);
+      await page.goto(`/tenants/${tenant}/presets/new`);
+      await page.getByLabel("Name", { exact: true }).fill("New column preset");
+      await page.getByRole("tab", { name: /^Columns/ }).click();
+      if (customize) {
+        await page
+          .getByRole("button", { name: `Remove ${label}`, exact: true })
+          .click();
+        await page
+          .getByRole("button", { name: "Move Alert up", exact: true })
+          .click();
+      }
+      const labels = await page
+        .getByRole("list", { name: "Columns, in order", exact: true })
+        .locator(".pe-col-label")
+        .allTextContents();
       await page
-        .getByRole("button", { name: "Remove Component", exact: true })
+        .getByRole("button", { name: "Create preset", exact: true })
         .click();
+      await expect(page).toHaveURL(`/tenants/${tenant}/presets/${preset}`);
+      expect(creates).toHaveLength(1);
+      if (!customize)
+        expect(creates[0].columns).toEqual([
+          "severity",
+          "display_status",
+          "message",
+          "application",
+          field,
+          "timestamp",
+          "assignee_id",
+        ]);
+      const headings = [
+        "",
+        ...labels.map((label) =>
+          label === "Last received" ? `${label} ↓` : label,
+        ),
+        "Actions",
+      ];
+      const table = page.getByRole("table", { name: "Alerts", exact: true });
+      await expect(table.getByRole("columnheader")).toHaveText(headings);
+      await expect(
+        table.getByRole("cell", { name: "Synthetic database", exact: true }),
+      ).toBeVisible();
+      await page.reload();
+      await expect(table.getByRole("columnheader")).toHaveText(headings);
       await page
-        .getByRole("button", { name: "Move Alert up", exact: true })
+        .getByRole("link", { name: "Edit preset", exact: true })
         .click();
-    }
-    const labels = await page
-      .getByRole("list", { name: "Columns, in order", exact: true })
-      .locator(".pe-col-label")
-      .allTextContents();
-    await page
-      .getByRole("button", { name: "Create preset", exact: true })
-      .click();
-    await expect(page).toHaveURL(`/tenants/${tenant}/presets/${preset}`);
-    expect(creates).toHaveLength(1);
-    if (!customize)
-      expect(creates[0].columns).toEqual([
-        "severity",
-        "display_status",
-        "message",
-        "application",
-        "component",
-        "timestamp",
-        "assignee_id",
+      await expect(table.getByRole("columnheader")).toHaveText([
+        "Selection",
+        ...headings.slice(1, -1),
       ]);
-    const headings = [
-      "",
-      ...labels.map((label) =>
-        label === "Last received" ? `${label} ↓` : label,
-      ),
-      "Actions",
-    ];
-    const table = page.getByRole("table", { name: "Alerts", exact: true });
-    await expect(table.getByRole("columnheader")).toHaveText(headings);
-    await expect(
-      table.getByRole("cell", { name: "Synthetic database", exact: true }),
-    ).toBeVisible();
-    await page.reload();
-    await expect(table.getByRole("columnheader")).toHaveText(headings);
-    await page.getByRole("link", { name: "Edit preset", exact: true }).click();
-    await expect(table.getByRole("columnheader")).toHaveText([
-      "Selection",
-      ...headings.slice(1, -1),
-    ]);
-    expect(creates).toHaveLength(1);
-  });
-}
+      expect(creates).toHaveLength(1);
+    });
+  }
 
+// In Global a saved v2 `component` column shows the v1 Object (REV-77).
 test("saved presets adapt legacy acknowledgement columns without changing their stored definition", async ({
   page,
 }) => {
@@ -174,7 +201,7 @@ test("saved presets adapt legacy acknowledgement columns without changing their 
     "Alert",
     "Status",
     "Application",
-    "Component",
+    "Object",
     "Last received",
     "Assignee",
     "Actions",
@@ -190,7 +217,7 @@ test("saved preset renders configured fields in order with its actual sort", asy
   await expect(table.getByRole("columnheader")).toHaveText([
     "",
     "Alert",
-    "Site ↑",
+    "Node ↑",
     "Assignee",
     "Last received",
     "Actions",
@@ -202,7 +229,7 @@ test("saved preset renders configured fields in order with its actual sort", asy
     table.getByRole("cell", { name: "Test operator (you)", exact: true }),
   ).toBeVisible();
   await expect(
-    table.getByRole("columnheader", { name: "Site ↑" }),
+    table.getByRole("columnheader", { name: "Node ↑" }),
   ).toHaveAttribute("aria-sort", "ascending");
   await table
     .getByRole("checkbox", { name: "Select Database latency", exact: true })
@@ -243,7 +270,7 @@ test("preset column clicks temporarily replace saved sort and restore it on the 
   await table.getByRole("button", { name: "Last received ↓" }).click();
   await expect.poll(() => preview()?.preset_id).toBe(preset);
   await expect(
-    table.getByRole("columnheader", { name: "Site ↑" }),
+    table.getByRole("columnheader", { name: "Node ↑" }),
   ).toHaveAttribute("aria-sort", "ascending");
   expect(saves).toEqual([]);
 });
@@ -285,16 +312,16 @@ test("draft column removal and reordering update the preview without saving", as
   await page.goto(`/tenants/${tenant}/presets/${preset}/edit`);
   const table = page.getByRole("table", { name: "Alerts", exact: true });
   await expect(
-    table.getByRole("columnheader", { name: "Site ↑" }),
+    table.getByRole("columnheader", { name: "Node ↑" }),
   ).toBeVisible();
   await page.getByRole("tab", { name: /^Columns/ }).click();
-  await page.getByRole("button", { name: "Move Site up", exact: true }).click();
+  await page.getByRole("button", { name: "Move Node up", exact: true }).click();
   await page
     .getByRole("button", { name: "Remove Last received", exact: true })
     .click();
   await expect(table.getByRole("columnheader")).toHaveText([
     "Selection",
-    "Site ↑",
+    "Node ↑",
     "Alert",
     "Assignee",
   ]);
@@ -307,13 +334,13 @@ test("draft column removal and reordering update the preview without saving", as
 test("custom columns retain row navigation and suppression when message is hidden", async ({
   page,
 }) => {
-  await setup(page, ["site"], true);
+  await setup(page, ["node_name"], true);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/tenants/${tenant}/presets/${preset}`);
   const table = page.getByRole("table", { name: "Alerts", exact: true });
   await expect(table.getByRole("columnheader")).toHaveText([
     "",
-    "Site ↑",
+    "Node ↑",
     "Actions",
   ]);
   await expect(table.getByText("Suppressed", { exact: true })).toBeVisible();

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /*
- * Requirements: REV-54; alert operations 3.
+ * Requirements: REV-54; REV-77; alert operations 3.
  * The alert name is the title in the Feed, alert detail and dismiss dialog,
  * with the message under it; v1 alerts have no name and keep their message.
  */
@@ -38,11 +38,15 @@ const rows = [
     name: key,
     message: "Disk usage above 95%",
   },
+  // A v1 alert as sent (REV-77): `object`, a v1 severity and no component.
   {
     ...base,
     id: legacyId,
     revision: "4",
     schema_version: "v1",
+    component: null,
+    object: "postgres",
+    severity: "major",
     key_field: "v1:8:payments8:postgres2:n1",
     name: null,
     message: "Legacy replication lag",

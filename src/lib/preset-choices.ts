@@ -150,6 +150,55 @@ export const SORT_FIELDS = [
   "time_created",
   "assignee_id",
 ];
+/**
+ * Alert field vocabulary for one tenant (REV-77). The fixed Global tenant holds
+ * only native v1 alerts, stored as sent: `object` instead of `component` and
+ * severities error/major/warning; v1 has no name, site or impact. Specific
+ * tenants hold only v2 alerts and keep the v2 lists.
+ */
+export interface AlertVocabulary {
+  defaultColumns: string[];
+  selectableColumns: string[];
+  sortFields: string[];
+  /** Group-by fields, in menu order; a subset of alert-groups' GROUP_FIELDS. */
+  groupFields: string[];
+  /** Severity quick views, in bar order; their CEL is `severity == "<key>"`. */
+  severities: string[];
+}
+const V1_ABSENT = new Set(["component", "site", "impact", "name"]);
+const v1 = (fields: string[]) =>
+  fields
+    .map((field) => (field === "component" ? "object" : field))
+    .filter((field) => !V1_ABSENT.has(field));
+const V2_GROUP_FIELDS = [
+  "severity",
+  "display_status",
+  "name",
+  "application",
+  "component",
+  "node_name",
+  "site",
+  "assignee_id",
+  "active_incident_id",
+];
+const V2_VOCABULARY: AlertVocabulary = {
+  defaultColumns: DEFAULT_COLUMNS,
+  selectableColumns: SELECTABLE_COLUMNS,
+  sortFields: SORT_FIELDS,
+  groupFields: V2_GROUP_FIELDS,
+  severities: ["critical", "high", "warning"],
+};
+const V1_VOCABULARY: AlertVocabulary = {
+  defaultColumns: v1(DEFAULT_COLUMNS),
+  selectableColumns: v1(SELECTABLE_COLUMNS),
+  sortFields: v1(SORT_FIELDS),
+  groupFields: v1(V2_GROUP_FIELDS),
+  severities: ["error", "major", "warning"],
+};
+/** `kind` is the tenant kind (`Tenant.kind`); "global" selects the v1 lists. */
+export function alertVocabulary(kind: string | undefined): AlertVocabulary {
+  return kind === "global" ? V1_VOCABULARY : V2_VOCABULARY;
+}
 export function nextQuickSort(
   current: SortItem | null,
   field: string,
@@ -184,6 +233,7 @@ const LABELS: Record<string, string> = {
   display_status: "Status",
   application: "Application",
   component: "Component",
+  object: "Object",
   node_name: "Node",
   site: "Site",
   operator: "Operator",
@@ -205,12 +255,20 @@ export function fieldLabel(field: string) {
   return LABELS[field] ?? field.replaceAll("_", " ");
 }
 
-/** Adapt legacy columns in the current view; stored revisions stay untouched. */
-export function currentAlertColumns(columns: string[]) {
+/**
+ * Adapt legacy columns in the current view; stored revisions stay untouched.
+ * In Global (`kind` "global") a saved `component` column shows v1 `object`
+ * (REV-77).
+ */
+export function currentAlertColumns(columns: string[], kind?: string) {
   const visible = columns
     .filter((field) => !["acknowledged_by", "acknowledged_at"].includes(field))
     .map((field) =>
-      ["status", "acknowledged"].includes(field) ? "display_status" : field,
+      ["status", "acknowledged"].includes(field)
+        ? "display_status"
+        : kind === "global" && field === "component"
+          ? "object"
+          : field,
     );
   return visible.length ? [...new Set(visible)] : ["display_status"];
 }
