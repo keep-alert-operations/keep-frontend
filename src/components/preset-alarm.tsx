@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /*
  * Noisy presets (REV-58): the shared alarm a preset's results page loops while
@@ -103,11 +103,11 @@ export function AlarmSample() {
   );
 }
 
-function BellIcon() {
+function BellIcon({ size = 13 }: { size?: number }) {
   return (
     <svg
-      width="13"
-      height="13"
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -118,6 +118,27 @@ function BellIcon() {
     >
       <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
       <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+    </svg>
+  );
+}
+
+function BellOffIcon({ size = 13 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5" />
+      <path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7" />
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+      <path d="m2 2 20 20" />
     </svg>
   );
 }
@@ -138,11 +159,11 @@ export function NoisyChip({
   );
 }
 
-function SpeakerOffIcon() {
+function SpeakerOffIcon({ size = 16 }: { size?: number }) {
   return (
     <svg
-      width="16"
-      height="16"
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -230,5 +251,147 @@ export function AlarmBanner({
         Mute
       </button>
     </div>
+  );
+}
+
+/** A noisy dashboard panel's alarm state (REV-78). */
+export type BellState = "sounding" | "quiet" | "muted";
+
+/**
+ * The bell at the end of a noisy dashboard panel's title row (REV-78): red and
+ * ringing while the panel sounds, grey without alerts, and a dashed bell-off
+ * icon while muted on this screen. It toggles only this panel's mute.
+ */
+export function PanelBell({
+  state,
+  label,
+  count,
+  onToggle,
+}: {
+  state: BellState;
+  label: string;
+  count?: string;
+  onToggle: () => void;
+}) {
+  const alerts =
+    count !== undefined && count !== "0"
+      ? ` while ${count} ${count === "1" ? "alert matches" : "alerts match"}`
+      : "";
+  const title =
+    state === "muted"
+      ? `Muted on this screen${alerts} · click to unmute`
+      : state === "sounding"
+        ? `Alarm sounding for ${label} · click to mute this panel`
+        : "Noisy preset, no alerts · click to mute this panel";
+  return (
+    <button
+      type="button"
+      className={`pn-bell is-${state}`}
+      aria-pressed={state === "muted"}
+      aria-label={`Mute ${label}`}
+      title={title}
+      data-bell-state={state}
+      onClick={onToggle}
+    >
+      {state === "muted" ? <BellOffIcon size={14} /> : <BellIcon size={14} />}
+    </button>
+  );
+}
+
+/** What a dashboard's noisy panels add up to (REV-78). */
+export interface DashboardAlarmSummary {
+  sound: AlarmState;
+  /** Unmuted noisy panels with alerts. */
+  sounding: number;
+  /** Muted noisy panels with alerts. */
+  mutedWithAlerts: number;
+  anyMuted: boolean;
+}
+
+const panelCount = (count: number) =>
+  `${count} ${count === 1 ? "panel" : "panels"}`;
+
+/**
+ * The alarm chip beside a dashboard's name and in its fullscreen bar (REV-78).
+ * One alarm sounds for every unmuted noisy panel with alerts. Each state has its
+ * own key so its button is a new element, as on the preset page.
+ */
+export function DashboardAlarmStatus({
+  summary,
+  onMuteAll,
+  onUnmuteAll,
+}: {
+  summary: DashboardAlarmSummary;
+  onMuteAll: () => void;
+  onUnmuteAll: () => void;
+}) {
+  const { sound, sounding, mutedWithAlerts, anyMuted } = summary;
+  let kind: string, tone: string, icon: ReactNode, text: string;
+  let action: ReactNode = null;
+  if (sounding > 0 && sound === "blocked") {
+    kind = "blocked";
+    tone = "is-blocked";
+    icon = <SpeakerOffIcon size={13} />;
+    text = `Alarm waiting for a click · ${panelCount(sounding)}`;
+    // Any click on the page starts the alarm; this button only invites one.
+    action = (
+      <button type="button" className="btn btn-sm">
+        Turn on sound
+      </button>
+    );
+  } else if (sounding > 0 && sound === "failed") {
+    kind = "failed";
+    tone = "is-failed";
+    icon = <SpeakerOffIcon size={13} />;
+    text = `Alarm can't play in this browser · ${panelCount(sounding)}`;
+  } else if (sounding > 0) {
+    kind = "playing";
+    tone = "is-ringing";
+    icon = (
+      <span className="alarm-eq" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+        <i />
+      </span>
+    );
+    text = `Alarm playing · ${panelCount(sounding)}`;
+    action = (
+      <button type="button" className="btn btn-sm" onClick={onMuteAll}>
+        Mute all
+      </button>
+    );
+  } else if (mutedWithAlerts > 0) {
+    kind = "muted";
+    tone = "is-muted";
+    icon = <BellOffIcon />;
+    text = `Alarm muted · ${mutedWithAlerts} ${mutedWithAlerts === 1 ? "panel has alerts" : "panels have alerts"}`;
+    action = (
+      <button type="button" className="btn btn-sm" onClick={onUnmuteAll}>
+        Unmute all
+      </button>
+    );
+  } else {
+    kind = "quiet";
+    tone = "";
+    icon = <BellIcon />;
+    text = "Alarm · quiet";
+    if (anyMuted)
+      action = (
+        <button type="button" className="btn btn-sm" onClick={onUnmuteAll}>
+          Unmute all
+        </button>
+      );
+  }
+  // The text may shorten beside a long name, so the header never changes height
+  // when the alarm starts or stops; the full text stays in the tooltip.
+  return (
+    <span key={kind} className="db-alarm" data-alarm-state={kind}>
+      <span className={`noisy-chip ${tone}`} role="status" title={text}>
+        {icon}
+        <span className="db-alarm-text">{text}</span>
+      </span>
+      {action}
+    </span>
   );
 }

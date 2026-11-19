@@ -32,9 +32,12 @@ import {
   isImagePanel,
   isServiceNowPanel,
   isTablePanel,
+  panelsOf,
+  useDashboardAlarm,
   type DashboardModel,
   type Panel,
 } from "./dashboard-counts";
+import { DashboardAlarmStatus } from "./preset-alarm";
 import { DashboardLayout } from "./dashboard-layout";
 import { DashboardPanelDialog } from "./dashboard-panel-dialog";
 import { TableTile } from "./dashboard-table-panel";
@@ -377,6 +380,13 @@ export function DashboardWorkspace({
       ? countedTitle(panel, observation(panel)?.preset_name)
       : contentPanelName(panel)) ??
     "Panel";
+  // One alarm for the panels on screen, as the board renders them: the draft for
+  // editors, else the counted definition (REV-78).
+  const alarm = useDashboardAlarm(
+    model,
+    canEdit ? draft.panels : model ? panelsOf(model.state.definition) : [],
+    absent,
+  );
   function editPanel(panelId: string) {
     const panel = draft.panels.find((item) => item.id === panelId);
     if (!panel) return;
@@ -573,7 +583,20 @@ export function DashboardWorkspace({
           display(latest?.name ?? base?.name)
         )
       }
-      extra={dirty && <span className="chip chip-warn">Unsaved changes</span>}
+      extra={
+        (dirty || alarm.summary) && (
+          <>
+            {dirty && <span className="chip chip-warn">Unsaved changes</span>}
+            {alarm.summary && (
+              <DashboardAlarmStatus
+                summary={alarm.summary}
+                onMuteAll={alarm.muteAll}
+                onUnmuteAll={alarm.unmuteAll}
+              />
+            )}
+          </>
+        )
+      }
       actions={
         <>
           {canEdit && (
@@ -760,6 +783,7 @@ export function DashboardWorkspace({
         <DashboardBoard
           scope={scope}
           model={model}
+          alarm={alarm}
           draftPanels={canEdit ? draft.panels : undefined}
           editing={
             canEdit

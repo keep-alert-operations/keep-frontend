@@ -437,6 +437,97 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Noisy panels (REV-78): a bell at the end of the title row, above the count
+   panel's whole-card preset link like the panel link button. Red and ringing
+   while the panel sounds, grey without alerts, a dashed bell-off icon when muted. */
+.pn-bell {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  border: 1px solid var(--input-border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--muted);
+  line-height: 1;
+  cursor: pointer;
+}
+.pn-bell:hover {
+  background: var(--fill);
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+.pn-bell:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.pn-bell.is-sounding {
+  border-color: var(--error-line);
+  background: var(--error-bg);
+  color: var(--critical);
+}
+.pn-bell.is-sounding svg {
+  transform-origin: 50% 12%;
+  animation: noisy-ring 1.1s ease-in-out infinite;
+}
+.pn-bell.is-muted {
+  border-style: dashed;
+  background: var(--fill);
+  color: var(--ink-soft);
+}
+/* The dashboard's one alarm, beside its name and in the fullscreen bar. Its text
+   shortens rather than wrapping, so starting or stopping the alarm never moves
+   the panels below. */
+.db-alarm {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.dashboard-workspace .page-title > .db-alarm {
+  flex: 1 1 0;
+  min-width: min(100%, 220px);
+}
+.db-alarm .noisy-chip {
+  height: 24px;
+  min-width: 0;
+}
+.db-alarm > .btn,
+.db-alarm .noisy-chip > svg {
+  flex-shrink: 0;
+}
+.db-alarm-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.db-alarm .noisy-chip.is-ringing .alarm-eq {
+  height: 12px;
+}
+.noisy-chip.is-muted {
+  border-style: dashed;
+}
+.noisy-chip.is-blocked {
+  border-color: var(--warning-line);
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+.noisy-chip.is-failed {
+  border-color: var(--error-line);
+  background: var(--error-bg);
+  color: var(--error);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pn-bell.is-sounding svg {
+    animation: none;
+  }
+}
 .db-fullscreen {
   max-width: none;
   max-height: none;
