@@ -4,7 +4,11 @@
  * mocks, test login route or injected session.
  *
  * Requirements: REV-73; identity configuration 2-5, 10 and 14; plan A1, A2,
- * A8, A13 and A24.
+ * A8, A13 and A24. Smoke baseline S1 (keep-delivery development runbook,
+ * "Critical smoke scenarios and expected results").
+ *
+ * `KEEP_LOCAL_DELIVERY_DIR` names the keep-delivery checkout that holds the
+ * running stack's `.local` state; it defaults to the sibling checkout.
  */
 import { test, expect, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
@@ -12,7 +16,9 @@ import { resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 
-const repository = resolve(__dirname, "../../keep-delivery");
+const repository =
+  process.env.KEEP_LOCAL_DELIVERY_DIR ??
+  resolve(__dirname, "../../keep-delivery");
 const origin = "https://localhost:3443";
 const adapi = process.env.KEEP_LOCAL_ADAPI_URL ?? "http://127.0.0.1:58092";
 const python =
@@ -88,7 +94,12 @@ for (const username of ["local-admin", "local-editor", "local-viewer"]) {
 test("a wrong password is refused with one message and no session", async ({
   page,
 }) => {
+  const login = page.waitForResponse("**/auth/login");
   await signIn(page, "local-viewer", `not-the-password-${randomUUID()}`);
+  // Requirements: smoke S1. The refusal is 401 authentication_rejected.
+  const refused = await login;
+  expect(refused.status()).toBe(401);
+  expect((await refused.json()).error.code).toBe("authentication_rejected");
   await expect(
     page.getByRole("alert").filter({
       hasText: "The username or password wasn't accepted.",
@@ -182,6 +193,12 @@ test("directory groups give the local demo tenant admin, edit and view access", 
         session.tenants.find((item: { id: string }) => item.id === tenant.id)
           ?.role,
       ).toBe(role);
+      // Requirements: smoke S1. Global keeps its separate edit baseline
+      // for every eligible person, whatever their Local Demo role.
+      expect(
+        session.tenants.find((item: { kind: string }) => item.kind === "global")
+          ?.role,
+      ).toBe("edit");
       expect(
         (
           await userPage.request.get(`/api/tenants/${tenant.id}/permissions`)
@@ -195,6 +212,7 @@ test("directory groups give the local demo tenant admin, edit and view access", 
 
 test("a group change reaches access through the refresh, and sign-out is local", async ({
   page,
+  browser,
 }) => {
   const viewer = await signedIn(page, "local-viewer");
   const tenant = viewer.tenants.find(
@@ -220,6 +238,8 @@ test("a group change reaches access through the refresh, and sign-out is local",
     200,
   );
   await page.goto(`/tenants/${tenant.id}/alerts`);
+  // Kept in memory only, to replay the signed-out session; never printed.
+  const before = await page.context().cookies();
   const logout = page.waitForResponse("**/auth/logout");
   await page.getByRole("button", { name: /^Account:/ }).click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
@@ -232,4 +252,16 @@ test("a group change reaches access through the refresh, and sign-out is local",
     "/sign-in",
   );
   expect((await page.request.get("/auth/session")).status()).toBe(401);
+  // Requirements: smoke S1. The old session itself is revoked, not only the
+  // browser's cookie: replaying it in a fresh context returns 401.
+  const replay = await browser.newContext({
+    baseURL: origin,
+    ignoreHTTPSErrors: true,
+  });
+  try {
+    await replay.addCookies(before);
+    expect((await replay.request.get("/auth/session")).status()).toBe(401);
+  } finally {
+    await replay.close();
+  }
 });
