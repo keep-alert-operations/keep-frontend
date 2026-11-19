@@ -1,4 +1,13 @@
-/** Real interactive local stack: no request mocks or injected identity/session. */
+/**
+ * Real interactive local stack: no request mocks or injected identity/session.
+ * Smoke baseline S2 (keep-delivery development runbook, "Critical smoke
+ * scenarios and expected results").
+ *
+ * `KEEP_LOCAL_DELIVERY_DIR` names the keep-delivery checkout that holds the
+ * running stack's `.local` state; it defaults to the sibling checkout.
+ * `KEEP_SMOKE_RUN` (optional) is recorded in the evidence so a smoke run can
+ * tell its own evidence from an older run's.
+ */
 import { test, expect } from "@playwright/test";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
@@ -12,7 +21,9 @@ test.skip(
 test("native alert reaches the real feed and supports browser acknowledgement and notes", async ({
   page,
 }) => {
-  const repository = resolve(__dirname, "../../keep-delivery");
+  const repository =
+    process.env.KEEP_LOCAL_DELIVERY_DIR ??
+    resolve(__dirname, "../../keep-delivery");
   const state = resolve(repository, ".local/runtime");
   mkdirSync(state, { recursive: true });
   const credentials = JSON.parse(
@@ -123,6 +134,17 @@ test("native alert reaches the real feed and supports browser acknowledgement an
   await expect(
     page.locator(".ad-note-text").filter({ hasText: note }),
   ).toBeVisible();
+  // Requirements: smoke S2. After a reload the assignee is still the acting
+  // user, in the page and in the stored alert.
+  await expect(page.locator(".ad-marks .st-acknowledged")).toBeVisible();
+  await expect(page.locator(".ad-marks .chip.b-neutral")).toHaveText(
+    `${session.principal.display_name} (you)`,
+  );
+  const reloaded = await page.request.get(
+    `/api/tenants/${tenant}/alerts/${alert}`,
+  );
+  expect(reloaded.status()).toBe(200);
+  expect((await reloaded.json()).data.assignee_id).toBe(session.principal.id);
   await page.screenshot({
     path: resolve(state, "alert-detail.png"),
     fullPage: true,
@@ -147,6 +169,7 @@ test("native alert reaches the real feed and supports browser acknowledgement an
     JSON.stringify(
       {
         tested_at: new Date().toISOString(),
+        smoke_run: process.env.KEEP_SMOKE_RUN ?? null,
         tenant,
         alert,
         result: "passed",
@@ -159,6 +182,7 @@ test("native alert reaches the real feed and supports browser acknowledgement an
           "live-hints-connected",
           "browser-acknowledgement",
           "browser-note",
+          "assignee-after-reload",
           "updated-search",
         ],
       },
