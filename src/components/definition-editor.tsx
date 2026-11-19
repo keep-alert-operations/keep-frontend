@@ -977,8 +977,8 @@ export function PresetEditor({
                       Noisy preset
                     </span>
                     <span className="help" id={`${formId}-noisy-help`}>
-                      Play an alarm while this preset is open and alerts match
-                      it.
+                      Play an alarm while this preset, or a dashboard panel
+                      showing it, is open and alerts match.
                     </span>
                   </span>
                 </div>
@@ -993,8 +993,8 @@ export function PresetEditor({
                 </div>
                 <ul className="pe-notes">
                   <li>
-                    Everyone who opens this preset hears it until no alerts
-                    match.
+                    Everyone who opens this preset or such a dashboard hears it
+                    until no alerts match or they mute it.
                   </li>
                   <li>
                     Anyone can mute it on their own screen. Muting doesn&apos;t

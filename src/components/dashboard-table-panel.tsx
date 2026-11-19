@@ -20,7 +20,7 @@ import { AlertField } from "./alert-table";
 import { SuppressedChip } from "./dismiss-dialog";
 import { NavLink } from "./page";
 import type { Scope } from "./workspace";
-import type { TablePanel } from "./dashboard-counts";
+import type { TableAlarmReport, TablePanel } from "./dashboard-counts";
 import { PanelLinkButton } from "./dashboard-panel-link";
 
 /** What a table panel shows: its preset's latest alerts (REV-63). */
@@ -207,6 +207,8 @@ export function TableTile({
   layoutControls,
   layoutActive,
   layoutStyle,
+  bell,
+  onAlarm,
 }: {
   scope: Scope;
   panel: TablePanel;
@@ -217,6 +219,14 @@ export function TableTile({
   layoutControls?: ReactNode;
   layoutActive?: boolean;
   layoutStyle?: CSSProperties;
+  /** A noisy panel's alarm bell for this title, at the end of the title row (REV-78). */
+  bell?: (title: string) => ReactNode;
+  /**
+   * Receives what the panel last knew about its preset's alarm (REV-78): nothing
+   * while it loads, so a remount or refresh keeps the last state, and null once
+   * the preset is gone. Only the dashboard's own board passes it.
+   */
+  onAlarm?: (report: TableAlarmReport | null) => void;
 }) {
   // Live updates refresh the rows unless the dashboard is paused.
   const [live, setLive] = useState(scope.version);
@@ -236,6 +246,24 @@ export function TableTile({
       : undefined;
   const absent =
     latest.error instanceof ApiError && latest.error.status === 404;
+  // Report the preset's alarm flag and whether alerts match, from the exact total
+  // when there is one (REV-78).
+  const known = latest.preset !== undefined;
+  const noisy = latest.preset?.noisy === true;
+  const exact =
+    latest.total !== undefined && decimal.test(latest.total)
+      ? latest.total
+      : undefined;
+  const alerts =
+    exact !== undefined
+      ? BigInt(exact) > BigInt(0)
+      : (latest.rows?.length ?? 0) > 0;
+  const reporter = useRef(onAlarm);
+  reporter.current = onAlarm;
+  useEffect(() => {
+    if (absent) reporter.current?.(null);
+    else if (known) reporter.current?.({ noisy, alerts, total: exact });
+  }, [absent, known, noisy, alerts, exact]);
   const title =
     shownTitle ??
     panel.title ??
@@ -346,6 +374,7 @@ export function TableTile({
           Latest {panel.rows.toLocaleString()} · newest first
         </span>
         <PanelLinkButton link={panel.link} inactive={layoutActive} />
+        {bell?.(title)}
       </span>
       {/* The preset line only adds something under a custom title, and needs room. */}
       {presetName && title !== presetName && panel.h >= 4 && (

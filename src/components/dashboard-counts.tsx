@@ -43,6 +43,7 @@ import {
   statusLine,
   type IncidentStatus,
 } from "@/lib/incident-counts";
+import { DashboardAlarmStatus, PanelBell, useAlarm } from "./preset-alarm";
 
 interface PanelLayout {
   id: string;
@@ -156,6 +157,8 @@ interface PanelCount {
   panel_id: string;
   preset_id: string;
   preset_name?: string;
+  /** The preset's saved alarm flag, read with the counted revision (REV-78). */
+  preset_noisy?: boolean;
   count?: string;
   /** Incident count panels: matching alerts and those in a counted incident (REV-69). */
   alerts?: string;
@@ -182,9 +185,11 @@ type State = {
   updating?: boolean;
   error?: unknown;
   announcement?: string;
+  /** The dashboard was deleted or is no longer readable; it stays silent (REV-78). */
+  gone?: boolean;
 };
 const decimal = /^(0|[1-9]\d*)$/;
-const panelsOf = (definition: RecordData) =>
+export const panelsOf = (definition: RecordData) =>
   Array.isArray(definition.panels) ? (definition.panels as Panel[]) : [];
 
 function checkedBatch(value: Batch, definition: RecordData): Batch {
@@ -392,6 +397,7 @@ export function useCounts(
         setState((old) => ({
           ...old,
           batch: denied || absent ? undefined : old.batch,
+          gone: denied || absent || old.gone,
           loading: false,
           updating: blocked,
           error: blocked
@@ -508,6 +514,7 @@ export function CountTile({
   layoutControls,
   layoutActive,
   layoutStyle,
+  bell,
 }: {
   scope: Scope;
   panel: CountedPanel;
@@ -525,6 +532,8 @@ export function CountTile({
   layoutControls?: ReactNode;
   layoutActive?: boolean;
   layoutStyle?: CSSProperties;
+  /** A noisy panel's alarm bell, at the end of the title row (REV-78). */
+  bell?: ReactNode;
 }) {
   const threshold = thresholdFor(value, panel.thresholds);
   const tone = threshold?.color;
@@ -592,6 +601,7 @@ export function CountTile({
         <span style={{ flexGrow: 1 }} />
         {isStale && <span className="chip b-dash">Stale</span>}
         <PanelLinkButton link={panel.link} inactive={layoutActive} />
+        {bell}
       </span>
       {isIncidentCountPanel(panel) ? (
         // An incident count always says what it counts (REV-69).
@@ -785,7 +795,37 @@ export function ImageTile({
   );
 }
 
-/** Count engine plus transient fullscreen state for one open dashboard. */
+/** What an alert table panel last knew about its preset's alarm (REV-78). */
+export interface TableAlarmReport {
+  noisy: boolean;
+  alerts: boolean;
+  total?: string;
+}
+/**
+ * A dashboard view's alarm memory (REV-78): the panels muted in this tab and the
+ * table panels' last reports, keyed by panel and preset. It lives with the view,
+ * not the tiles, because fullscreen remounts every tile.
+ */
+interface AlarmMemory {
+  dashboard: string;
+  muted: ReadonlySet<string>;
+  tables: ReadonlyMap<string, TableAlarmReport>;
+}
+/**
+ * Mutes last for the browser tab (REV-78): leaving a dashboard and coming back,
+ * for example through a panel's link, keeps them, and a reload starts unmuted.
+ * Keyed by tenant and dashboard; nothing is sent or stored.
+ */
+const tabMutes = new Map<string, ReadonlySet<string>>();
+const alarmMemory = (dashboard: string): AlarmMemory => ({
+  dashboard,
+  muted: tabMutes.get(dashboard) ?? new Set(),
+  tables: new Map(),
+});
+export const tableAlarmKey = (panel: TablePanel) =>
+  `${panel.id}\n${panel.preset_id}`;
+
+/** Count engine plus transient fullscreen and alarm state for one open dashboard. */
 export function useDashboard(
   scope: Scope,
   dashboard: RecordData,
@@ -800,9 +840,173 @@ export function useDashboard(
     counts.refresh();
     setRefreshed((value) => value + 1);
   };
-  return { ...counts, refresh, refreshed, fullscreen, setFullscreen, trigger };
+  // Mutes are per tab and per dashboard: nothing is sent or stored (REV-78).
+  const id = `${scope.tenant.id}:${String(dashboard.id)}`;
+  const [stored, setStored] = useState(() => alarmMemory(id));
+  const memory = useMemo(
+    () => (stored.dashboard === id ? stored : alarmMemory(id)),
+    [stored, id],
+  );
+  useEffect(() => {
+    tabMutes.set(memory.dashboard, memory.muted);
+  }, [memory]);
+  const alarm = useMemo(() => {
+    const update = (change: (memory: AlarmMemory) => AlarmMemory) =>
+      setStored((old) => change(old.dashboard === id ? old : alarmMemory(id)));
+    return {
+      memory,
+      setMuted(panelIds: string[], muted: boolean) {
+        update((old) => {
+          const next = new Set(muted ? [...old.muted, ...panelIds] : []);
+          if (!muted)
+            for (const panelId of old.muted)
+              if (!panelIds.includes(panelId)) next.add(panelId);
+          return { ...old, muted: next };
+        });
+      },
+      report(key: string, report: TableAlarmReport | null) {
+        update((old) => {
+          const before = old.tables.get(key);
+          if (
+            report === null
+              ? before === undefined
+              : before?.noisy === report.noisy &&
+                before.alerts === report.alerts &&
+                before.total === report.total
+          )
+            return old;
+          const tables = new Map(old.tables);
+          if (report === null) tables.delete(key);
+          else tables.set(key, report);
+          return { ...old, tables };
+        });
+      },
+      /** Forget table reports for panels no longer on screen. */
+      prune(keys: ReadonlySet<string>) {
+        update((old) => {
+          if ([...old.tables.keys()].every((key) => keys.has(key))) return old;
+          return {
+            ...old,
+            tables: new Map([...old.tables].filter(([key]) => keys.has(key))),
+          };
+        });
+      },
+    };
+  }, [memory, id]);
+  return {
+    ...counts,
+    refresh,
+    refreshed,
+    fullscreen,
+    setFullscreen,
+    trigger,
+    alarm,
+  };
 }
 export type DashboardModel = ReturnType<typeof useDashboard>;
+
+/** One noisy panel on screen and whether it has alerts (REV-78). */
+interface AlarmEntry {
+  id: string;
+  alerts: boolean;
+  count?: string;
+}
+const NO_MUTES: ReadonlySet<string> = new Set();
+
+/**
+ * The one alarm of a dashboard view (REV-78). `panels` are the panels on screen,
+ * an unsaved draft included, so a panel deleted or pointed at another preset in a
+ * draft stops its part at once. Alert count panels use the last count batch,
+ * matched by panel and preset, so a loading or failed count keeps its last state;
+ * table panels use their last report. Muted panels stay muted when their alerts
+ * drop to zero and return. Call it once per view: it owns the audio element.
+ */
+export function useDashboardAlarm(
+  model: DashboardModel | undefined,
+  panels: Panel[],
+  silenced = false,
+) {
+  const state = model?.state;
+  const gone = silenced || !model || state?.gone === true;
+  const batch = gone ? undefined : state?.batch;
+  const memory = model?.alarm.memory;
+  const entries: AlarmEntry[] = [];
+  for (const panel of gone ? [] : panels) {
+    if (isCountPanel(panel)) {
+      const observation = batch?.panels.find(
+        (item) =>
+          item.panel_id === panel.id && item.preset_id === panel.preset_id,
+      );
+      if (observation?.preset_noisy !== true) continue;
+      const count =
+        observation.error === undefined &&
+        typeof observation.count === "string" &&
+        decimal.test(observation.count)
+          ? observation.count
+          : undefined;
+      entries.push({
+        id: panel.id,
+        alerts: count !== undefined && BigInt(count) > BigInt(0),
+        count,
+      });
+    } else if (isTablePanel(panel)) {
+      const report = memory?.tables.get(tableAlarmKey(panel));
+      if (report?.noisy)
+        entries.push({
+          id: panel.id,
+          alerts: report.alerts,
+          count: report.total,
+        });
+    }
+  }
+  const muted = memory?.muted ?? NO_MUTES;
+  const sounding = entries.filter(
+    (entry) => entry.alerts && !muted.has(entry.id),
+  ).length;
+  const sound = useAlarm(sounding > 0);
+  const tableKeys = panels
+    .filter(isTablePanel)
+    .map(tableAlarmKey)
+    .sort()
+    .join("\t");
+  const latest = useRef(model?.alarm);
+  latest.current = model?.alarm;
+  useEffect(() => {
+    latest.current?.prune(new Set(tableKeys ? tableKeys.split("\t") : []));
+  }, [tableKeys]);
+  const ids = entries.map((entry) => entry.id);
+  return {
+    summary: entries.length
+      ? {
+          sound,
+          sounding,
+          mutedWithAlerts: entries.filter(
+            (entry) => entry.alerts && muted.has(entry.id),
+          ).length,
+          anyMuted: entries.some((entry) => muted.has(entry.id)),
+        }
+      : undefined,
+    /** The bell of a noisy panel on screen, or nothing for any other panel. */
+    bell(panel: Panel, label: string) {
+      const entry = entries.find((item) => item.id === panel.id);
+      if (!entry || !model) return undefined;
+      const isMuted = muted.has(entry.id);
+      return (
+        <PanelBell
+          state={isMuted ? "muted" : entry.alerts ? "sounding" : "quiet"}
+          label={label}
+          count={entry.count}
+          onToggle={() => model.alarm.setMuted([entry.id], !isMuted)}
+        />
+      );
+    },
+    muteAll: () => model?.alarm.setMuted(ids, true),
+    unmuteAll: () => model?.alarm.setMuted(ids, false),
+    report: (panel: TablePanel, report: TableAlarmReport | null) =>
+      model?.alarm.report(tableAlarmKey(panel), report),
+  };
+}
+export type DashboardAlarm = ReturnType<typeof useDashboardAlarm>;
 
 function statusWord(scope: Scope, model: DashboardModel) {
   const { state, paused } = model;
@@ -828,11 +1032,14 @@ function statusWord(scope: Scope, model: DashboardModel) {
 export function DashboardBoard({
   scope,
   model,
+  alarm,
   draftPanels,
   editing,
 }: {
   scope: Scope;
   model: DashboardModel;
+  /** The view's one alarm, from `useDashboardAlarm` over the same panels (REV-78). */
+  alarm?: DashboardAlarm;
   draftPanels?: Panel[];
   editing?: {
     disabled: boolean;
@@ -947,6 +1154,8 @@ export function DashboardBoard({
           layoutControls={layoutControls}
           layoutActive={active}
           layoutStyle={style}
+          bell={alarm && ((label) => alarm.bell(panel, label))}
+          onAlarm={alarm && ((report) => alarm.report(panel, report))}
         />
       );
     const observation = batch?.panels.find(
@@ -996,6 +1205,7 @@ export function DashboardBoard({
         layoutControls={layoutControls}
         layoutActive={active}
         layoutStyle={style}
+        bell={alarm?.bell(panel, title)}
       />
     );
   }
@@ -1093,6 +1303,13 @@ export function DashboardBoard({
           <div className="db-fullscreen-body">
             <div className="db-fullscreen-bar">
               <h2 id={titleId}>{display(definition.name)}</h2>
+              {alarm?.summary && (
+                <DashboardAlarmStatus
+                  summary={alarm.summary}
+                  onMuteAll={alarm.muteAll}
+                  onUnmuteAll={alarm.unmuteAll}
+                />
+              )}
               <span style={{ flexGrow: 1 }} />
               <button type="button" className="btn" onClick={refresh}>
                 Refresh counts
